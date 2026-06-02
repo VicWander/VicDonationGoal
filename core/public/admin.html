@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Donation Goal Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+  <link rel="stylesheet" href="admin-theme.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div>
+        <h1>Donation Goal Admin</h1>
+        <p>Учёт всех донатов, управление сбором и история событий</p>
+      </div>
+      <div class="header-actions">
+        <a class="link-button secondary" href="/docs/index.html" target="_blank">Документация</a>
+        <a class="link-button secondary" href="/api/donations" target="_blank">JSON истории</a>
+        <a class="link-button" href="/widget.html" target="_blank">Открыть виджет</a>
+      </div>
+    </header>
+
+    <section class="grid top-grid">
+      <section class="card big-card">
+        <div class="card-title">
+          <h2>Текущая цель</h2>
+          <span class="muted" id="progressText">0%</span>
+        </div>
+
+        <div class="goal-preview">
+          <div class="goal-preview-top">
+            <span id="goalTitlePreview">Сбор на цель</span>
+            <span id="goalNumbersPreview">0 / 10000 RUB</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span class="stat-label">В сборе</span><span class="stat-value" id="currentPreview">0 RUB</span></div>
+          <div class="stat"><span class="stat-label">Всего учтено</span><span class="stat-value" id="totalAllPreview">0 RUB</span></div>
+          <div class="stat"><span class="stat-label">Не в сборе</span><span class="stat-value" id="notIncludedPreview">0 RUB</span></div>
+          <div class="stat"><span class="stat-label">Цель</span><span class="stat-value" id="goalPreview">10000 RUB</span></div>
+          <div class="stat"><span class="stat-label">Осталось</span><span class="stat-value" id="leftPreview">10000 RUB</span></div>
+          <div class="stat"><span class="stat-label">Событий</span><span class="stat-value" id="countPreview">0</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h2>Настроить цель</h2></div>
+        <label>Название цели<input id="titleInput" value="Сбор на цель" /></label>
+        <div class="form-row">
+          <label>Стартовая сумма<input id="baseAmountInput" type="number" value="0" /></label>
+          <label>Цель<input id="goalInput" type="number" value="10000" /></label>
+        </div>
+        <label>Валюта цели<input id="currencyInput" value="RUB" /></label>
+        <button id="saveGoalButton">Сохранить цель</button>
+        <p class="hint">Стартовая сумма — деньги, которые уже есть, но не привязаны к отдельному донату.</p>
+      </section>
+    </section>
+
+    <section class="grid">
+      <section class="card">
+        <div class="card-title"><h2>Добавить донат вручную</h2></div>
+        <label>Имя<input id="usernameInput" value="Тестовый зритель" /></label>
+        <div class="form-row">
+          <label>Сумма<input id="amountInput" type="number" value="100" /></label>
+          <label>Валюта<input id="donationCurrencyInput" value="RUB" /></label>
+        </div>
+        <label>Сообщение<input id="messageInput" value="На тест полоски" /></label>
+        <label class="checkbox-line"><input id="includeInput" type="checkbox" checked />Добавлять в текущий сбор</label>
+        <label class="checkbox-line"><input id="notifyInput" type="checkbox" />Отправить оповещение в Streamer.bot</label>
+        <button id="addDonationButton">Добавить донат</button>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h2>Фильтры истории</h2></div>
+        <label>Поиск<input id="searchInput" placeholder="имя, сообщение, сумма..." /></label>
+        <div class="form-row">
+          <label>Источник
+            <select id="sourceFilter">
+              <option value="all">Все</option>
+              <option value="donationalerts">DonationAlerts</option>
+              <option value="donatty">Donatty</option>
+              <option value="manual">Manual</option>
+            </select>
+          </label>
+          <label>Сбор
+            <select id="goalFilter">
+              <option value="all">Все</option>
+              <option value="included">В сборе</option>
+              <option value="excluded">Не в сборе</option>
+            </select>
+          </label>
+        </div>
+        <div class="danger-zone inline">
+          <button id="undoButton" class="secondary">Удалить последний</button>
+          <button id="resetButton" class="danger">Сбросить сбор</button>
+        </div>
+        <p class="hint">Сброс сбора сохранит историю, но уберёт старые донаты из текущей цели.</p>
+      </section>
+    </section>
+
+    <section class="grid">
+      <section class="card">
+        <div class="card-title">
+          <h2>Статусы интеграций</h2>
+          <button id="refreshStatusButton" class="secondary">Обновить</button>
+        </div>
+        <div class="status-list" id="statusList">
+          <div class="status-item"><span class="status-dot unknown"></span><div><b>Статусы</b><p>Загрузка...</p></div></div>
+        </div>
+        <p class="hint">Donatty и Streamer.bot пишут heartbeat в runtime. Если процесс закрыт, статус станет устаревшим.</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title"><h2>Курсы валют к RUB</h2></div>
+        <div class="form-row rates-row">
+          <label>USD → RUB<input id="rateUSDInput" type="number" step="0.01" value="90" /></label>
+          <label>EUR → RUB<input id="rateEURInput" type="number" step="0.01" value="100" /></label>
+        </div>
+        <div class="form-row rates-row">
+          <label>KZT → RUB<input id="rateKZTInput" type="number" step="0.0001" value="0.18" /></label>
+          <label>Доп. курсы JSON<input id="extraRatesInput" placeholder='{"UAH":2.2,"BYN":28}' /></label>
+        </div>
+        <button id="saveRatesButton">Сохранить курсы</button>
+        <p class="hint">Курс означает, сколько рублей стоит 1 единица валюты. RUB всегда равен 1.</p>
+      </section>
+    </section>
+
+    <section class="card">
+      <div class="card-title">
+        <h2>История донатов</h2>
+        <div class="history-actions">
+          <span class="muted" id="eventsCount">0 событий</span>
+          <a class="link-button secondary" href="/api/donations/export.csv" target="_blank">Экспорт CSV</a>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="donations-table">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Источник</th>
+              <th>Имя</th>
+              <th>Сумма</th>
+              <th>В сбор</th>
+              <th>Опов.</th>
+              <th>Сообщение</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="eventsTableBody">
+            <tr><td colspan="8" class="empty-cell">Пока донатов нет</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="admin.js"></script>
+  <script src="admin-theme.js"></script>
+</body>
+</html>

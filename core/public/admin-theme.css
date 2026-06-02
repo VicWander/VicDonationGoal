@@ -1,0 +1,568 @@
+/* 
+  Admin Theme Patch
+  Подключать ПОСЛЕ admin.css:
+  <link rel="stylesheet" href="admin-theme.css" />
+*/
+
+:root,
+body[data-theme="dark"] {
+  --bg: #0b0f17;
+  --bg-soft: #0f1624;
+  --card: #111827;
+  --card-2: #0b1020;
+  --card-3: #151f31;
+
+  --text: #e5e7eb;
+  --text-strong: #f9fafb;
+  --muted: #8b95a7;
+  --muted-2: #64748b;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --input-bg: #0b1020;
+  --input-text: #f9fafb;
+
+  --cyan-dark: #23489e;
+  --cyan: #35a9d4;
+  --cyan-bright: #3bc7da;
+
+  --accent: var(--cyan);
+  --accent-2: var(--cyan-bright);
+  --accent-dark: var(--cyan-dark);
+
+  --danger: #fb7185;
+  --warning: #f59e0b;
+  --success: #22c55e;
+
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+  --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.18);
+
+  color-scheme: dark;
+}
+
+body[data-theme="light"] {
+  --bg: #edf3f8;
+  --bg-soft: #e6eef6;
+  --card: #ffffff;
+  --card-2: #f7fbff;
+  --card-3: #eef6fb;
+
+  --text: #172033;
+  --text-strong: #0b1220;
+  --muted: #64748b;
+  --muted-2: #7b8797;
+
+  --border: rgba(15, 23, 42, 0.10);
+  --border-strong: rgba(15, 23, 42, 0.17);
+
+  --input-bg: #f8fbff;
+  --input-text: #0b1220;
+
+  --cyan-dark: #23489e;
+  --cyan: #35a9d4;
+  --cyan-bright: #3bc7da;
+
+  --accent: var(--cyan);
+  --accent-2: var(--cyan-bright);
+  --accent-dark: var(--cyan-dark);
+
+  --danger: #e11d48;
+  --warning: #d97706;
+  --success: #16a34a;
+
+  --shadow: 0 18px 44px rgba(35, 72, 158, 0.10);
+  --shadow-soft: 0 10px 28px rgba(35, 72, 158, 0.08);
+
+  color-scheme: light;
+}
+
+/* Base */
+
+body {
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 34%),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-dark) 12%, transparent), transparent 30%),
+    var(--bg) !important;
+  color: var(--text) !important;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body,
+input,
+button,
+select,
+textarea {
+  font-family: "Manrope", Arial, Helvetica, sans-serif;
+}
+
+/* Header */
+
+.header h1,
+h1,
+h2,
+h3 {
+  color: var(--text-strong) !important;
+}
+
+.header p,
+.muted,
+.stat-label,
+.service-sub,
+.event-message,
+.empty,
+#goalNumbersPreview {
+  color: var(--muted) !important;
+}
+
+/* Cards */
+
+.card,
+.panel,
+.section,
+.settings-card {
+  background: color-mix(in srgb, var(--card) 96%, transparent) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.goal-preview,
+.stat,
+.service,
+.event,
+.empty,
+.table-wrap,
+.donations-table,
+.history-table,
+.donation-row,
+.filters,
+.form-block {
+  background: var(--card-2) !important;
+  border-color: var(--border) !important;
+}
+
+/* Inputs */
+
+input,
+select,
+textarea {
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 1px solid var(--border-strong) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted-2) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: color-mix(in srgb, var(--accent-2) 75%, white 5%) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 18%, transparent) !important;
+  outline: none !important;
+}
+
+label {
+  color: var(--muted) !important;
+}
+
+/* Buttons */
+
+button,
+.link-button,
+.btn,
+.primary {
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent-2)) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 24%, transparent) !important;
+}
+
+button:hover,
+.link-button:hover,
+.btn:hover,
+.primary:hover {
+  filter: brightness(1.05) saturate(1.05);
+}
+
+.secondary {
+  background: var(--card-3) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: none !important;
+}
+
+.danger {
+  background: linear-gradient(135deg, #be123c, var(--danger)) !important;
+  color: #ffffff !important;
+}
+
+a {
+  color: var(--accent) !important;
+}
+
+/* Progress */
+
+.progress-bar {
+  background: color-mix(in srgb, var(--muted) 24%, transparent) !important;
+}
+
+.progress-fill,
+.goal-fill,
+.bar-fill {
+  background: linear-gradient(90deg, var(--accent-dark), var(--accent), var(--accent-2)) !important;
+}
+
+/* Status dots */
+
+.status-dot {
+  background: var(--success) !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--success) 60%, transparent) !important;
+}
+
+.status-dot.off {
+  background: var(--danger) !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--danger) 50%, transparent) !important;
+}
+
+.status-dot.unknown {
+  background: var(--warning) !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--warning) 50%, transparent) !important;
+}
+
+/* Events / tables */
+
+.event-source,
+.badge,
+.source-badge {
+  background: var(--card-3) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.event-source.donationalerts,
+.badge.donationalerts,
+.source-badge.donationalerts {
+  background: color-mix(in srgb, #fb923c 18%, transparent) !important;
+  color: #fb923c !important;
+}
+
+.event-source.donatty,
+.badge.donatty,
+.source-badge.donatty {
+  background: color-mix(in srgb, var(--accent-2) 18%, transparent) !important;
+  color: var(--accent) !important;
+}
+
+.event-source.manual,
+.badge.manual,
+.source-badge.manual {
+  background: color-mix(in srgb, #a855f7 18%, transparent) !important;
+  color: #a855f7 !important;
+}
+
+.event-user,
+.event-amount,
+.stat-value {
+  color: var(--text-strong) !important;
+}
+
+/* Таблицы на случай accounting-патча */
+
+table {
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+thead,
+.table-head {
+  background: var(--card-3) !important;
+  color: var(--muted) !important;
+}
+
+tbody tr,
+.table-row {
+  border-color: var(--border) !important;
+}
+
+tbody tr:hover,
+.table-row:hover {
+  background: color-mix(in srgb, var(--accent-2) 7%, var(--card-2)) !important;
+}
+
+td,
+th {
+  border-color: var(--border) !important;
+}
+
+/* Theme toggle */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  border: 1px solid var(--border-strong) !important;
+  background: var(--card-2) !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow-soft) !important;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 850;
+  user-select: none;
+}
+
+.theme-toggle:hover {
+  filter: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong)) !important;
+}
+
+.theme-toggle-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent-2));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.theme-toggle-text {
+  white-space: nowrap;
+}
+
+/* Если в header-actions уже есть кнопки, переключатель красиво встанет рядом */
+
+.header-actions {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Fallback: если header-actions нет, JS создаст плавающий переключатель */
+
+.theme-toggle-floating {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+}
+
+/* Light polish */
+
+body[data-theme="light"] .card,
+body[data-theme="light"] .goal-preview,
+body[data-theme="light"] .stat,
+body[data-theme="light"] .service,
+body[data-theme="light"] .event,
+body[data-theme="light"] .empty {
+  backdrop-filter: blur(8px);
+}
+
+body[data-theme="light"] .secondary {
+  background: #f1f7fb !important;
+}
+
+body[data-theme="light"] .progress-bar {
+  background: #dbe7f0 !important;
+}
+
+
+/* =========================================================
+   LIGHT THEME FIXES — таблица, текст и полоски в светлой теме
+   Добавлено после основного admin-theme.css
+   ========================================================= */
+
+body[data-theme="light"] {
+  --text: #172033;
+  --text-strong: #0b1220;
+  --muted: #526174;
+  --muted-2: #7a8797;
+
+  --table-head: #e8f1f8;
+  --table-row: #ffffff;
+  --table-row-alt: #f7fbff;
+  --table-hover: #edf8fc;
+
+  --progress-bg: #d7e3ed;
+}
+
+/* Заголовки и основной текст */
+
+body[data-theme="light"] h1,
+body[data-theme="light"] h2,
+body[data-theme="light"] h3,
+body[data-theme="light"] .header h1,
+body[data-theme="light"] .card-title h2,
+body[data-theme="light"] #goalTitlePreview,
+body[data-theme="light"] .stat-value,
+body[data-theme="light"] .amount-cell {
+  color: var(--text-strong) !important;
+}
+
+body[data-theme="light"] .page,
+body[data-theme="light"] .card,
+body[data-theme="light"] td,
+body[data-theme="light"] label,
+body[data-theme="light"] .goal-preview-top {
+  color: var(--text) !important;
+}
+
+body[data-theme="light"] .header p,
+body[data-theme="light"] .muted,
+body[data-theme="light"] .hint,
+body[data-theme="light"] .stat-label,
+body[data-theme="light"] #goalNumbersPreview,
+body[data-theme="light"] .date-cell,
+body[data-theme="light"] .message-cell,
+body[data-theme="light"] .empty-cell {
+  color: var(--muted) !important;
+}
+
+/* Мини-полоска цели в админке */
+
+body[data-theme="light"] .progress-bar {
+  background: var(--progress-bg) !important;
+}
+
+body[data-theme="light"] .progress-fill {
+  background: linear-gradient(90deg, #23489e, #35a9d4, #3bc7da) !important;
+}
+
+/* Таблица истории */
+
+body[data-theme="light"] .table-wrap {
+  background: var(--table-row) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+body[data-theme="light"] .donations-table {
+  background: var(--table-row) !important;
+  color: var(--text) !important;
+}
+
+body[data-theme="light"] .donations-table th,
+body[data-theme="light"] th {
+  background: var(--table-head) !important;
+  color: #334155 !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+body[data-theme="light"] .donations-table td,
+body[data-theme="light"] td {
+  background: transparent !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+body[data-theme="light"] .donations-table tbody tr:nth-child(even) td {
+  background: var(--table-row-alt) !important;
+}
+
+body[data-theme="light"] .donations-table tbody tr:hover td {
+  background: var(--table-hover) !important;
+}
+
+body[data-theme="light"] .date-cell {
+  color: #64748b !important;
+}
+
+body[data-theme="light"] .message-cell {
+  color: #64748b !important;
+}
+
+body[data-theme="light"] .amount-cell {
+  color: #0f172a !important;
+}
+
+/* Плашки источников */
+
+body[data-theme="light"] .source-pill {
+  background: #eef3f8 !important;
+  color: #334155 !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+body[data-theme="light"] .source-pill.manual {
+  background: #efe5ff !important;
+  color: #6d28d9 !important;
+}
+
+body[data-theme="light"] .source-pill.donationalerts {
+  background: #fff0df !important;
+  color: #c2410c !important;
+}
+
+body[data-theme="light"] .source-pill.donatty {
+  background: #dff8ff !important;
+  color: #08799b !important;
+}
+
+/* Чекбоксы */
+
+body[data-theme="light"] input[type="checkbox"] {
+  accent-color: #35a9d4;
+}
+
+body[data-theme="light"] .goal-toggle input:checked {
+  accent-color: #16a34a;
+}
+
+body[data-theme="light"] .notify-toggle input:checked {
+  accent-color: #35a9d4;
+}
+
+/* Кнопки в таблице — чтобы не были слишком тяжёлыми на светлой теме */
+
+body[data-theme="light"] .icon-button.secondary {
+  background: #f1f7fb !important;
+  color: #172033 !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="light"] .icon-button.danger {
+  background: #db1850 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Карточки */
+
+body[data-theme="light"] .goal-preview,
+body[data-theme="light"] .stat {
+  background: #f7fbff !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+/* Stage 3 additions: statuses, CSV, rates, replay */
+.status-item {
+  background: var(--card-2) !important;
+  border-color: var(--border) !important;
+}
+
+.status-item b {
+  color: var(--text-strong) !important;
+}
+
+.status-item p,
+.status-item small,
+.amount-converted {
+  color: var(--muted) !important;
+}
+
+body[data-theme="light"] .status-item {
+  background: #f7fbff !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+body[data-theme="light"] .status-item b {
+  color: #0b1220 !important;
+}
+
+body[data-theme="light"] .status-item p,
+body[data-theme="light"] .status-item small,
+body[data-theme="light"] .amount-converted {
+  color: #64748b !important;
+}

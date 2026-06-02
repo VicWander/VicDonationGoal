@@ -1,0 +1,166 @@
+/* =========================================================
+   LIGHT THEME FIXES — таблица, текст и полоски в светлой теме
+   Добавлено после основного admin-theme.css
+   ========================================================= */
+
+body[data-theme="light"] {
+  --text: #172033;
+  --text-strong: #0b1220;
+  --muted: #526174;
+  --muted-2: #7a8797;
+
+  --table-head: #e8f1f8;
+  --table-row: #ffffff;
+  --table-row-alt: #f7fbff;
+  --table-hover: #edf8fc;
+
+  --progress-bg: #d7e3ed;
+}
+
+/* Заголовки и основной текст */
+
+body[data-theme="light"] h1,
+body[data-theme="light"] h2,
+body[data-theme="light"] h3,
+body[data-theme="light"] .header h1,
+body[data-theme="light"] .card-title h2,
+body[data-theme="light"] #goalTitlePreview,
+body[data-theme="light"] .stat-value,
+body[data-theme="light"] .amount-cell {
+  color: var(--text-strong) !important;
+}
+
+body[data-theme="light"] .page,
+body[data-theme="light"] .card,
+body[data-theme="light"] td,
+body[data-theme="light"] label,
+body[data-theme="light"] .goal-preview-top {
+  color: var(--text) !important;
+}
+
+body[data-theme="light"] .header p,
+body[data-theme="light"] .muted,
+body[data-theme="light"] .hint,
+body[data-theme="light"] .stat-label,
+body[data-theme="light"] #goalNumbersPreview,
+body[data-theme="light"] .date-cell,
+body[data-theme="light"] .message-cell,
+body[data-theme="light"] .empty-cell {
+  color: var(--muted) !important;
+}
+
+/* Мини-полоска цели в админке */
+
+body[data-theme="light"] .progress-bar {
+  background: var(--progress-bg) !important;
+}
+
+body[data-theme="light"] .progress-fill {
+  background: linear-gradient(90deg, #23489e, #35a9d4, #3bc7da) !important;
+}
+
+/* Таблица истории */
+
+body[data-theme="light"] .table-wrap {
+  background: var(--table-row) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+body[data-theme="light"] .donations-table {
+  background: var(--table-row) !important;
+  color: var(--text) !important;
+}
+
+body[data-theme="light"] .donations-table th,
+body[data-theme="light"] th {
+  background: var(--table-head) !important;
+  color: #334155 !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+body[data-theme="light"] .donations-table td,
+body[data-theme="light"] td {
+  background: transparent !important;
+  color: var(--text) !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+body[data-theme="light"] .donations-table tbody tr:nth-child(even) td {
+  background: var(--table-row-alt) !important;
+}
+
+body[data-theme="light"] .donations-table tbody tr:hover td {
+  background: var(--table-hover) !important;
+}
+
+body[data-theme="light"] .date-cell {
+  color: #64748b !important;
+}
+
+body[data-theme="light"] .message-cell {
+  color: #64748b !important;
+}
+
+body[data-theme="light"] .amount-cell {
+  color: #0f172a !important;
+}
+
+/* Плашки источников */
+
+body[data-theme="light"] .source-pill {
+  background: #eef3f8 !important;
+  color: #334155 !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+body[data-theme="light"] .source-pill.manual {
+  background: #efe5ff !important;
+  color: #6d28d9 !important;
+}
+
+body[data-theme="light"] .source-pill.donationalerts {
+  background: #fff0df !important;
+  color: #c2410c !important;
+}
+
+body[data-theme="light"] .source-pill.donatty {
+  background: #dff8ff !important;
+  color: #08799b !important;
+}
+
+/* Чекбоксы */
+
+body[data-theme="light"] input[type="checkbox"] {
+  accent-color: #35a9d4;
+}
+
+body[data-theme="light"] .goal-toggle input:checked {
+  accent-color: #16a34a;
+}
+
+body[data-theme="light"] .notify-toggle input:checked {
+  accent-color: #35a9d4;
+}
+
+/* Кнопки в таблице — чтобы не были слишком тяжёлыми на светлой теме */
+
+body[data-theme="light"] .icon-button.secondary {
+  background: #f1f7fb !important;
+  color: #172033 !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="light"] .icon-button.danger {
+  background: #db1850 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Карточки */
+
+body[data-theme="light"] .goal-preview,
+body[data-theme="light"] .stat {
+  background: #f7fbff !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}

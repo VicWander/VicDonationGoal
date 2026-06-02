@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "widget_url": "ВСТАВЬ_ОБЫЧНУЮ_ССЫЛКУ_DONATTY_ДЛЯ_OBS_СЮДА",
+  "sse_url": "",
+  "widget_api_url": "http://127.0.0.1:3333/api/donation",
+  "headless_browser": true,
+  "sse_capture_timeout_seconds": 35,
+  "prefer_auto_sse": true,
+  "use_old_sse_if_auto_failed": true,
+  "reconnect_delay_seconds": 5,
+  "max_reconnect_delay_seconds": 60
+}

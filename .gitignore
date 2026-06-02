@@ -1,0 +1,52 @@
+# ==============================
+# VicDonationGoal local files
+# ==============================
+
+# DonationAlerts secrets / OAuth tokens
+core/integrations/donationalerts/da_config.json
+core/integrations/donationalerts/da_tokens.json
+core/integrations/donationalerts/da_oauth_state.txt
+
+# Donatty private widget links / tokens
+integrations/donatty/donatty_config.json
+
+# Streamer.bot local settings and processed events
+integrations/streamerbot/streamerbot_config.json
+integrations/streamerbot/streamerbot_sent.json
+
+# Local donation data
+core/data/state.json
+core/data/donations.json
+core/data/rates.json
+
+# Python cache / virtual envs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Logs
+*.log
+logs/
+
+# OS/editor trash
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Release/build artifacts
+*.zip
+*.7z
+*.rar
+build/
+dist/
+
+# Runtime status/heartbeat files
+runtime/
+
+# Runtime temp files
+*.tmp
+*.bak

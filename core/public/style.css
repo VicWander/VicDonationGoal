@@ -1,0 +1,96 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: ManropeBlod, Helvetica, sans-serif;
+}
+
+.widget-body {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goal-card {
+  position: relative;
+  width: 700px;
+  padding: 0;
+  color: #ffffff;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.goal-top {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.goal-title {
+  font-size: 30px;
+  font-weight: 800;
+  text-align: left;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+}
+
+.goal-percent {
+  display: none;
+}
+
+.goal-bar {
+  position: relative;
+  width: 100%;
+  height: 55px;
+  border-radius: 30px;
+  overflow: hidden;
+  background: rgba(83, 83, 83, 0.747);
+  border: none;
+}
+
+.goal-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 10px 0 0 10px;
+  background: linear-gradient(45deg, #23489e, #3bc7da, #35a9d4);
+  transition: width 0.45s ease;
+  box-shadow: none;
+}
+
+.goal-glow {
+  display: none;
+}
+
+.goal-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 7px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  pointer-events: none;
+  font-size: 26px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+#goalAmount {
+  display: none;
+}
+
+.last-donation {
+  display: none;
+}

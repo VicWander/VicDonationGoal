@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "client_id": "ВСТАВЬ_CLIENT_ID_СЮДА",
+  "client_secret": "ВСТАВЬ_CLIENT_SECRET_СЮДА",
+  "redirect_uri": "http://127.0.0.1:3333/auth/donationalerts/callback",
+  "scopes": "oauth-user-show oauth-donation-subscribe oauth-donation-index"
+}

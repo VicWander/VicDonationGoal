@@ -1,0 +1,23 @@
+{
+  "enabled": true,
+  "streamerbot_http_url": "http://127.0.0.1:7474/DoAction",
+  "action_name": "оповещение о донате",
+  "action_id": "",
+  "poll_interval_seconds": 0.5,
+  "send_existing_on_first_start": false,
+  "send_manual_donations": false,
+  "send_sources": [
+    "donationalerts",
+    "donatty"
+  ],
+  "currency_mode_for_currency_arg": "symbol",
+  "currency_symbols": {
+    "RUB": "₽",
+    "USD": "$",
+    "EUR": "€",
+    "KZT": "₸"
+  },
+  "extra_args": {
+    "integration": "VicDonationGoal"
+  }
+}

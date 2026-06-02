@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Donation Goal Widget</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="widget-body">
+  <div class="goal-card">
+    <div class="goal-top">
+      <div class="goal-title" id="goalTitle">Сбор на цель</div>
+      <div class="goal-percent" id="goalPercent">0%</div>
+    </div>
+
+    <div class="goal-bar">
+      <div class="goal-fill" id="goalFill"></div>
+      <div class="goal-glow"></div>
+    </div>
+
+    <div class="goal-bottom">
+      <span id="currentAmount">0 RUB</span>
+      <span id="goalAmount">10000 RUB</span>
+    </div>
+
+    <div class="last-donation" id="lastDonation"></div>
+  </div>
+
+  <script src="widget.js"></script>
+</body>
+</html>

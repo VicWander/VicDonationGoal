@@ -1,0 +1,9 @@
+{
+  "baseCurrency": "RUB",
+  "ratesToRUB": {
+    "RUB": 1,
+    "USD": 90,
+    "EUR": 100,
+    "KZT": 0.18
+  }
+}

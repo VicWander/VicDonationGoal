@@ -1,0 +1,58 @@
+VicDonationGoal project structure
+================================
+
+Root files
+----------
+00_INSTALL_ALL.bat              Install Python packages, Playwright Chromium and create local configs
+01_START_ALL.bat                Start core server, Donatty listener and Streamer.bot bridge
+02_START_SERVER_ONLY.bat        Start only the core local server
+03_START_DONATTY_ONLY.bat       Start only Donatty Auto Listener
+04_START_STREAMERBOT_ONLY.bat   Start only Streamer.bot Bridge
+05_TEST_STREAMERBOT.bat         Send a test donation event to Streamer.bot
+06_RESET_STREAMERBOT_SENT.bat   Reset processed Streamer.bot event list
+07_CREATE_LOCAL_CONFIGS.bat     Create local config/data files from examples
+README.md                       Main GitHub README
+LICENSE                         MIT license
+requirements.txt                Python dependencies
+.gitignore                      Keeps local secrets/data out of Git
+
+docs/
+-----
+Static documentation for GitHub/manual reading.
+The same documentation is also served inside the app from core/public/docs/.
+
+core/
+-----
+server.py                       Main local HTTP server
+public/                         Admin panel, OBS widget and served docs
+data/                           Local data files and examples
+integrations/donationalerts/    DonationAlerts config examples and local OAuth files
+
+integrations/donatty/
+---------------------
+donatty_listener.py             Auto SSE listener for Donatty
+ donatty_config.example.json     Public config template
+ donatty_config.json             Local private config, ignored by Git
+
+integrations/streamerbot/
+-------------------------
+streamerbot_bridge.py            Sends donation events to Streamer.bot
+streamerbot_config.example.json  Public config template
+streamerbot_config.json          Local private config, ignored by Git
+streamerbot_sent.json            Local processed event list, ignored by Git
+
+legacy/
+-------
+Old helper scripts kept for reference/backward compatibility.
+
+README/
+-------
+Older step-by-step README files from development stages.
+They are kept for reference; README.md and docs/ are the main public documentation.
+
+Stage 3 additions:
+- core/data/rates.example.json — example manual currency rates.
+- runtime/ — local heartbeat/status files, ignored by Git.
+- /api/donations/export.csv — CSV export endpoint.
+- /api/status — combined status endpoint.
+- /api/rates — manual currency rates endpoint.

@@ -1,0 +1,17 @@
+{
+  "created_at": "2026-06-02 12:25:10 UTC",
+  "version": "1.0.0",
+  "file_count": 77,
+  "suspicious_hits": [],
+  "removed_runtime_files": [
+    "core/data/state.json",
+    "core/data/donations.json",
+    "core/data/rates.json",
+    "core/integrations/donationalerts/da_config.json",
+    "core/integrations/donationalerts/da_tokens.json",
+    "core/integrations/donationalerts/da_oauth_state.txt",
+    "integrations/donatty/donatty_config.json",
+    "integrations/streamerbot/streamerbot_config.json",
+    "integrations/streamerbot/streamerbot_sent.json"
+  ]
+}
