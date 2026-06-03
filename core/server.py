@@ -705,7 +705,7 @@ def da_listener_loop():
                 continue
 
             if not load_da_tokens().get("access_token"):
-                DA_STATUS["last_error"] = "DonationAlerts не авторизован. Открой /auth/donationalerts/start."
+                DA_STATUS["last_error"] = "DonationAlerts не авторизован. Открой http://127.0.0.1:3333/auth/donationalerts/start."
                 time.sleep(reconnect_delay)
                 continue
 
