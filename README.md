@@ -322,7 +322,7 @@ A full local manual is available in two places:
 Repository docs:
 
 ```text
-docs/index.html
+docs/manual.html
 ```
 
 Served by the local app:
