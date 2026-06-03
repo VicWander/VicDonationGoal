@@ -1,772 +1,833 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VicDonationGoal — Project Showcase</title>
-  <style>
-    :root {
-      --bg: #0b0f17;
-      --bg2: #101827;
-      --card: rgba(17, 24, 39, 0.78);
-      --card2: rgba(11, 16, 32, 0.82);
-      --text: #e5e7eb;
-      --strong: #f9fafb;
-      --muted: #94a3b8;
-      --border: rgba(255,255,255,.10);
-      --accent-dark: #23489e;
-      --accent: #35a9d4;
-      --accent2: #3bc7da;
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --danger: #fb7185;
-      --shadow: 0 22px 70px rgba(0,0,0,.28);
-      color-scheme: dark;
-    }
-
-    * { box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 85% 8%, rgba(59,199,218,.20), transparent 34%),
-        radial-gradient(circle at 12% 12%, rgba(35,72,158,.24), transparent 32%),
-        linear-gradient(180deg, #080c14 0%, #0b0f17 45%, #090d14 100%);
-      color: var(--text);
-      font-family: Inter, Manrope, Arial, sans-serif;
-      line-height: 1.6;
-    }
-
-    a { color: var(--accent2); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    .page {
-      width: min(1180px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 28px 0 80px;
-    }
-
-    .nav {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 14px 0;
-      backdrop-filter: blur(16px);
-    }
-
-    .nav-inner {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: rgba(8, 12, 20, .68);
-      box-shadow: 0 12px 36px rgba(0,0,0,.18);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 950;
-      color: var(--strong);
-      letter-spacing: -.03em;
-    }
-
-    .brand-mark {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent2));
-      box-shadow: 0 0 26px rgba(53,169,212,.35);
-    }
-
-    .links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-
-    .links a {
-      padding: 8px 10px;
-      border-radius: 12px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .links a:hover {
-      background: rgba(53,169,212,.12);
-      color: var(--strong);
-      text-decoration: none;
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      margin-top: 22px;
-      padding: 52px;
-      border-radius: 34px;
-      border: 1px solid var(--border);
-      background:
-        linear-gradient(135deg, rgba(35,72,158,.28), rgba(17,24,39,.88) 45%, rgba(59,199,218,.12)),
-        radial-gradient(circle at 84% 20%, rgba(59,199,218,.20), transparent 24%);
-      box-shadow: var(--shadow);
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      right: -80px;
-      bottom: -120px;
-      width: 340px;
-      height: 340px;
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(59,199,218,.20), transparent 70%);
-      pointer-events: none;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      padding: 7px 10px;
-      margin-bottom: 18px;
-      border-radius: 999px;
-      background: rgba(53,169,212,.12);
-      border: 1px solid rgba(53,169,212,.20);
-      color: #a5f3fc;
-      font-weight: 850;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-
-    h1, h2, h3 { color: var(--strong); line-height: 1.12; }
-
-    h1 {
-      max-width: 860px;
-      margin: 0;
-      font-size: clamp(38px, 6vw, 72px);
-      letter-spacing: -.065em;
-    }
-
-    .hero-lead {
-      max-width: 790px;
-      margin: 20px 0 0;
-      color: #d8e3ef;
-      font-size: clamp(17px, 2vw, 21px);
-    }
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: 28px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      padding: 11px 16px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,.06);
-      color: var(--strong);
-      font-weight: 850;
-      text-decoration: none;
-    }
-
-    .btn.primary {
-      background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent2));
-      border: 0;
-      box-shadow: 0 14px 34px rgba(53,169,212,.22);
-    }
-
-    .btn:hover { text-decoration: none; filter: brightness(1.06); }
-
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .metric {
-      padding: 18px;
-      border-radius: 22px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      box-shadow: 0 14px 34px rgba(0,0,0,.14);
-    }
-
-    .metric strong {
-      display: block;
-      font-size: 24px;
-      color: var(--strong);
-      letter-spacing: -.04em;
-    }
-
-    .metric span {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    section {
-      margin-top: 34px;
-      padding: 30px;
-      border-radius: 30px;
-      border: 1px solid var(--border);
-      background: rgba(17, 24, 39, .64);
-      box-shadow: 0 20px 58px rgba(0,0,0,.18);
-    }
-
-    .section-head {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 24px;
-      margin-bottom: 22px;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: clamp(28px, 4vw, 42px);
-      letter-spacing: -.045em;
-    }
-
-    .section-note {
-      max-width: 560px;
-      margin: 8px 0 0;
-      color: var(--muted);
-    }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-    }
-
-    .card {
-      padding: 20px;
-      border-radius: 22px;
-      border: 1px solid var(--border);
-      background: var(--card2);
-    }
-
-    .card h3 {
-      margin: 0 0 8px;
-      font-size: 18px;
-      letter-spacing: -.02em;
-    }
-
-    .card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 15px;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 26px;
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: rgba(53,169,212,.13);
-      color: #a5f3fc;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-      margin-bottom: 12px;
-    }
-
-    .architecture {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 16px;
-      align-items: stretch;
-    }
-
-    .lane {
-      display: grid;
-      gap: 12px;
-      align-content: start;
-      padding: 18px;
-      border-radius: 24px;
-      border: 1px solid var(--border);
-      background: rgba(11,16,32,.62);
-    }
-
-    .lane-title {
-      color: var(--muted);
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-weight: 900;
-    }
-
-    .node {
-      padding: 14px;
-      border-radius: 18px;
-      background: rgba(255,255,255,.055);
-      border: 1px solid rgba(255,255,255,.08);
-      color: var(--strong);
-      font-weight: 850;
-    }
-
-    .node small {
-      display: block;
-      margin-top: 4px;
-      color: var(--muted);
-      font-weight: 500;
-    }
-
-    .flow-arrow {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent2);
-      font-weight: 950;
-      font-size: 24px;
-    }
-
-    .tech-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .tech {
-      padding: 9px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--border);
-      color: #dbeafe;
-      font-weight: 750;
-    }
-
-    .screens {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    figure {
-      margin: 0;
-      overflow: hidden;
-      border-radius: 24px;
-      border: 1px solid var(--border);
-      background: rgba(11,16,32,.72);
-      box-shadow: 0 18px 48px rgba(0,0,0,.18);
-    }
-
-    figure img {
-      display: block;
-      width: 100%;
-      height: auto;
-      background: #0b1020;
-    }
-
-    figcaption {
-      padding: 14px 16px;
-      color: var(--muted);
-      border-top: 1px solid var(--border);
-      font-size: 14px;
-    }
-
-    .wide { grid-column: 1 / -1; }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      counter-reset: step;
-    }
-
-    .step {
-      position: relative;
-      padding: 20px;
-      border-radius: 22px;
-      background: var(--card2);
-      border: 1px solid var(--border);
-    }
-
-    .step::before {
-      counter-increment: step;
-      content: counter(step);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 34px;
-      height: 34px;
-      margin-bottom: 14px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent2));
-      color: white;
-      font-weight: 950;
-    }
-
-    .step strong {
-      display: block;
-      color: var(--strong);
-      margin-bottom: 6px;
-    }
-
-    .step span { color: var(--muted); font-size: 14px; }
-
-    code {
-      padding: 2px 6px;
-      border-radius: 7px;
-      background: rgba(255,255,255,.08);
-      color: #cffafe;
-      font-family: Consolas, monospace;
-    }
-
-    .footer {
-      margin-top: 36px;
-      padding: 26px;
-      border-radius: 28px;
-      border: 1px solid var(--border);
-      background: rgba(11,16,32,.72);
-      color: var(--muted);
-    }
-
-    .footer strong { color: var(--strong); }
-
-    @media (max-width: 980px) {
-      .metrics, .cards, .architecture, .steps { grid-template-columns: 1fr 1fr; }
-      .screens { grid-template-columns: 1fr; }
-      .hero { padding: 34px; }
-      .links { display: none; }
-    }
-
-    @media (max-width: 620px) {
-      .page { width: min(100% - 22px, 1180px); }
-      section { padding: 20px; border-radius: 24px; }
-      .metrics, .cards, .architecture, .steps { grid-template-columns: 1fr; }
-      .hero { padding: 26px; border-radius: 26px; }
-      .nav-inner { border-radius: 16px; }
-    }
-
-    @media print {
-      .nav { display: none; }
-      body { background: #fff; color: #111827; }
-      section, .hero, .card, .metric, .lane, .step, figure, .footer {
-        box-shadow: none !important;
-        break-inside: avoid;
-      }
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VicWander Donation Goal Widget — Manual</title>
+<style>
+:root {
+  --bg: #0b0f17;
+  --card: #111827;
+  --card2: #0b1020;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --border: rgba(255,255,255,.09);
+  --accent-dark: #23489e;
+  --accent: #35a9d4;
+  --accent2: #3bc7da;
+  --code: #0a0f1c;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgba(59,199,218,.16), transparent 36%),
+    radial-gradient(circle at top left, rgba(35,72,158,.16), transparent 28%),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, Manrope, Arial, sans-serif;
+  line-height: 1.6;
+}
+.layout { display: grid; grid-template-columns: 310px 1fr; min-height: 100vh; }
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow: auto;
+  padding: 24px 18px;
+  border-right: 1px solid var(--border);
+  background: rgba(7,11,20,.76);
+  backdrop-filter: blur(10px);
+}
+.brand { font-size: 22px; font-weight: 900; line-height: 1.15; margin-bottom: 8px; }
+.subtitle { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+.nav { display: grid; gap: 4px; }
+.nav a {
+  color: var(--muted); text-decoration: none; padding: 7px 10px; border-radius: 10px;
+  font-size: 14px;
+}
+.nav a:hover { background: rgba(53,169,212,.12); color: #fff; }
+.content { max-width: 1080px; padding: 42px 48px 90px; }
+.hero {
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(35,72,158,.18), rgba(17,24,39,.9), rgba(59,199,218,.10));
+  box-shadow: 0 18px 50px rgba(0,0,0,.25);
+  margin-bottom: 28px;
+}
+h1 { margin: 0 0 10px; font-size: 42px; line-height: 1.08; letter-spacing: -.04em; }
+h2 { margin-top: 46px; padding-top: 16px; font-size: 30px; letter-spacing: -.03em; border-top: 1px solid var(--border); }
+h3 { margin-top: 30px; font-size: 22px; }
+p, li { color: #d6deea; }
+.muted { color: var(--muted); }
+.card {
+  background: rgba(17,24,39,.78);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin: 18px 0;
+}
+.quick {
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.quick .card { margin: 0; }
+.badge {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(53,169,212,.14);
+  color: #7dd3fc;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+pre {
+  background: var(--code);
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 16px;
+  overflow: auto;
+}
+code { font-family: Consolas, monospace; color: #d7f8ff; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(11,16,32,.8);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  display: table;
+  margin: 18px 0;
+}
+th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { text-align: left; color: #93c5fd; background: rgba(35,72,158,.16); }
+td { color: #d6deea; }
+a { color: var(--accent2); }
+hr { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; }
+  .content { padding: 28px 18px 70px; }
+  .quick { grid-template-columns: 1fr; }
+  h1 { font-size: 32px; }
+}
+</style>
+  <link rel="stylesheet" href="docs-theme.css">
 </head>
 <body>
-  <div class="page">
-    <nav class="nav">
-      <div class="nav-inner">
-        <div class="brand"><span class="brand-mark"></span><span>VicDonationGoal</span></div>
-        <div class="links">
-          <a href="#about">Описание</a>
-          <a href="#architecture">Архитектура</a>
-          <a href="#tech">Технологии</a>
-          <a href="#screens">Скриншоты</a>
-          <a href="#launch">Запуск</a>
-          <a href="#roadmap">Roadmap</a>
-          <a href="https://github.com/VicWander/VicDonationGoal" target="_blank" rel="noopener">GitHub</a>
-        </div>
-      </div>
-    </nav>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">VicWander<br>Donation Goal</div>
+      <div class="subtitle">Единый мануал проекта</div>
+      <nav class="nav">
+        <a href="#1-что-это-такое">1. Что это такое</a><a href="#2-короткий-запуск-перед-стримом">2. Короткий запуск перед стримом</a><a href="#3-первый-запуск-на-новом-пк">3. Первый запуск на новом ПК</a><a href="#4-структура-проекта">4. Структура проекта</a><a href="#5-основной-сервер">5. Основной сервер</a><a href="#6-obs-виджет">6. OBS-виджет</a><a href="#7-админка">7. Админка</a><a href="#8-donationalerts">8. DonationAlerts</a><a href="#9-donatty">9. Donatty</a><a href="#10-streamer-bot">10. Streamer.bot</a><a href="#11-данные-и-хранение">11. Данные и хранение</a><a href="#12-валюты">12. Валюты</a><a href="#13-светлая-и-тёмная-тема-админки">13. Светлая и тёмная тема админки</a><a href="#14-настройка-оформления-админки">14. Настройка оформления админки</a><a href="#15-api">15. API</a><a href="#16-батники">16. Батники</a><a href="#17-типичные-проблемы">17. Типичные проблемы</a><a href="#18-безопасность">18. Безопасность</a><a href="#19-бэкапы">19. Бэкапы</a><a href="#20-что-можно-добавить-потом">20. Что можно добавить потом</a><a href="#21-быстрый-чеклист-перед-стримом">21. Быстрый чеклист перед стримом</a><a href="#22-stage-3-полезные-функции">22. Stage 3: полезные функции</a><a href="#23-roadmap">23. Roadmap</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <div class='hero'><span class='badge'>manual</span><h1>VicWander Donation Goal Widget</h1><p class='muted'>Локальная система донат-гола, истории донатов и интеграций для стрима.</p></div>
+<p>Полная документация по локальной системе донат-гола, учёта донатов и интеграции с DonationAlerts, Donatty, OBS и Streamer.bot.</p>
+<hr>
+<h2 id='1-что-это-такое'>1. Что это такое</h2>
+<p><strong>VicWander Donation Goal Widget</strong> — это локальная система для стрима, которая:</p>
+<ul>
+<li>собирает донаты из разных источников;</li>
+<li>ведёт историю всех донатов;</li>
+<li>показывает кастомную полоску сбора в OBS;</li>
+<li>позволяет вручную добавлять донаты;</li>
+<li>позволяет решать, учитывать донат в текущей цели или нет;</li>
+<li>позволяет решать, отправлять ли ручной донат в Streamer.bot как оповещение;</li>
+<li>отправляет события донатов в Streamer.bot;</li>
+<li>работает локально на компьютере.</li>
+</ul>
+<p>Основная идея:</p>
+<pre><code>DonationAlerts ─┐
+                 ├─&gt; Donation Goal Server ──&gt; OBS Widget
+Donatty ─────────┘            │
+                              ├─&gt; Admin Panel
+                              ├─&gt; donations.json
+                              └─&gt; Streamer.bot Bridge ──&gt; Streamer.bot Action ──&gt; OBS Alerts
+Manual donation ──────────────┘</code></pre>
+<hr>
+<h2 id='2-короткий-запуск-перед-стримом'>2. Короткий запуск перед стримом</h2>
+<p>Если проект уже настроен и зависимости установлены:</p>
+<p>1. Открой папку проекта.</p>
+<p>2. Запусти:</p>
+<pre><code>01_START_ALL.bat</code></pre>
+<p>3. Должны открыться окна:</p>
+<pre><code>Donation Goal Server
+Donatty Listener
+Streamer.bot Bridge</code></pre>
+<p>4. Открой админку:</p>
+<pre><code>http://127.0.0.1:3333/admin.html</code></pre>
+<p>5. Виджет для OBS:</p>
+<pre><code>http://127.0.0.1:3333/widget.html</code></pre>
+<hr>
+<h2 id='3-первый-запуск-на-новом-пк'>3. Первый запуск на новом ПК</h2>
+<h3 id='3-1-установить-зависимости'>3.1. Установить зависимости</h3>
+<p>Запусти:</p>
+<pre><code>00_INSTALL_ALL.bat</code></pre>
+<p>Он должен установить:</p>
+<pre><code>requests
+websocket-client
+playwright
+Playwright Chromium</code></pre>
+<p>Если установка Chromium занимает несколько минут — это нормально.</p>
+<h3 id='3-2-проверить-python'>3.2. Проверить Python</h3>
+<p>Если батник не запускается, проверь, установлен ли Python.</p>
+<p>В консоли:</p>
+<pre><code>python --version</code></pre>
+<p>или:</p>
+<pre><code>py -3 --version</code></pre>
+<p>Если Python не найден, установи Python 3.11+ с официального сайта и при установке включи галочку:</p>
+<pre><code>Add Python to PATH</code></pre>
+<hr>
+<h2 id='4-структура-проекта'>4. Структура проекта</h2>
+<p>После реорганизации проект должен выглядеть примерно так:</p>
+<pre><code>donation_goal_widget/
+├─ 00_INSTALL_ALL.bat
+├─ 01_START_ALL.bat
+├─ 02_START_SERVER_ONLY.bat
+├─ 03_START_DONATTY_ONLY.bat
+├─ 04_START_STREAMERBOT_ONLY.bat
+├─ 05_TEST_STREAMERBOT.bat
+├─ 06_RESET_STREAMERBOT_SENT.bat
+├─ PROJECT_STRUCTURE.txt
+│
+├─ core/
+│  ├─ server.py
+│  ├─ public/
+│  │  ├─ widget.html
+│  │  ├─ widget.js
+│  │  ├─ style.css
+│  │  ├─ admin.html
+│  │  ├─ admin.js
+│  │  ├─ admin.css
+│  │  ├─ admin-theme.css
+│  │  └─ admin-theme.js
+│  │
+│  ├─ data/
+│  │  ├─ state.json
+│  │  └─ donations.json
+│  │
+│  └─ integrations/
+│     └─ donationalerts/
+│        ├─ da_config.json
+│        ├─ da_tokens.json
+│        └─ da_oauth_state.txt
+│
+├─ integrations/
+│  ├─ donatty/
+│  │  ├─ donatty_listener.py
+│  │  └─ donatty_config.json
+│  │
+│  └─ streamerbot/
+│     ├─ streamerbot_bridge.py
+│     ├─ streamerbot_config.json
+│     └─ streamerbot_sent.json
+│
+├─ legacy/
+└─ README/</code></pre>
+<h3 id='что-где-лежит'>Что где лежит</h3>
+<table>
+<tr><th>Путь</th><th>Назначение</th></tr>
+<tr><td><code>core/server.py</code></td><td>Основной локальный сервер</td></tr>
+<tr><td><code>core/public/widget.html</code></td><td>HTML виджета для OBS</td></tr>
+<tr><td><code>core/public/style.css</code></td><td>Оформление OBS-виджета</td></tr>
+<tr><td><code>core/public/widget.js</code></td><td>Логика обновления OBS-виджета</td></tr>
+<tr><td><code>core/public/admin.html</code></td><td>Админка</td></tr>
+<tr><td><code>core/public/admin.css</code></td><td>Основное оформление админки</td></tr>
+<tr><td><code>core/public/admin-theme.css</code></td><td>Светлая/тёмная тема админки</td></tr>
+<tr><td><code>core/public/admin.js</code></td><td>Логика админки</td></tr>
+<tr><td><code>core/public/admin-theme.js</code></td><td>Переключатель темы</td></tr>
+<tr><td><code>core/data/state.json</code></td><td>Текущая цель</td></tr>
+<tr><td><code>core/data/donations.json</code></td><td>История донатов</td></tr>
+<tr><td><code>core/integrations/donationalerts/da_config.json</code></td><td>Настройки DonationAlerts</td></tr>
+<tr><td><code>core/integrations/donationalerts/da_tokens.json</code></td><td>Токены DonationAlerts</td></tr>
+<tr><td><code>integrations/donatty/donatty_listener.py</code></td><td>Listener Donatty</td></tr>
+<tr><td><code>integrations/donatty/donatty_config.json</code></td><td>Настройки Donatty</td></tr>
+<tr><td><code>integrations/streamerbot/streamerbot_bridge.py</code></td><td>Bridge в Streamer.bot</td></tr>
+<tr><td><code>integrations/streamerbot/streamerbot_config.json</code></td><td>Настройки Streamer.bot</td></tr>
+<tr><td><code>integrations/streamerbot/streamerbot_sent.json</code></td><td>Список уже отправленных в Streamer.bot событий</td></tr>
+</table>
+<hr>
+<h2 id='5-основной-сервер'>5. Основной сервер</h2>
+<p>Основной сервер запускается через:</p>
+<pre><code>02_START_SERVER_ONLY.bat</code></pre>
+<p>или вместе со всем проектом через:</p>
+<pre><code>01_START_ALL.bat</code></pre>
+<p>После запуска доступны адреса:</p>
+<pre><code>Админка: http://127.0.0.1:3333/admin.html
+Виджет:  http://127.0.0.1:3333/widget.html
+API:     http://127.0.0.1:3333/api/state</code></pre>
+<hr>
+<h2 id='6-obs-виджет'>6. OBS-виджет</h2>
+<h3 id='6-1-как-добавить-в-obs'>6.1. Как добавить в OBS</h3>
+<p>1. Открой OBS.</p>
+<p>2. В источниках нажми <code>+</code>.</p>
+<p>3. Выбери <code>Браузер</code> / <code>Browser Source</code>.</p>
+<p>4. URL:</p>
+<pre><code>http://127.0.0.1:3333/widget.html</code></pre>
+<p>5. Рекомендуемый стартовый размер:</p>
+<pre><code>Ширина: 800
+Высота: 220</code></pre>
+<p>6. Включи прозрачный фон, если OBS предлагает такую настройку.</p>
+<h3 id='6-2-где-менять-внешний-вид'>6.2. Где менять внешний вид</h3>
+<p>Оформление полоски лежит в:</p>
+<pre><code>core/public/style.css</code></pre>
+<p>Основные блоки:</p>
+<pre><code>.goal-card
+.goal-title
+.goal-bar
+.goal-fill
+.goal-bottom</code></pre>
+<h3 id='6-3-частые-настройки'>6.3. Частые настройки</h3>
+<p>#### Длина полоски</p>
+<pre><code>.goal-card {
+  width: 700px;
+}</code></pre>
+<p>#### Высота полоски</p>
+<pre><code>.goal-bar {
+  height: 55px;
+}</code></pre>
+<p>#### Фон незаполненной части</p>
+<pre><code>.goal-bar {
+  background: rgba(83, 83, 83, 0.747);
+}</code></pre>
+<p>#### Заполненная часть</p>
+<pre><code>.goal-fill {
+  background: linear-gradient(45deg, #23489e, #3bc7da, #35a9d4);
+}</code></pre>
+<p>#### Текст внутри полоски</p>
+<pre><code>.goal-bottom {
+  font-size: 26px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.95);
+}</code></pre>
+<hr>
+<h2 id='7-админка'>7. Админка</h2>
+<p>Админка открывается по адресу:</p>
+<pre><code>http://127.0.0.1:3333/admin.html</code></pre>
+<p>В ней можно:</p>
+<ul>
+<li>смотреть текущий прогресс цели;</li>
+<li>менять название цели;</li>
+<li>менять стартовую сумму;</li>
+<li>менять итоговую сумму цели;</li>
+<li>вручную добавлять донаты;</li>
+<li>выбирать, добавлять ли ручной донат в текущий сбор;</li>
+<li>выбирать, отправлять ли ручной донат в Streamer.bot;</li>
+<li>смотреть историю всех донатов;</li>
+<li>фильтровать историю;</li>
+<li>редактировать донаты;</li>
+<li>удалять донаты;</li>
+<li>включать/выключать донат из текущего сбора;</li>
+<li>включать/выключать оповещение в Streamer.bot для ручного доната;</li>
+<li>переключать светлую/тёмную тему.</li>
+</ul>
+<h3 id='7-1-стартовая-сумма'>7.1. Стартовая сумма</h3>
+<p>Стартовая сумма — это деньги, которые уже есть, но не связаны с отдельным донатом.</p>
+<p>Пример:</p>
+<pre><code>До запуска системы уже было собрано 500 RUB.</code></pre>
+<p>Тогда ставишь:</p>
+<pre><code>Стартовая сумма: 500</code></pre>
+<h3 id='7-2-в-сбор-не-в-сбор'>7.2. В сбор / не в сбор</h3>
+<p>У каждого доната есть флаг:</p>
+<pre><code>В сбор</code></pre>
+<p>Если включено — донат прибавляется к текущей цели.</p>
+<p>Если выключено — донат остаётся в истории, но не влияет на текущую полоску.</p>
+<h3 id='7-3-оповещение-в-streamer-bot'>7.3. Оповещение в Streamer.bot</h3>
+<p>У ручных донатов есть флаг:</p>
+<pre><code>Отправить оповещение в Streamer.bot</code></pre>
+<p>Если включено — bridge отправит событие в Streamer.bot.</p>
+<p>Если выключено — донат останется только в истории и/или сборе.</p>
+<hr>
+<h2 id='8-donationalerts'>8. DonationAlerts</h2>
+<h3 id='8-1-что-делает-интеграция'>8.1. Что делает интеграция</h3>
+<p>DonationAlerts подключается к real-time событиям через WebSocket/Centrifugo.</p>
+<p>Когда приходит донат:</p>
+<pre><code>DonationAlerts -&gt; core/server.py -&gt; donations.json -&gt; widget/admin -&gt; Streamer.bot bridge</code></pre>
+<h3 id='8-2-создание-приложения-donationalerts'>8.2. Создание приложения DonationAlerts</h3>
+<p>Нужно создать OAuth-приложение в DonationAlerts:</p>
+<pre><code>https://www.donationalerts.com/application/clients</code></pre>
+<p>Redirect URL должен быть <strong>точно</strong>:</p>
+<pre><code>http://127.0.0.1:3333/auth/donationalerts/callback</code></pre>
+<p>Важно: <code>127.0.0.1</code> и <code>localhost</code> считаются разными адресами. Если в конфиге стоит <code>127.0.0.1</code>, в DonationAlerts тоже должен быть <code>127.0.0.1</code>.</p>
+<h3 id='8-3-настройка-da-config-json'>8.3. Настройка da_config.json</h3>
+<p>Файл:</p>
+<pre><code>core/integrations/donationalerts/da_config.json</code></pre>
+<p>Пример:</p>
+<pre><code>{
+  &quot;enabled&quot;: true,
+  &quot;client_id&quot;: &quot;ТВОЙ_CLIENT_ID&quot;,
+  &quot;client_secret&quot;: &quot;ТВОЙ_CLIENT_SECRET&quot;,
+  &quot;redirect_uri&quot;: &quot;http://127.0.0.1:3333/auth/donationalerts/callback&quot;,
+  &quot;scopes&quot;: &quot;oauth-user-show oauth-donation-subscribe oauth-donation-index&quot;
+}</code></pre>
+<p>Нужные права:</p>
+<pre><code>oauth-user-show
+oauth-donation-subscribe
+oauth-donation-index</code></pre>
+<h3 id='8-4-авторизация-donationalerts'>8.4. Авторизация DonationAlerts</h3>
+<p>1. Запусти основной сервер:</p>
+<pre><code>02_START_SERVER_ONLY.bat</code></pre>
+<p>или:</p>
+<pre><code>01_START_ALL.bat</code></pre>
+<p>2. Открой:</p>
+<pre><code>http://127.0.0.1:3333/auth/donationalerts/start</code></pre>
+<p>3. Разреши доступ.</p>
+<p>4. После успеха токены сохранятся в:</p>
+<pre><code>core/integrations/donationalerts/da_tokens.json</code></pre>
+<h3 id='8-5-проверка-статуса'>8.5. Проверка статуса</h3>
+<p>Открой:</p>
+<pre><code>http://127.0.0.1:3333/api/da/status</code></pre>
+<p>Нормальное состояние:</p>
+<pre><code>{
+  &quot;configured&quot;: true,
+  &quot;authorized&quot;: true,
+  &quot;connected&quot;: true,
+  &quot;running&quot;: true
+}</code></pre>
+<h3 id='8-6-безопасность'>8.6. Безопасность</h3>
+<p>Не показывай на стриме и не отправляй другим:</p>
+<pre><code>da_config.json
+da_tokens.json
+client_secret
+access_token
+refresh_token</code></pre>
+<hr>
+<h2 id='9-donatty'>9. Donatty</h2>
+<h3 id='9-1-что-делает-интеграция'>9.1. Что делает интеграция</h3>
+<p>Donatty listener получает донаты из Donatty и отправляет их в основной сервер:</p>
+<pre><code>Donatty -&gt; donatty_listener.py -&gt; http://127.0.0.1:3333/api/donation</code></pre>
+<h3 id='9-2-почему-нужен-auto-listener'>9.2. Почему нужен Auto Listener</h3>
+<p>В Donatty внутренняя SSE-ссылка вида:</p>
+<pre><code>https://api-009.donatty.com/widgets/.../sse?jwt=...</code></pre>
+<p>может меняться. Поэтому новый listener не хранит старую SSE-ссылку, а:</p>
+<p>1. открывает обычную ссылку виджета Donatty;</p>
+<p>2. ловит свежий <code>/sse?jwt=...</code> из Network;</p>
+<p>3. подключается к нему;</p>
+<p>4. при отвале пытается повторить процесс.</p>
+<h3 id='9-3-настройка-donatty'>9.3. Настройка Donatty</h3>
+<p>Файл:</p>
+<pre><code>integrations/donatty/donatty_config.json</code></pre>
+<p>Пример:</p>
+<pre><code>{
+  &quot;enabled&quot;: true,
 
-    <header class="hero">
-      <div class="eyebrow">Локальное web-приложение</div>
-      <h1>VicDonationGoal — система донат-гола для OBS-стримов</h1>
-      <p class="hero-lead">
-        Проект агрегирует донаты из DonationAlerts и Donatty, ведёт локальную историю событий,
-        отображает кастомный OBS-виджет и передаёт события в Streamer.bot для оповещений.
-      </p>
-      <div class="hero-actions">
-        <a class="btn primary" href="https://github.com/VicWander/VicDonationGoal" target="_blank" rel="noopener">Открыть GitHub</a>
-        <a class="btn" href="#screens">Посмотреть демо</a>
-        <a class="btn" href="#launch">Инструкция запуска</a>
-      </div>
-    </header>
+  &quot;widget_url&quot;: &quot;https://widgets.donatty.com/ТВОЯ_ССЫЛКА_ДЛЯ_OBS&quot;,
 
-    <div class="metrics">
-      <div class="metric"><strong>3</strong><span>внешние интеграции</span></div>
-      <div class="metric"><strong>Web UI</strong><span>админка и OBS-виджет</span></div>
-      <div class="metric"><strong>Local-first</strong><span>данные хранятся на ПК</span></div>
-      <div class="metric"><strong>v1.0.0</strong><span>публичный релиз на GitHub</span></div>
-    </div>
+  &quot;sse_url&quot;: &quot;&quot;,
 
-    <section id="about">
-      <div class="section-head">
-        <div>
-          <h2>Краткое описание</h2>
-          <p class="section-note">Задача проекта — заменить набор разрозненных виджетов одной локальной системой для управления донатами на стриме.</p>
-        </div>
-      </div>
+  &quot;widget_api_url&quot;: &quot;http://127.0.0.1:3333/api/donation&quot;,
 
-      <div class="cards">
-        <article class="card">
-          <div class="badge">Донаты</div>
-          <h3>Агрегация источников</h3>
-          <p>Донаты из разных сервисов приводятся к единому формату и сохраняются в общей истории.</p>
-        </article>
-        <article class="card">
-          <div class="badge">OBS</div>
-          <h3>Кастомный виджет</h3>
-          <p>Прогресс сбора отображается через Browser Source в OBS и полностью настраивается через CSS.</p>
-        </article>
-        <article class="card">
-          <div class="badge">Streamer.bot</div>
-          <h3>Оповещения</h3>
-          <p>Проект передаёт данные доната в Streamer.bot, где запускается кастомный action со звуком и текстом.</p>
-        </article>
-        <article class="card">
-          <div class="badge">Admin</div>
-          <h3>Панель управления</h3>
-          <p>В админке можно добавлять донаты вручную, редактировать события, экспортировать CSV и управлять целью.</p>
-        </article>
-        <article class="card">
-          <div class="badge">Storage</div>
-          <h3>Локальное хранение</h3>
-          <p>История донатов, состояние цели и курсы валют хранятся локально в JSON-файлах.</p>
-        </article>
-        <article class="card">
-          <div class="badge">Release</div>
-          <h3>Готовность к публикации</h3>
-          <p>Проект вычищен от приватных данных, имеет README, документацию, лицензию и релизный архив.</p>
-        </article>
-      </div>
-    </section>
+  &quot;headless_browser&quot;: true,
+  &quot;sse_capture_timeout_seconds&quot;: 35,
 
-    <section id="architecture">
-      <div class="section-head">
-        <div>
-          <h2>Архитектурная схема</h2>
-          <p class="section-note">Система разделена на независимые модули: основной сервер, listener Donatty и bridge для Streamer.bot.</p>
-        </div>
-      </div>
+  &quot;prefer_auto_sse&quot;: true,
+  &quot;use_old_sse_if_auto_failed&quot;: true,
 
-      <div class="architecture">
-        <div class="lane">
-          <div class="lane-title">Источники данных</div>
-          <div class="node">DonationAlerts <small>OAuth + real-time events</small></div>
-          <div class="node">Donatty <small>Auto SSE Listener</small></div>
-          <div class="node">Manual input <small>ручное добавление в админке</small></div>
-        </div>
+  &quot;reconnect_delay_seconds&quot;: 5,
+  &quot;max_reconnect_delay_seconds&quot;: 60
+}</code></pre>
+<p>В <code>widget_url</code> вставляется обычная ссылка Donatty для OBS/встраивания, не внутренняя <code>sse?jwt</code>.</p>
+<h3 id='9-4-запуск-donatty-listener'>9.4. Запуск Donatty listener</h3>
+<p>Отдельно:</p>
+<pre><code>03_START_DONATTY_ONLY.bat</code></pre>
+<p>Или вместе со всем:</p>
+<pre><code>01_START_ALL.bat</code></pre>
+<p>В норме в окне будет:</p>
+<pre><code>[DONATTY] Открываю Donatty-виджет в скрытом браузере...
+[DONATTY] Свежий SSE URL пойман из Network.
+[DONATTY] Подключаюсь к SSE...
+[DONATTY] Подключено. Слушаю донаты Donatty.</code></pre>
+<h3 id='9-5-если-donatty-не-подключается'>9.5. Если Donatty не подключается</h3>
+<p>Открой <code>donatty_config.json</code> и поставь:</p>
+<pre><code>&quot;headless_browser&quot;: false</code></pre>
+<p>Тогда браузер откроется видимо. Можно будет увидеть, грузится ли виджет.</p>
+<p>Потом снова запусти:</p>
+<pre><code>03_START_DONATTY_ONLY.bat</code></pre>
+<h3 id='9-6-безопасность'>9.6. Безопасность</h3>
+<p>Не показывай публично:</p>
+<pre><code>widget_url
+sse_url
+jwt</code></pre>
+<hr>
+<h2 id='10-streamer-bot'>10. Streamer.bot</h2>
+<h3 id='10-1-что-делает-bridge'>10.1. Что делает bridge</h3>
+<p>Streamer.bot bridge следит за историей донатов и отправляет новые донаты в Streamer.bot.</p>
+<pre><code>donations.json -&gt; streamerbot_bridge.py -&gt; Streamer.bot HTTP Server -&gt; action</code></pre>
+<p>Он запускает action и передаёт переменные:</p>
+<pre><code>%user%
+%amount%
+%currency%
+%message%</code></pre>
+<p>Дополнительные переменные:</p>
+<pre><code>%username%
+%donationUser%
+%donor%
+%currencyCode%
+%currencySymbol%
+%amountWithCurrency%
+%source%
+%donationId%</code></pre>
+<h3 id='10-2-настройка-streamer-bot'>10.2. Настройка Streamer.bot</h3>
+<p>В Streamer.bot включи HTTP Server:</p>
+<pre><code>Servers/Clients -&gt; HTTP Server</code></pre>
+<p>Рекомендуемые настройки:</p>
+<pre><code>Host: 127.0.0.1
+Port: 7474
+Auto Start: включить</code></pre>
+<h3 id='10-3-настройка-streamerbot-config-json'>10.3. Настройка streamerbot_config.json</h3>
+<p>Файл:</p>
+<pre><code>integrations/streamerbot/streamerbot_config.json</code></pre>
+<p>Пример:</p>
+<pre><code>{
+  &quot;enabled&quot;: true,
+  &quot;streamerbot_http_url&quot;: &quot;http://127.0.0.1:7474/DoAction&quot;,
 
-        <div class="lane">
-          <div class="lane-title">Локальное ядро</div>
-          <div class="node">Python HTTP Server <small>API, статика, состояние цели</small></div>
-          <div class="node">JSON Storage <small>donations, state, rates</small></div>
-          <div class="node">Admin Panel <small>управление и история</small></div>
-        </div>
+  &quot;action_name&quot;: &quot;оповещение о донате&quot;,
+  &quot;action_id&quot;: &quot;&quot;,
 
-        <div class="lane">
-          <div class="lane-title">Вывод и автоматизация</div>
-          <div class="node">OBS Widget <small>полоска сбора через Browser Source</small></div>
-          <div class="node">Streamer.bot Bridge <small>HTTP DoAction</small></div>
-          <div class="node">Custom Alerts <small>звук, текст, показ/скрытие источников</small></div>
-        </div>
-      </div>
-    </section>
+  &quot;poll_interval_seconds&quot;: 0.5,
 
-    <section id="tech">
-      <div class="section-head">
-        <div>
-          <h2>Использованные технологии</h2>
-          <p class="section-note">Проект показывает работу с web-интерфейсом, сетевыми протоколами, внешними API и локальным хранением данных.</p>
-        </div>
-      </div>
+  &quot;send_existing_on_first_start&quot;: false,
+  &quot;send_manual_donations&quot;: false,
 
-      <div class="tech-grid">
-        <span class="tech">Python</span>
-        <span class="tech">HTTP Server</span>
-        <span class="tech">REST API</span>
-        <span class="tech">HTML</span>
-        <span class="tech">CSS</span>
-        <span class="tech">JavaScript</span>
-        <span class="tech">JSON</span>
-        <span class="tech">OAuth 2.0</span>
-        <span class="tech">WebSocket</span>
-        <span class="tech">Server-Sent Events</span>
-        <span class="tech">Playwright</span>
-        <span class="tech">OBS Browser Source</span>
-        <span class="tech">Streamer.bot HTTP API</span>
-        <span class="tech">CSV Export</span>
-        <span class="tech">GitHub</span>
-      </div>
-    </section>
+  &quot;send_sources&quot;: [
+    &quot;donationalerts&quot;,
+    &quot;donatty&quot;
+  ],
 
-    <section id="screens">
-      <div class="section-head">
-        <div>
-          <h2>Скриншоты и демонстрация</h2>
-          <p class="section-note">Основные элементы проекта: админ-панель, OBS-виджет, интеграции, консольные модули и репозиторий.</p>
-        </div>
-      </div>
+  &quot;currency_mode_for_currency_arg&quot;: &quot;symbol&quot;,
 
-      <div class="screens">
-        <figure class="wide">
-          <img src="showcase-assets/admin-overview-1.png" alt="Админ-панель VicDonationGoal" />
-          <figcaption>Админ-панель: текущая цель, статистика, ручное добавление донатов и фильтры истории.</figcaption>
-        </figure>
+  &quot;currency_symbols&quot;: {
+    &quot;RUB&quot;: &quot;₽&quot;,
+    &quot;USD&quot;: &quot;$&quot;,
+    &quot;EUR&quot;: &quot;€&quot;,
+    &quot;KZT&quot;: &quot;₸&quot;
+  },
 
-        <figure>
-          <img src="showcase-assets/admin-overview-2.png" alt="История донатов" />
-          <figcaption>История донатов: события из разных источников, управление сбором, оповещениями и экспортом.</figcaption>
-        </figure>
+  &quot;extra_args&quot;: {
+    &quot;integration&quot;: &quot;VicWanderDonationGoal&quot;
+  }
+}</code></pre>
+<h3 id='10-4-action-id'>10.4. Action ID</h3>
+<p>Если bridge пишет:</p>
+<pre><code>action not found</code></pre>
+<p>лучше запускать action по ID.</p>
+<p>Открой:</p>
+<pre><code>http://127.0.0.1:7474/GetActions</code></pre>
+<p>Найди нужное действие и скопируй <code>id</code>.</p>
+<p>Вставь в:</p>
+<pre><code>&quot;action_id&quot;: &quot;ТУТ_ID_ACTION&quot;</code></pre>
+<p><code>action_name</code> можно оставить для удобства.</p>
+<h3 id='10-5-настройка-текста-в-streamer-bot'>10.5. Настройка текста в Streamer.bot</h3>
+<p>В твоём action используется:</p>
+<pre><code>%user% — %amount%%currency%</code></pre>
+<p>и сообщение:</p>
+<pre><code>%message%</code></pre>
+<p>Bridge передаёт именно эти переменные.</p>
+<p>Пример:</p>
+<pre><code>TestUser — 133₽
+Тестовое сообщение доната</code></pre>
+<h3 id='10-6-тест-streamer-bot'>10.6. Тест Streamer.bot</h3>
+<p>Запусти:</p>
+<pre><code>05_TEST_STREAMERBOT.bat</code></pre>
+<p>Должен запуститься action с тестовыми переменными.</p>
+<h3 id='10-7-дубли-с-minichat'>10.7. Дубли с MiniChat</h3>
+<p>Если MiniChat тоже запускает тот же action, может быть двойное оповещение:</p>
+<pre><code>MiniChat -&gt; Streamer.bot
+наш Bridge -&gt; Streamer.bot</code></pre>
+<p>Для проверки лучше:</p>
+<p>1. сделать копию action;</p>
+<p>2. назвать её <code>оповещение о донате ТЕСТ</code>;</p>
+<p>3. прописать её ID в <code>streamerbot_config.json</code>;</p>
+<p>4. убедиться, что bridge работает;</p>
+<p>5. потом отключить MiniChat trigger или перевести bridge на основной action.</p>
+<hr>
+<h2 id='11-данные-и-хранение'>11. Данные и хранение</h2>
+<h3 id='11-1-state-json'>11.1. state.json</h3>
+<p>Файл:</p>
+<pre><code>core/data/state.json</code></pre>
+<p>Хранит:</p>
+<pre><code>{
+  &quot;title&quot;: &quot;Сбор на цель&quot;,
+  &quot;current&quot;: 0,
+  &quot;baseAmount&quot;: 0,
+  &quot;goal&quot;: 10000,
+  &quot;currency&quot;: &quot;RUB&quot;,
+  &quot;lastDonation&quot;: null
+}</code></pre>
+<p><code>current</code> пересчитывается автоматически.</p>
+<h3 id='11-2-donations-json'>11.2. donations.json</h3>
+<p>Файл:</p>
+<pre><code>core/data/donations.json</code></pre>
+<p>Пример записи:</p>
+<pre><code>{
+  &quot;uniqueKey&quot;: &quot;donatty:3376e992-7ac9-43b7-b685-334a176ccbb6&quot;,
+  &quot;source&quot;: &quot;donatty&quot;,
+  &quot;externalId&quot;: &quot;3376e992-7ac9-43b7-b685-334a176ccbb6&quot;,
+  &quot;username&quot;: &quot;3223&quot;,
+  &quot;amount&quot;: 133,
+  &quot;currency&quot;: &quot;RUB&quot;,
+  &quot;amountForGoal&quot;: 133,
+  &quot;includeInGoal&quot;: true,
+  &quot;notifyStreamerBot&quot;: true,
+  &quot;message&quot;: &quot;12313&quot;,
+  &quot;createdAt&quot;: &quot;2026-05-31T11:24:59.418570589Z&quot;,
+  &quot;receivedAt&quot;: &quot;2026-06-01T23:00:00+07:00&quot;,
+  &quot;note&quot;: &quot;&quot;
+}</code></pre>
+<h3 id='11-3-защита-от-дублей'>11.3. Защита от дублей</h3>
+<p>Донаты не должны учитываться дважды, потому что используется ключ:</p>
+<pre><code>source:externalId</code></pre>
+<p>Примеры:</p>
+<pre><code>donationalerts:123456
+donatty:3376e992-7ac9-43b7-b685-334a176ccbb6
+manual:random-uuid</code></pre>
+<hr>
+<h2 id='12-валюты'>12. Валюты</h2>
+<p>Текущая базовая логика:</p>
+<ul>
+<li>если валюта совпадает с валютой цели — сумма добавляется как есть;</li>
+<li>если цель в RUB, для некоторых валют может использоваться ручная таблица курсов;</li>
+<li>полноценная система курсов пока требует отдельной доработки.</li>
+</ul>
+<p>Рекомендуемая будущая логика:</p>
+<pre><code>originalAmount: 10
+originalCurrency: USD
+goalAmount: 900
+goalCurrency: RUB
+rate: 90
+rateSource: manual</code></pre>
+<p>То есть история должна хранить оригинал, а в сбор добавлять пересчитанную сумму.</p>
+<hr>
+<h2 id='13-светлая-и-тёмная-тема-админки'>13. Светлая и тёмная тема админки</h2>
+<p>Файлы:</p>
+<pre><code>core/public/admin-theme.css
+core/public/admin-theme.js</code></pre>
+<p>Тема переключается кнопкой в админке.</p>
+<p>Выбор сохраняется в браузере через <code>localStorage</code>.</p>
+<p>Акцентные цвета:</p>
+<pre><code>#23489e
+#35a9d4
+#3bc7da</code></pre>
+<p>Если тема выглядит старой после правок:</p>
+<pre><code>Ctrl + F5</code></pre>
+<hr>
+<h2 id='14-настройка-оформления-админки'>14. Настройка оформления админки</h2>
+<p>Основной CSS:</p>
+<pre><code>core/public/admin.css</code></pre>
+<p>Тема:</p>
+<pre><code>core/public/admin-theme.css</code></pre>
+<p>Если надо менять общую палитру — лучше править переменные в <code>admin-theme.css</code>:</p>
+<pre><code>body[data-theme=&quot;light&quot;] {
+  --bg: #edf3f8;
+  --card: #ffffff;
+  --text: #172033;
+  --accent: #35a9d4;
+}</code></pre>
+<pre><code>body[data-theme=&quot;dark&quot;] {
+  --bg: #0b0f17;
+  --card: #111827;
+  --text: #e5e7eb;
+  --accent: #35a9d4;
+}</code></pre>
+<hr>
+<h2 id='15-api'>15. API</h2>
+<p>Основные адреса:</p>
+<table>
+<tr><th>Метод</th><th>Адрес</th><th>Что делает</th></tr>
+<tr><td>GET</td><td><code>/api/state</code></td><td>Текущее состояние цели</td></tr>
+<tr><td>GET</td><td><code>/api/donations</code></td><td>История донатов</td></tr>
+<tr><td>POST</td><td><code>/api/donation</code></td><td>Добавить донат</td></tr>
+<tr><td>POST</td><td><code>/api/donation/update</code></td><td>Обновить донат</td></tr>
+<tr><td>POST</td><td><code>/api/donation/delete</code></td><td>Удалить донат</td></tr>
+<tr><td>POST</td><td><code>/api/set-goal</code></td><td>Обновить цель</td></tr>
+<tr><td>POST</td><td><code>/api/reset</code></td><td>Сбросить текущий сбор, оставив историю</td></tr>
+<tr><td>GET</td><td><code>/api/da/status</code></td><td>Статус DonationAlerts</td></tr>
+</table>
+<p>Пример ручного добавления через API:</p>
+<pre><code>{
+  &quot;source&quot;: &quot;manual&quot;,
+  &quot;externalId&quot;: &quot;manual-test-1&quot;,
+  &quot;username&quot;: &quot;TestUser&quot;,
+  &quot;amount&quot;: 100,
+  &quot;currency&quot;: &quot;RUB&quot;,
+  &quot;message&quot;: &quot;Тест&quot;,
+  &quot;includeInGoal&quot;: true,
+  &quot;notifyStreamerBot&quot;: false
+}</code></pre>
+<hr>
+<h2 id='16-батники'>16. Батники</h2>
+<table>
+<tr><th>Батник</th><th>Что делает</th></tr>
+<tr><td><code>00_INSTALL_ALL.bat</code></td><td>Установка зависимостей</td></tr>
+<tr><td><code>01_START_ALL.bat</code></td><td>Запуск всего перед стримом</td></tr>
+<tr><td><code>02_START_SERVER_ONLY.bat</code></td><td>Только основной сервер</td></tr>
+<tr><td><code>03_START_DONATTY_ONLY.bat</code></td><td>Только Donatty listener</td></tr>
+<tr><td><code>04_START_STREAMERBOT_ONLY.bat</code></td><td>Только Streamer.bot bridge</td></tr>
+<tr><td><code>05_TEST_STREAMERBOT.bat</code></td><td>Тестовый запуск Streamer.bot action</td></tr>
+<tr><td><code>06_RESET_STREAMERBOT_SENT.bat</code></td><td>Сброс списка отправленных в Streamer.bot событий</td></tr>
+</table>
+<hr>
+<h2 id='17-типичные-проблемы'>17. Типичные проблемы</h2>
+<h3 id='17-1-виджет-не-открывается'>17.1. Виджет не открывается</h3>
+<p>Проверь, запущен ли основной сервер.</p>
+<p>Должно быть открыто окно:</p>
+<pre><code>Donation Goal Widget запущен</code></pre>
+<p>Адрес:</p>
+<pre><code>http://127.0.0.1:3333/widget.html</code></pre>
+<h3 id='17-2-админка-не-обновляется'>17.2. Админка не обновляется</h3>
+<p>Попробуй:</p>
+<pre><code>Ctrl + F5</code></pre>
+<p>Проверь:</p>
+<pre><code>http://127.0.0.1:3333/api/state</code></pre>
+<p>Если API не открывается — сервер не запущен.</p>
+<h3 id='17-3-donationalerts-не-подключается'>17.3. DonationAlerts не подключается</h3>
+<p>Проверь:</p>
+<pre><code>http://127.0.0.1:3333/api/da/status</code></pre>
+<p>Частые причины:</p>
+<ul>
+<li>неверный <code>client_id</code>;</li>
+<li>неверный <code>client_secret</code>;</li>
+<li>redirect URL не совпадает символ в символ;</li>
+<li>не пройдена авторизация;</li>
+<li>токен протух.</li>
+</ul>
+<h3 id='17-4-donatty-не-подключается'>17.4. Donatty не подключается</h3>
+<p>Проверь:</p>
+<pre><code>integrations/donatty/donatty_config.json</code></pre>
+<p>Убедись, что вставлена обычная ссылка виджета, а не старая <code>sse?jwt</code>.</p>
+<p>Если не помогает:</p>
+<pre><code>&quot;headless_browser&quot;: false</code></pre>
+<p>и перезапусти Donatty listener.</p>
+<h3 id='17-5-streamer-bot-пишет-action-not-found'>17.5. Streamer.bot пишет <code>action not found</code></h3>
+<p>Открой:</p>
+<pre><code>http://127.0.0.1:7474/GetActions</code></pre>
+<p>Найди action и вставь его ID в <code>streamerbot_config.json</code>.</p>
+<h3 id='17-6-двойные-оповещения'>17.6. Двойные оповещения</h3>
+<p>Скорее всего, одновременно работают:</p>
+<pre><code>MiniChat trigger
+Streamer.bot Bridge</code></pre>
+<p>Отключи MiniChat trigger или используй отдельный test action.</p>
+<h3 id='17-7-при-запуске-проигрались-старые-донаты'>17.7. При запуске проигрались старые донаты</h3>
+<p>Bridge хранит список отправленных событий в:</p>
+<pre><code>integrations/streamerbot/streamerbot_sent.json</code></pre>
+<p>Если его удалить или сбросить, старые донаты могут считаться новыми.</p>
+<h3 id='17-8-светлая-тема-выглядит-криво'>17.8. Светлая тема выглядит криво</h3>
+<p>Обнови страницу:</p>
+<pre><code>Ctrl + F5</code></pre>
+<p>Проверь, что подключены:</p>
+<pre><code>&lt;link rel=&quot;stylesheet&quot; href=&quot;admin-theme.css&quot; /&gt;
+&lt;script src=&quot;admin-theme.js&quot;&gt;&lt;/script&gt;</code></pre>
+<hr>
+<h2 id='18-безопасность'>18. Безопасность</h2>
+<p>Не публиковать:</p>
+<pre><code>da_config.json
+da_tokens.json
+donatty_config.json
+streamerbot_config.json
+streamerbot_sent.json</code></pre>
+<p>Особенно опасны:</p>
+<pre><code>client_secret
+access_token
+refresh_token
+widget_url Donatty
+sse_url Donatty
+jwt</code></pre>
+<p>Если ссылка Donatty засветилась — лучше пересоздать ссылку виджета, если Donatty позволяет.</p>
+<hr>
+<h2 id='19-бэкапы'>19. Бэкапы</h2>
+<p>Перед крупными изменениями делай копию папки:</p>
+<pre><code>donation_goal_widget_BACKUP_дата</code></pre>
+<p>Особенно важно сохранить:</p>
+<pre><code>core/data/state.json
+core/data/donations.json
+core/integrations/donationalerts/da_config.json
+core/integrations/donationalerts/da_tokens.json
+integrations/donatty/donatty_config.json
+integrations/streamerbot/streamerbot_config.json</code></pre>
+<hr>
+<h2 id='20-что-можно-добавить-потом'>20. Что можно добавить потом</h2>
+<p>Идеи на будущее:</p>
+<ul>
+<li>нормальный пересчёт валют;</li>
+<li>ручная таблица курсов в админке;</li>
+<li>экспорт истории донатов в CSV/Excel;</li>
+<li>несколько целей;</li>
+<li>отдельные цели для разных источников;</li>
+<li>кнопка “повторить оповещение”;</li>
+<li>очередь оповещений;</li>
+<li>статусы Donatty/Streamer.bot прямо в админке;</li>
+<li>встроенная страница настроек;</li>
+<li>автообновление конфигов из админки;</li>
+<li>лог ошибок на отдельной странице;</li>
+<li>упаковка в <code>.exe</code>.</li>
+</ul>
+<hr>
+<h2 id='21-быстрый-чеклист-перед-стримом'>21. Быстрый чеклист перед стримом</h2>
+<pre><code>[ ] Запустить 01_START_ALL.bat
+[ ] Открыть админку
+[ ] Проверить, что сбор правильный
+[ ] Проверить, что OBS видит widget.html
+[ ] Проверить Streamer.bot HTTP Server
+[ ] Проверить тест Streamer.bot, если были изменения
+[ ] Проверить Donatty listener
+[ ] Проверить DonationAlerts status
+[ ] Не светить приватные ссылки на стриме</code></pre>
 
-        <figure>
-          <img src="showcase-assets/obs-widget.png" alt="OBS-виджет донат-гола" />
-          <figcaption>Кастомный OBS-виджет: минималистичная полоска сбора с прогрессом.</figcaption>
-        </figure>
+<h2 id="22-stage-3-полезные-функции">22. Stage 3: полезные функции</h2>
+<h3>Экспорт CSV</h3>
+<p>В админке есть кнопка <strong>Экспорт CSV</strong>. Она скачивает историю донатов в файл <code>donations_export.csv</code>.</p>
+<pre><code>http://127.0.0.1:3333/api/donations/export.csv</code></pre>
+<h3>Повторить оповещение</h3>
+<p>В истории донатов есть кнопка <strong>Повт.</strong>. Она ставит выбранный донат обратно в очередь Streamer.bot.</p>
+<h3>Блок статусов</h3>
+<p>Админка показывает состояние локального сервера, DonationAlerts, Donatty и Streamer.bot. Donatty и Streamer.bot пишут heartbeat-файлы в папку <code>runtime/</code>.</p>
+<h3>Ручные курсы валют</h3>
+<p>Курсы хранятся в <code>core/data/rates.json</code>. Курс означает, сколько рублей стоит 1 единица валюты.</p>
+<pre><code>{
+  &quot;baseCurrency&quot;: &quot;RUB&quot;,
+  &quot;ratesToRUB&quot;: {
+    &quot;RUB&quot;: 1,
+    &quot;USD&quot;: 90,
+    &quot;EUR&quot;: 100,
+    &quot;KZT&quot;: 0.18
+  }
+}</code></pre>
 
-        <figure>
-          <img src="showcase-assets/streamerbot-action.png" alt="Streamer.bot action" />
-          <figcaption>Streamer.bot action получает переменные доната и запускает кастомное оповещение.</figcaption>
-        </figure>
+<hr>
+<h2 id='23-roadmap'>23. Roadmap</h2>
+<p>План развития VicDonationGoal после первого публичного релиза. Полная версия также доступна в файле <code>ROADMAP.md</code> в корне репозитория.</p>
 
-        <figure>
-          <img src="showcase-assets/running-modules.png" alt="Запущенные модули проекта" />
-          <figcaption>Запущенные модули: основной сервер, Donatty listener и Streamer.bot bridge.</figcaption>
-        </figure>
-
-        <figure class="wide">
-          <img src="showcase-assets/github-repository.png" alt="GitHub repository" />
-          <figcaption>Публичный репозиторий GitHub с документацией, релизом и чистыми example-конфигами.</figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <section id="launch">
-      <div class="section-head">
-        <div>
-          <h2>Инструкция запуска</h2>
-          <p class="section-note">Проект подготовлен так, чтобы его можно было скачать с GitHub и запустить на Windows через bat-файлы.</p>
-        </div>
-      </div>
-
-      <div class="steps">
-        <div class="step">
-          <strong>Скачать проект</strong>
-          <span>Клонировать репозиторий или скачать релизный архив <code>v1.0.0</code>.</span>
-        </div>
-        <div class="step">
-          <strong>Установить зависимости</strong>
-          <span>Запустить <code>00_INSTALL_ALL.bat</code>, чтобы установить Python-зависимости и Playwright Chromium.</span>
-        </div>
-        <div class="step">
-          <strong>Настроить сервисы</strong>
-          <span>Заполнить локальные конфиги DonationAlerts, Donatty и Streamer.bot на основе <code>.example.json</code>.</span>
-        </div>
-        <div class="step">
-          <strong>Запустить систему</strong>
-          <span>Перед стримом запустить <code>01_START_ALL.bat</code> и открыть админку <code>/admin.html</code>.</span>
-        </div>
-      </div>
-    </section>
-
-    <section id="result">
-      <div class="section-head">
-        <div>
-          <h2>Почему проект можно считать полноценным</h2>
-          <p class="section-note">Это не просто учебный скрипт, а маленькое локальное приложение с несколькими слоями и внешними интеграциями.</p>
-        </div>
-      </div>
-
-      <div class="cards">
-        <article class="card">
-          <h3>Клиент-серверная архитектура</h3>
-          <p>Есть backend на Python, frontend на HTML/CSS/JS, API и отдельные интеграционные модули.</p>
-        </article>
-        <article class="card">
-          <h3>Работа с внешними сервисами</h3>
-          <p>Используются OAuth, WebSocket, Server-Sent Events и HTTP API Streamer.bot.</p>
-        </article>
-        <article class="card">
-          <h3>Практическая польза</h3>
-          <p>Проект решает реальную задачу стримера: единая цель, учёт донатов и кастомные оповещения.</p>
-        </article>
-      </div>
-    </section>
-    <section class="section" id="roadmap">
-  <div class="section-head">
-    <span class="eyebrow">Future development</span>
-    <h2>Roadmap</h2>
-    <p>
-      VicDonationGoal v1.0.0 is the first public release. The next versions are planned around stability,
-      more integrations, easier configuration, and a future desktop app.
-    </p>
+<div class="quick">
+  <div class="card">
+    <span class="badge">v1.1</span>
+    <h3>Stabilization</h3>
+    <p>Багфиксы, улучшенные логи, диагностика запуска, стабильные переподключения, проверка конфигов и полировка админки.</p>
   </div>
+  <div class="card">
+    <span class="badge">v1.2</span>
+    <h3>More services</h3>
+    <p>Подключение новых донат-сервисов через текущую adapter/listener архитектуру: DonatePay, Donate.Stream, StreamElements, Streamlabs и другие.</p>
+  </div>
+  <div class="card">
+    <span class="badge">v1.5</span>
+    <h3>Settings UI</h3>
+    <p>Страница настроек внутри админки, чтобы пользователь мог настраивать интеграции, курсы валют и виджет без ручного редактирования JSON.</p>
+  </div>
+</div>
 
-  <div class="cards roadmap-grid">
-    <article class="card">
-      <span class="badge">v1.1</span>
-      <h3>Stabilization</h3>
-      <p>
-        Bug fixes, better logs, improved reconnects, safer configs, clearer startup diagnostics,
-        and general UX polish.
-      </p>
-    </article>
-
-```
-<article class="card">
-  <span class="badge">v1.2</span>
-  <h3>More services</h3>
-  <p>
-    Additional donation platforms through the existing adapter/listener architecture:
-    DonatePay, Donate.Stream, StreamElements, Streamlabs, and others.
-  </p>
-</article>
-
-<article class="card">
-  <span class="badge">v1.5</span>
-  <h3>Settings UI</h3>
-  <p>
-    A full settings page inside the admin panel, so users can configure integrations,
-    currency rates, and widget options without editing JSON files.
-  </p>
-</article>
-
-<article class="card">
+<div class="card">
   <span class="badge">v2.0</span>
   <h3>Desktop app</h3>
-  <p>
-    A proper desktop .exe with a graphical launcher, module controls, logs, status indicators,
-    and setup helpers for non-technical users.
-  </p>
-</article>
-```
+  <p>Полноценное desktop-приложение в формате <code>.exe</code>: GUI, запуск/остановка модулей, статусы, логи, мастер настройки и удобный контроль без батников.</p>
+</div>
 
+    </main>
   </div>
-
-  <p class="section-note">
-    Full roadmap is available in <code>ROADMAP.md</code>.
-  </p>
-</section>
-
-
-    <footer class="footer">
-      <strong>VicDonationGoal v1.0.0</strong><br>
-      Репозиторий: <a href="https://github.com/VicWander/VicDonationGoal" target="_blank" rel="noopener">github.com/VicWander/VicDonationGoal</a><br>
-
-    </footer>
-  </div>
+  <script src="docs-theme.js"></script>
 </body>
 </html>
