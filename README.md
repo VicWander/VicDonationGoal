@@ -26,16 +26,6 @@ It runs on your computer, collects donations from different services, keeps a lo
 - Built-in local documentation page.
 - GitHub-ready example configs with secrets excluded.
 
-## Screenshots
-
-Screenshots are not included yet. Recommended screenshots for the repository:
-
-- Admin panel, dark theme.
-- Admin panel, light theme.
-- OBS widget.
-- Documentation page.
-- Streamer.bot test alert.
-
 ## Requirements
 
 - Windows 10/11.
