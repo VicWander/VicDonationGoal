@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Дорожная карта развития
+VicDonationGoal.">
+  <meta name="theme-color" content="#0b0f17">
+  <title>Дорожная карта — VicDonationGoal</title>
+  <link rel="stylesheet" href="docs-theme.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="doc-home" href="../index.html">← На сайт проекта</a>
+      <div class="brand">VicDonationGoal<br>v1.4.4</div>
+      <div class="subtitle">Планы развития проекта</div>
+      <nav class="nav" aria-label="Содержание страницы"><ul>
+<li><a href="#сейчас-v144--closed-beta"
+id="toc-сейчас-v144--closed-beta">Сейчас: v1.4.4 — Closed Beta</a></li>
+<li><a href="#выполненные-этапы" id="toc-выполненные-этапы">Выполненные
+этапы</a></li>
+<li><a href="#следующие-версии" id="toc-следующие-версии">Следующие
+версии</a></li>
+</ul></nav>
+    </aside>
+    <main class="content">
+      <div class="hero">
+        <span class="badge">Roadmap</span>
+        <h1>Дорожная карта</h1>
+        <p class="muted">Что будет происходить после закрытой беты
+v1.4.4.</p>
+      </div>
+      <h2 id="сейчас-v144--closed-beta">Сейчас: v1.4.4 — Closed
+      Beta</h2>
+      <p>Главная задача ветки — проверить уже существующие функции на
+      чистых установках и реальных стримах. До завершения беты в
+      <code>v1.4.4.x</code> не добавляются новые донат-сервисы,
+      TTS-движки или крупные разделы интерфейса.</p>
+      <p>План закрытой беты:</p>
+      <ol type="1">
+      <li>установка в чистую папку;</li>
+      <li>прохождение мастера первого запуска;</li>
+      <li>подключение хотя бы одного сервиса с нуля;</li>
+      <li>проверка OBS, Streamer.bot и TTS по необходимости;</li>
+      <li>несколько продолжительных стримов;</li>
+      <li>сбор безопасных диагностических отчётов;</li>
+      <li>исправления <code>v1.4.4.1</code>, <code>v1.4.4.2</code> и
+      далее.</li>
+      </ol>
+      <h2 id="выполненные-этапы">Выполненные этапы</h2>
+      <table>
+      <thead>
+      <tr class="header">
+      <th>Версия</th>
+      <th>Название</th>
+      <th>Результат</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr class="odd">
+      <td>v1.0.0</td>
+      <td>First Release</td>
+      <td>Донат-гол, история, OBS, DonationAlerts, Donatty и
+      Streamer.bot</td>
+      </tr>
+      <tr class="even">
+      <td>v1.1.1</td>
+      <td>Stability</td>
+      <td>Устойчивые JSON, health-check и диагностика запуска</td>
+      </tr>
+      <tr class="odd">
+      <td>v1.2.0</td>
+      <td>TTS Hub</td>
+      <td>Провайдеры, профили, правила, очередь и API озвучки</td>
+      </tr>
+      <tr class="even">
+      <td>v1.2.1</td>
+      <td>TTS Stability &amp; Documentation</td>
+      <td>Полировка TTS и полное руководство</td>
+      </tr>
+      <tr class="odd">
+      <td>v1.3.0</td>
+      <td>TopDonation</td>
+      <td>Рейтинг, профили, алиасы, заметки и корректировки</td>
+      </tr>
+      <tr class="even">
+      <td>v1.4.0</td>
+      <td>Integrations Hub</td>
+      <td>Модульные сервисы и мастер первого запуска</td>
+      </tr>
+      <tr class="odd">
+      <td>v1.4.1</td>
+      <td>Official Services</td>
+      <td>StreamElements и Streamlabs</td>
+      </tr>
+      <tr class="even">
+      <td>v1.4.2</td>
+      <td>Russian Services</td>
+      <td>DonatePay, Donate.Stream, DonateX и Tribute</td>
+      </tr>
+      <tr class="odd">
+      <td>v1.4.3</td>
+      <td>Integration Stability</td>
+      <td>Общие источники, процессы, JSON и безопасность логов</td>
+      </tr>
+      <tr class="even">
+      <td>v1.4.4</td>
+      <td>Beta Readiness</td>
+      <td>Dashboard, единые статусы, диагностика и чистый релиз</td>
+      </tr>
+      </tbody>
+      </table>
+      <h2 id="следующие-версии">Следующие версии</h2>
+      <h3 id="v15--core--storage-refactor">v1.5 — Core &amp; Storage
+      Refactor</h3>
+      <ul>
+      <li>измерить реальные ограничения текущей Python-архитектуры;</li>
+      <li>рассмотреть SQLite вместо части JSON;</li>
+      <li>разделить Core на более компактные модули;</li>
+      <li>добавить типизированные модели и автоматические тесты;</li>
+      <li>не менять язык без доказанной технической необходимости.</li>
+      </ul>
+      <h3 id="v16--donation-goal-customisation">v1.6 — Donation Goal
+      Customisation</h3>
+      <ul>
+      <li>визуальный редактор виджета;</li>
+      <li>live preview;</li>
+      <li>цвета, формы, шрифты, размеры, фон, границы и анимации;</li>
+      <li>простые пресеты и импорт/экспорт тем.</li>
+      </ul>
+      <h3 id="v20--desktop-application">v2.0 — Desktop Application</h3>
+      <ul>
+      <li>единое приложение вместо набора BAT-файлов;</li>
+      <li>установка и обновление зависимостей;</li>
+      <li>запуск и остановка модулей;</li>
+      <li>встроенные диагностика, админка и документация;</li>
+      <li>подготовка переносимой Windows-сборки.</li>
+      </ul>
+      <h3 id="позже--optional-cloud-backup">Позже — Optional Cloud
+      Backup</h3>
+      <ul>
+      <li>необязательная резервная копия минимально необходимых
+      данных;</li>
+      <li>прозрачное согласие пользователя;</li>
+      <li>восстановление истории на новой установке;</li>
+      <li>локальный режим остаётся полноценным и не требует
+      аккаунта.</li>
+      </ul>
+      <div class="article-footer">
+        <a href="../index.html">Главная</a>
+        <a href="index.html">Полное руководство</a>
+        <a href="quick-start.html">Быстрый старт</a>
+        <a href="changelog.html">История изменений</a>
+      </div>
+    </main>
+  </div>
+  <script src="docs-theme.js"></script>
+</body>
+</html>

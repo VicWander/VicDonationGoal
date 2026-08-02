@@ -33,10 +33,40 @@ body {
 .brand { font-size: 22px; font-weight: 900; line-height: 1.15; margin-bottom: 8px; }
 .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
 .nav { display: grid; gap: 4px; }
+.nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.nav ul ul { margin: 2px 0 7px 12px; padding-left: 10px; border-left: 1px solid var(--border); }
 .nav a {
   color: var(--muted); text-decoration: none; padding: 7px 10px; border-radius: 10px;
   font-size: 14px;
 }
+.doc-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  color: var(--accent2);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.doc-home:hover { color: #fff; }
+.article-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 54px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.article-footer a {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card2);
+  text-decoration: none;
+  font-weight: 750;
+}
+.article-footer a:hover { border-color: rgba(53,169,212,.55); }
 .nav a:hover { background: rgba(53,169,212,.12); color: #fff; }
 .content { max-width: 1080px; padding: 42px 48px 90px; }
 .hero {

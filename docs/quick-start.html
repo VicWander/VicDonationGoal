@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Быстрый старт VicDonationGoal
+v1.4.4: установка, первый запуск, OBS, Streamer.bot и TTS.">
+  <meta name="theme-color" content="#0b0f17">
+  <title>Быстрый старт — VicDonationGoal</title>
+  <link rel="stylesheet" href="docs-theme.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="doc-home" href="../index.html">← На сайт проекта</a>
+      <div class="brand">VicDonationGoal<br>v1.4.4</div>
+      <div class="subtitle">Установка и первое подключение</div>
+      <nav class="nav" aria-label="Содержание страницы"><ul>
+<li><a href="#1-что-понадобится" id="toc-1-что-понадобится">1. Что
+понадобится</a></li>
+<li><a href="#2-установка" id="toc-2-установка">2. Установка</a></li>
+<li><a href="#3-первый-запуск" id="toc-3-первый-запуск">3. Первый
+запуск</a></li>
+<li><a href="#4-obs-виджет" id="toc-4-obs-виджет">4. OBS-виджет</a></li>
+<li><a href="#5-streamerbot-и-tts" id="toc-5-streamerbot-и-tts">5.
+Streamer.bot и TTS</a></li>
+<li><a href="#6-проверка-установки" id="toc-6-проверка-установки">6.
+Проверка установки</a></li>
+<li><a href="#7-если-что-то-не-работает"
+id="toc-7-если-что-то-не-работает">7. Если что-то не работает</a></li>
+</ul></nav>
+    </aside>
+    <main class="content">
+      <div class="hero">
+        <span class="badge">Quick start</span>
+        <h1>Быстрый старт</h1>
+        <p class="muted">От чистой папки до первого тестового
+доната.</p>
+      </div>
+      <h2 id="1-что-понадобится">1. Что понадобится</h2>
+      <ul>
+      <li>Windows 10 или 11;</li>
+      <li>Python 3.11 или новее с включённой опцией
+      <code>Add Python to PATH</code>;</li>
+      <li>OBS Studio для виджета цели;</li>
+      <li>интернет при первой установке зависимостей;</li>
+      <li>аккаунт хотя бы в одном поддерживаемом донат-сервисе.</li>
+      </ul>
+      <p>Streamer.bot, Speaker.bot и другие TTS-сервисы необязательны:
+      устанавливайте их только для соответствующих функций.</p>
+      <h2 id="2-установка">2. Установка</h2>
+      <ol type="1">
+      <li>Распакуйте архив в обычную папку, например
+      <code>D:\VicDonationGoal</code>.</li>
+      <li>Не запускайте программу прямо из ZIP и не помещайте её в
+      защищённую системную папку.</li>
+      <li>Запустите <code>00_INSTALL_ALL.bat</code>.</li>
+      <li>Дождитесь установки Python-пакетов и Playwright Chromium.</li>
+      <li>После сообщения <code>Done</code> запустите
+      <code>01_START_ALL.bat</code>.</li>
+      </ol>
+      <p>Установщик создаёт локальные конфиги из
+      <code>*.example.json</code>. В публичной сборке нет чужих токенов,
+      истории или готовых подключений.</p>
+      <h2 id="3-первый-запуск">3. Первый запуск</h2>
+      <p>Откройте админку:</p>
+      <pre class="text"><code>http://127.0.0.1:3333/admin.html</code></pre>
+      <p>В разделе <code>Интеграции</code> появится мастер:</p>
+      <ol type="1">
+      <li>выберите только тот сервис, который хотите настроить
+      сейчас;</li>
+      <li>откройте его карточку;</li>
+      <li>заполните обязательные поля по встроенной инструкции;</li>
+      <li>сохраните настройки и нажмите <code>Запустить</code> или
+      <code>Авторизовать</code>;</li>
+      <li>дождитесь зелёного статуса;</li>
+      <li>отправьте тестовый донат и проверьте его в истории.</li>
+      </ol>
+      <p>Для первого теста лучше подключить один сервис. Остальные можно
+      добавить позже в Integration Hub.</p>
+      <h2 id="4-obs-виджет">4. OBS-виджет</h2>
+      <p>Добавьте в OBS источник <code>Браузер</code>:</p>
+      <pre class="text"><code>http://127.0.0.1:3333/widget.html</code></pre>
+      <p>Рекомендуемый размер источника зависит от вашей сцены; начните
+      с <code>1920 × 300</code>, затем подгоните CSS или трансформацию в
+      OBS.</p>
+      <h2 id="5-streamerbot-и-tts">5. Streamer.bot и TTS</h2>
+      <p>Эти модули можно оставить выключенными до тех пор, пока донаты
+      и OBS-виджет не заработают стабильно.</p>
+      <ul>
+      <li>Streamer.bot настраивается в админке и в
+      <code>integrations/streamerbot/README_DONATION_EVENT_RULES.md</code>.</li>
+      <li>TTS Hub настраивается в одноимённом разделе; локальный
+      проигрыватель доступен по адресу
+      <code>http://127.0.0.1:3333/tts.html</code>.</li>
+      </ul>
+      <h2 id="6-проверка-установки">6. Проверка установки</h2>
+      <p>Запустите:</p>
+      <pre class="text"><code>09_STABILITY_CHECK.bat
+15_BETA_READINESS_CHECK.bat</code></pre>
+      <p>Предупреждение о выключенном или ненастроенном сервисе
+      допустимо. Ошибки <code>ERR</code> нужно исправить до стрима.</p>
+      <h2 id="7-если-что-то-не-работает">7. Если что-то не работает</h2>
+      <ol type="1">
+      <li>Закройте все окна через <code>13_STOP_ALL.bat</code>.</li>
+      <li>Повторно запустите <code>01_START_ALL.bat</code>.</li>
+      <li>Проверьте лампочки на главной странице админки.</li>
+      <li>Создайте диагностический ZIP кнопкой в админке или через
+      <code>14_CREATE_DIAGNOSTIC_REPORT.bat</code>.</li>
+      <li>Свяжитесь с автором: <a
+      href="https://t.me/wander_streams">t.me/wander_streams</a>.</li>
+      </ol>
+      <p>Перед отправкой отчёта можно открыть ZIP и самостоятельно
+      проверить его содержимое.</p>
+      <div class="article-footer">
+        <a href="../index.html">Главная</a>
+        <a href="index.html">Полное руководство</a>
+        <a href="quick-start.html">Быстрый старт</a>
+        <a href="changelog.html">История изменений</a>
+      </div>
+    </main>
+  </div>
+  <script src="docs-theme.js"></script>
+</body>
+</html>
