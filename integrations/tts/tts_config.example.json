@@ -1,0 +1,123 @@
+{
+  "enabled": false,
+  "paused": false,
+  "activeProvider": "speakerbot",
+  "fallbackProvider": "edge",
+  "defaultProfileId": "donations",
+  "donations": {
+    "enabled": false,
+    "sources": [
+      "donationalerts",
+      "donatty",
+      "streamelements",
+      "streamlabs",
+      "donatepay",
+      "donatestream",
+      "donatex",
+      "tribute",
+      "manual"
+    ],
+    "amountField": "amountForGoal",
+    "minAmount": 100,
+    "currency": "RUB",
+    "manualRequiresSpeakFlag": true,
+    "externalDefaultSpeak": true,
+    "readExistingOnFirstStart": false,
+    "manualBypassMinAmount": true
+  },
+  "textProcessing": {
+    "template": "{message}",
+    "skipEmpty": true,
+    "removeLinks": true,
+    "stripHtml": true,
+    "collapseWhitespace": true,
+    "maxLength": 500,
+    "maxRepeatedCharacters": 8
+  },
+  "queue": {
+    "maxItems": 100,
+    "maxHistoryItems": 2000,
+    "pollIntervalSeconds": 0.6,
+    "retryMaxAttempts": 3,
+    "retryBaseDelaySeconds": 5,
+    "audioCacheMaxFiles": 200,
+    "browserPollIntervalMs": 500,
+    "browserDelayAfterDoneMs": 250,
+    "browserMaxPlayAttempts": 3
+  },
+  "providers": {
+    "speakerbot": {
+      "enabled": true,
+      "websocketUrl": "ws://127.0.0.1:7580/",
+      "defaultVoiceAlias": "Donations",
+      "badWordFilter": false,
+      "autoEnable": true,
+      "connectTimeoutSeconds": 4,
+      "responseTimeoutSeconds": 2
+    },
+    "edge": {
+      "enabled": true,
+      "voice": "ru-RU-SvetlanaNeural",
+      "rate": "+0%",
+      "volume": "+0%",
+      "pitch": "+0Hz",
+      "proxy": "",
+      "connect_timeout_seconds": 10,
+      "receive_timeout_seconds": 60,
+      "output_format": "mp3"
+    },
+    "yandex": {
+      "enabled": false,
+      "endpoint": "https://tts.api.cloud.yandex.net/speech/v1/tts:synthesize",
+      "authMode": "api_key",
+      "apiKey": "",
+      "iamToken": "",
+      "folderId": "",
+      "lang": "ru-RU",
+      "voice": "marina",
+      "emotion": "friendly",
+      "speed": "1.0",
+      "format": "mp3",
+      "timeoutSeconds": 60,
+      "status": "disabled"
+    },
+    "xtts": {
+      "enabled": false,
+      "endpoint": "",
+      "language": "ru",
+      "speakerWav": "",
+      "timeoutSeconds": 180,
+      "output_format": "wav",
+      "responseType": "audio",
+      "textField": "text",
+      "languageField": "language",
+      "speakerField": "speaker_wav",
+      "headers": {},
+      "speaker_wav": "",
+      "timeout_seconds": 180,
+      "status": "planned"
+    },
+    "http": {
+      "enabled": false,
+      "url": "",
+      "method": "POST",
+      "headers": {},
+      "bodyType": "json",
+      "body": {
+        "text": "{text}",
+        "voice": "{voice}",
+        "language": "{language}"
+      },
+      "voice": "",
+      "language": "ru",
+      "timeoutSeconds": 60,
+      "output_format": "mp3",
+      "responseType": "audio",
+      "audioUrlField": "audioUrl",
+      "audioBase64Field": "audio",
+      "body_type": "json",
+      "timeout_seconds": 60,
+      "status": "planned"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "api_key": "",
+  "webhook_secret": "",
+  "cloudflared_path": "tools/cloudflared.exe",
+  "auto_start_tunnel": true,
+  "public_base_url": "",
+  "local_url": "http://127.0.0.1:3333",
+  "request_timeout_seconds": 15,
+  "auto_install_cloudflared": true,
+  "tunnel_protocol": "http2"
+}

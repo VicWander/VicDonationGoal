@@ -1,0 +1,79 @@
+{
+  "id": "streamlabs",
+  "name": "Streamlabs",
+  "shortName": "Streamlabs",
+  "icon": "SL",
+  "order": 40,
+  "kind": "inprocess",
+  "description": "Официальный OAuth 2.0, Socket Token и real-time Socket.IO события донатов.",
+  "configFile": "streamlabs_config.json",
+  "configExampleFile": "streamlabs_config.example.json",
+  "guideFile": "GUIDE.md",
+  "authStartPath": "/auth/streamlabs/start",
+  "requiredFields": [
+    "client_id",
+    "client_secret"
+  ],
+  "secretFields": [
+    "client_secret"
+  ],
+  "capabilities": {
+    "oauth": true,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": true,
+    "beta": true
+  },
+  "fields": [
+    {
+      "key": "client_id",
+      "label": "Client ID",
+      "type": "text",
+      "placeholder": "Client ID Streamlabs OAuth App",
+      "help": "Создаётся в Streamlabs Developer Console."
+    },
+    {
+      "key": "client_secret",
+      "label": "Client Secret",
+      "type": "password",
+      "placeholder": "Client Secret",
+      "help": "Секрет хранится только локально и не возвращается в браузер."
+    },
+    {
+      "key": "redirect_uri",
+      "label": "Redirect URL",
+      "type": "text",
+      "default": "http://127.0.0.1:3333/auth/streamlabs/callback",
+      "help": "Должен полностью совпадать с Redirect URI в приложении Streamlabs."
+    },
+    {
+      "key": "scopes",
+      "label": "OAuth scopes",
+      "type": "text",
+      "default": "socket.token",
+      "help": "Для real-time донатов достаточно socket.token."
+    },
+    {
+      "key": "engineio_versions",
+      "label": "Engine.IO версии",
+      "type": "text",
+      "default": "4,3",
+      "help": "Автоматический fallback для совместимости Socket.IO. Обычно менять не нужно."
+    },
+    {
+      "key": "reconnect_delay_seconds",
+      "label": "Начальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 3
+    },
+    {
+      "key": "max_reconnect_delay_seconds",
+      "label": "Максимальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 60
+    }
+  ],
+  "stability": "beta",
+  "dashboardVisible": true
+}

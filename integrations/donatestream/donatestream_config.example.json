@@ -1,0 +1,10 @@
+{
+  "enabled": false,
+  "widget_url": "",
+  "widget_api_url": "http://127.0.0.1:3333/api/donation",
+  "headless_browser": true,
+  "capture_console": true,
+  "reconnect_delay_seconds": 5,
+  "request_timeout_seconds": 12,
+  "default_currency": "RUB"
+}

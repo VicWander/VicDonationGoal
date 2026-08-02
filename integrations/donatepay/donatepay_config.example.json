@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "api_key": "",
+  "api_v1_url": "https://donatepay.ru/api/v1",
+  "socket_token_url": "https://donatepay.ru/api/v2/socket/token",
+  "websocket_url": "wss://centrifugo.donatepay.ru:443/connection/websocket",
+  "widget_api_url": "http://127.0.0.1:3333/api/donation",
+  "catch_up_enabled": false,
+  "catch_up_limit": 10,
+  "import_existing_first_run": false,
+  "reconnect_delay_seconds": 5,
+  "max_reconnect_delay_seconds": 60,
+  "request_timeout_seconds": 15,
+  "catch_up_min_interval_seconds": 1800,
+  "catch_up_rate_limit_delay_seconds": 900,
+  "user_id": ""
+}

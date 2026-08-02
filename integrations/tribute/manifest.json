@@ -1,0 +1,100 @@
+{
+  "id": "tribute",
+  "name": "Tribute",
+  "shortName": "Tribute",
+  "icon": "TR",
+  "order": 80,
+  "kind": "subprocess",
+  "entrypoint": "tribute_tunnel.py",
+  "description": "Experimental: официальный подписанный webhook Tribute через автоматический Cloudflare Quick Tunnel.",
+  "configFile": "tribute_config.json",
+  "configExampleFile": "tribute_config.example.json",
+  "guideFile": "GUIDE.md",
+  "statusFile": "runtime/integrations/tribute_status.json",
+  "statusStaleSeconds": 120,
+  "testWaitSeconds": 20,
+  "requiredFields": [
+    "api_key",
+    "webhook_secret"
+  ],
+  "secretFields": [
+    "api_key",
+    "webhook_secret"
+  ],
+  "capabilities": {
+    "oauth": false,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": false
+  },
+  "fields": [
+    {
+      "key": "api_key",
+      "label": "API-ключ Tribute",
+      "type": "password",
+      "placeholder": "Api-Key из Tribute",
+      "help": "Используется для проверки HMAC-SHA256 подписи webhook."
+    },
+    {
+      "key": "webhook_secret",
+      "label": "Секрет в адресе webhook",
+      "type": "password",
+      "placeholder": "Случайная длинная строка",
+      "help": "Не API-ключ. Придумайте длинную случайную строку для защиты URL."
+    },
+    {
+      "key": "cloudflared_path",
+      "label": "Путь к cloudflared.exe",
+      "type": "text",
+      "default": "tools/cloudflared.exe",
+      "help": "Сначала запустите исправленный 12_INSTALL_CLOUDFLARED.bat."
+    },
+    {
+      "key": "auto_install_cloudflared",
+      "label": "Автоматически скачать cloudflared, если его нет",
+      "type": "checkbox",
+      "default": true,
+      "help": "При первом запуске Tribute VicDonationGoal сам скачает официальный cloudflared.exe."
+    },
+    {
+      "key": "auto_start_tunnel",
+      "label": "Автоматически запускать Quick Tunnel",
+      "type": "checkbox",
+      "default": true
+    },
+    {
+      "key": "tunnel_protocol",
+      "label": "Протокол Cloudflare Tunnel",
+      "type": "select",
+      "default": "http2",
+      "options": [
+        {
+          "value": "http2",
+          "label": "HTTP/2 — рекомендуется при таймаутах QUIC"
+        },
+        {
+          "value": "auto",
+          "label": "Auto — Cloudflare выбирает протокол"
+        },
+        {
+          "value": "quic",
+          "label": "QUIC — UDP 7844"
+        }
+      ],
+      "help": "HTTP/2 использует TCP и обычно стабильнее, если UDP/QUIC блокируется провайдером или фаерволом."
+    },
+    {
+      "key": "public_base_url",
+      "label": "Готовый публичный HTTPS URL (если туннель внешний)",
+      "type": "text",
+      "placeholder": "https://example.com",
+      "help": "Оставьте пустым при использовании cloudflared."
+    }
+  ],
+  "publicStatusFields": [
+    "publicWebhookUrl"
+  ],
+  "stability": "experimental",
+  "dashboardVisible": true
+}

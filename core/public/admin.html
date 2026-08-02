@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Donation Goal Admin</title>
+  <title>VicDonationGoal v1.4.4 — Closed Beta</title>
   <link rel="stylesheet" href="admin.css" />
   <link rel="stylesheet" href="admin-theme.css" />
 </head>
@@ -10,8 +10,8 @@
   <main class="page">
     <header class="header">
       <div>
-        <h1>Donation Goal Admin</h1>
-        <p>Учёт всех донатов, управление сбором и история событий</p>
+        <h1>VicDonationGoal v1.4.4 <span class="release-badge">Closed Beta</span></h1>
+        <p>Donation Goal, TopDonation, TTS Hub и модульные интеграции донат-сервисов</p>
       </div>
       <div class="header-actions">
         <a class="link-button secondary" href="/docs/index.html" target="_blank">Документация</a>
@@ -19,6 +19,14 @@
         <a class="link-button" href="/widget.html" target="_blank">Открыть виджет</a>
       </div>
     </header>
+
+    <nav class="admin-tabs" aria-label="Разделы админки">
+      <button class="admin-tab active" type="button" data-panel="donationsPanel">Донаты</button>
+      <button class="admin-tab" type="button" data-panel="ttsPanel">TTS Hub</button>
+      <button class="admin-tab" type="button" data-panel="integrationsPanel">Интеграции</button>
+    </nav>
+
+    <div id="donationsPanel" class="admin-panel active">
 
     <section class="grid top-grid">
       <section class="card big-card">
@@ -70,7 +78,10 @@
         </div>
         <label>Сообщение<input id="messageInput" value="На тест полоски" /></label>
         <label class="checkbox-line"><input id="includeInput" type="checkbox" checked />Добавлять в текущий сбор</label>
-        <label class="checkbox-line"><input id="notifyInput" type="checkbox" />Отправить оповещение в Streamer.bot</label>
+        <label class="checkbox-line"><input id="notifyInput" type="checkbox" checked />Отправить обычное оповещение в Streamer.bot</label>
+        <label class="checkbox-line"><input id="eventInput" type="checkbox" checked />Запустить донат-ивенты</label>
+        <label class="checkbox-line"><input id="speakInput" type="checkbox" checked />Озвучить сообщение через TTS Hub</label>
+        <label class="checkbox-line"><input id="includeTopInput" type="checkbox" checked />Учитывать в TopDonation</label>
         <button id="addDonationButton">Добавить донат</button>
       </section>
 
@@ -103,15 +114,39 @@
     </section>
 
     <section class="grid">
-      <section class="card">
-        <div class="card-title">
-          <h2>Статусы интеграций</h2>
-          <button id="refreshStatusButton" class="secondary">Обновить</button>
+      <section class="card status-dashboard-card">
+        <div class="card-title status-dashboard-title">
+          <div>
+            <h2>Состояние VicDonationGoal</h2>
+            <span class="muted" id="statusSummary">Загрузка...</span>
+          </div>
+          <div class="status-dashboard-actions">
+            <button id="createDiagnosticButton" class="secondary" type="button">Диагностический отчёт</button>
+            <button id="refreshStatusButton" class="secondary" type="button">Обновить</button>
+          </div>
         </div>
-        <div class="status-list" id="statusList">
-          <div class="status-item"><span class="status-dot unknown"></span><div><b>Статусы</b><p>Загрузка...</p></div></div>
+
+        <div class="status-group">
+          <div class="status-group-heading">
+            <h3>Системные модули</h3>
+            <span class="muted">Ядро программы, менеджер, Streamer.bot и TTS</span>
+          </div>
+          <div class="status-grid system-status-grid" id="systemStatusGrid">
+            <div class="status-item"><span class="status-dot unknown"></span><div><b>Система</b><p>Загрузка...</p></div></div>
+          </div>
         </div>
-        <p class="hint">Donatty и Streamer.bot пишут heartbeat в runtime. Если процесс закрыт, статус станет устаревшим.</p>
+
+        <div class="status-group">
+          <div class="status-group-heading">
+            <h3>Донат-сервисы</h3>
+            <span class="muted" id="servicesStatusSummary">Загрузка...</span>
+          </div>
+          <div class="status-grid service-status-grid" id="serviceStatusGrid"></div>
+          <div class="status-disabled-summary" id="statusDisabledList" hidden></div>
+          <button id="toggleStatusDetailsButton" class="status-details-toggle secondary" type="button">Показать подробности</button>
+        </div>
+
+        <p class="hint">Лампочка показывает общее состояние. Подробные настройки, логи и перезапуск находятся в разделе «Интеграции».</p>
       </section>
 
       <section class="card">
@@ -129,37 +164,393 @@
       </section>
     </section>
 
-    <section class="card">
-      <div class="card-title">
-        <h2>История донатов</h2>
-        <div class="history-actions">
-          <span class="muted" id="eventsCount">0 событий</span>
-          <a class="link-button secondary" href="/api/donations/export.csv" target="_blank">Экспорт CSV</a>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="donations-table">
-          <thead>
-            <tr>
-              <th>Дата</th>
-              <th>Источник</th>
-              <th>Имя</th>
-              <th>Сумма</th>
-              <th>В сбор</th>
-              <th>Опов.</th>
-              <th>Сообщение</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="eventsTableBody">
-            <tr><td colspan="8" class="empty-cell">Пока донатов нет</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <section class="donations-subtabs" aria-label="Данные о донатах">
+      <button type="button" class="donation-subtab active" data-donation-view="historyDonationsView">История</button>
+      <button type="button" class="donation-subtab" data-donation-view="topDonorsView">Топ</button>
     </section>
+
+    <section id="historyDonationsView" class="donation-view active">
+      <section class="card">
+        <div class="card-title history-title-row">
+          <div>
+            <h2>История донатов</h2>
+            <span class="muted" id="eventsCount">0 событий</span>
+          </div>
+          <div class="history-actions">
+            <a class="link-button secondary" href="/api/donations/export.csv" target="_blank">Экспорт CSV</a>
+          </div>
+        </div>
+
+        <div class="bulk-flags" id="bulkFlagsPanel">
+          <span class="bulk-flags-title">Все записи:</span>
+          <label title="Включить или выключить учёт в текущем сборе у всех донатов"><input id="bulkGoalToggle" type="checkbox" />Сбор</label>
+          <label title="Включить или выключить обычные оповещения у всех донатов"><input id="bulkNotifyToggle" type="checkbox" />Опов.</label>
+          <label title="Включить или выключить донат-ивенты у всех донатов"><input id="bulkEventToggle" type="checkbox" />Ивент</label>
+          <label title="Включить или выключить TTS у всех донатов"><input id="bulkTtsToggle" type="checkbox" />TTS</label>
+          <label title="Включить или выключить учёт в TopDonation у всех донатов"><input id="bulkTopToggle" type="checkbox" />Топ</label>
+          <span class="hint inline-hint">Смешанное состояние обозначается чертой. Изменение применяется ко всей истории.</span>
+        </div>
+
+        <div id="eventsTableBody" class="donation-history-list">
+          <div class="empty-cell">Пока донатов нет</div>
+        </div>
+      </section>
+    </section>
+
+    <section id="topDonorsView" class="donation-view">
+      <section class="card">
+        <div class="card-title history-title-row">
+          <div>
+            <h2>TopDonation</h2>
+            <span class="muted" id="topDonorsCount">0 донатеров</span>
+          </div>
+          <div class="history-actions top-toolbar">
+            <input id="topDonorsSearch" class="compact-input" placeholder="ник, алиас, заметка или текст доната..." />
+            <label class="checkbox-line compact-check"><input id="showExcludedDonors" type="checkbox" />Показать исключённых</label>
+          </div>
+        </div>
+        <div class="top-summary-strip">
+          <div><span>Общая сумма рейтинга</span><strong id="topGrandTotal">0 RUB</strong></div>
+          <div><span>Закреплено</span><strong id="topPinnedCount">0</strong></div>
+          <div><span>В рейтинге</span><strong id="topRankingCount">0</strong></div>
+        </div>
+
+        <section id="pinnedDonorsSection" class="donor-group" hidden>
+          <div class="donor-group-title"><h3>Закреплённые</h3><span class="muted">Показываются отдельно над рейтингом</span></div>
+          <div id="pinnedDonorsList" class="donor-list"></div>
+        </section>
+
+        <section class="donor-group">
+          <div class="donor-group-title"><h3>Рейтинг</h3><span class="muted">Сумма за всё время, независимо от текущего сбора</span></div>
+          <div id="topDonorsList" class="donor-list"><div class="empty-cell">Загрузка...</div></div>
+        </section>
+
+        <section id="excludedDonorsSection" class="donor-group" hidden>
+          <div class="donor-group-title"><h3>Исключённые из топа</h3></div>
+          <div id="excludedDonorsList" class="donor-list"></div>
+        </section>
+      </section>
+    </section>
+
+    </div>
+
+    <div id="ttsPanel" class="admin-panel">
+      <section class="grid tts-overview-grid">
+        <section class="card big-card">
+          <div class="card-title">
+            <div>
+              <h2>TTS Hub</h2>
+              <p class="hint">Единая очередь озвучки донатов, наград, виртуальных персонажей, команд и внешних событий.</p>
+            </div>
+            <span class="tts-state-badge" id="ttsStateBadge">Загрузка...</span>
+          </div>
+          <div class="stats tts-stats">
+            <div class="stat"><span class="stat-label">Основной</span><span class="stat-value" id="ttsProviderStat">—</span></div>
+            <div class="stat"><span class="stat-label">Speaker.bot</span><span class="stat-value" id="ttsSpeakerStat">—</span></div>
+            <div class="stat"><span class="stat-label">Edge Player</span><span class="stat-value" id="ttsPlayerStat">—</span></div>
+            <div class="stat"><span class="stat-label">В очереди</span><span class="stat-value" id="ttsQueueStat">0</span></div>
+            <div class="stat"><span class="stat-label">История</span><span class="stat-value" id="ttsHistoryStat">0</span></div>
+            <div class="stat"><span class="stat-label">Сейчас</span><span class="stat-value compact" id="ttsCurrentStat">—</span></div>
+            <div class="stat"><span class="stat-label">Последняя ошибка</span><span class="stat-value compact" id="ttsErrorStat">—</span></div>
+          </div>
+          <div class="tts-controls">
+            <button type="button" id="ttsTestButton">Тест голоса</button>
+            <button type="button" class="secondary" id="ttsPauseButton">Пауза</button>
+            <button type="button" class="secondary" id="ttsResumeButton">Продолжить</button>
+            <button type="button" class="secondary" id="ttsStopButton">Остановить текущее</button>
+            <button type="button" class="danger" id="ttsClearButton">Очистить очередь</button>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-title"><h2>Быстрый тест</h2></div>
+          <label>Профиль<select id="ttsTestProfile"></select></label>
+          <label>Принудительный провайдер
+            <select id="ttsTestProvider">
+              <option value="">По профилю</option>
+              <option value="speakerbot">Speaker.bot</option>
+              <option value="edge">Microsoft Edge</option>
+              <option value="yandex">Yandex SpeechKit</option>
+              <option value="xtts">XTTS Local</option>
+              <option value="http">Custom HTTP</option>
+            </select>
+          </label>
+          <label>Текст<textarea id="ttsTestText" rows="5">Это тестовое сообщение VicDonationGoal.</textarea></label>
+          <button type="button" id="ttsSendTestButton">Поставить в очередь</button>
+          <p class="hint">Тест обходит минимальную сумму. Для Edge должен быть открыт <code>/tts.html</code> в OBS.</p>
+        </section>
+      </section>
+
+      <section class="tts-subtabs">
+        <button type="button" class="tts-subtab active" data-tts-view="ttsSettingsView">Настройки</button>
+        <button type="button" class="tts-subtab" data-tts-view="ttsProfilesView">Голосовые профили</button>
+        <button type="button" class="tts-subtab" data-tts-view="ttsRulesView">Правила</button>
+        <button type="button" class="tts-subtab" data-tts-view="ttsQueueView">Очередь</button>
+        <button type="button" class="tts-subtab" data-tts-view="ttsHistoryView">История</button>
+        <button type="button" class="tts-subtab" data-tts-view="ttsLogsView">Логи</button>
+      </section>
+
+      <section id="ttsSettingsView" class="tts-view active">
+        <section class="grid">
+          <section class="card">
+            <div class="card-title"><h2>Общие настройки</h2></div>
+            <label class="checkbox-line"><input id="ttsEnabledInput" type="checkbox" />TTS Hub включён</label>
+            <div class="form-row">
+              <label>Основной провайдер<select id="ttsActiveProviderInput" class="provider-select"></select></label>
+              <label>Резервный провайдер<select id="ttsFallbackProviderInput" class="provider-select allow-none"></select></label>
+            </div>
+            <label>Профиль по умолчанию<select id="ttsDefaultProfileInput"></select></label>
+            <div class="form-row">
+              <label>Минимальная сумма автоматического доната, ₽<input id="ttsMinAmountInput" type="number" min="0" step="1" /></label>
+              <label>Максимальная длина текста<input id="ttsMaxLengthInput" type="number" min="1" step="1" /></label>
+            </div>
+            <label class="checkbox-line"><input id="ttsRemoveLinksInput" type="checkbox" />Удалять ссылки</label>
+            <label class="checkbox-line"><input id="ttsStripHtmlInput" type="checkbox" />Удалять HTML</label>
+            <label class="checkbox-line"><input id="ttsSkipEmptyInput" type="checkbox" />Пропускать пустые сообщения</label>
+            <label class="checkbox-line"><input id="ttsExternalDefaultInput" type="checkbox" />Автоматически озвучивать донаты сервисов</label>
+            <p class="hint">Ручной донат озвучивается только по своей галочке и при этом обходит общий порог суммы.</p>
+            <button type="button" id="ttsSaveGeneralButton">Сохранить все настройки</button>
+          </section>
+
+          <section class="card provider-card">
+            <div class="card-title"><h2>Speaker.bot</h2><span class="badge-soft" id="speakerProviderBadge">—</span></div>
+            <label class="checkbox-line"><input id="speakerEnabledInput" type="checkbox" />Провайдер включён</label>
+            <label>WebSocket URL<input id="speakerUrlInput" value="ws://127.0.0.1:7580/" /></label>
+            <label>Voice Alias по умолчанию<input id="speakerAliasInput" value="Donations" /></label>
+            <label class="checkbox-line"><input id="speakerBadWordsInput" type="checkbox" />Использовать Bad Word Filter Speaker.bot</label>
+            <div class="provider-status" id="speakerStatusText">Статус ещё не проверен.</div>
+            <button type="button" class="secondary provider-test" data-provider-test="speakerbot">Тест Speaker.bot</button>
+          </section>
+        </section>
+
+        <section class="grid">
+          <section class="card provider-card">
+            <div class="card-title"><h2>Microsoft Edge</h2><span class="badge-soft" id="edgeProviderBadge">—</span></div>
+            <label class="checkbox-line"><input id="edgeEnabledInput" type="checkbox" />Провайдер включён</label>
+            <label>Голос<input id="edgeVoiceInput" value="ru-RU-SvetlanaNeural" /></label>
+            <div class="form-row">
+              <label>Скорость<input id="edgeRateInput" value="+0%" /></label>
+              <label>Высота<input id="edgePitchInput" value="+0Hz" /></label>
+            </div>
+            <label>Громкость движка<input id="edgeVolumeInput" value="+0%" /></label>
+            <div class="provider-status" id="edgeStatusText">Edge создаёт MP3, а <code>/tts.html</code> проигрывает его в OBS.</div>
+            <button type="button" class="secondary provider-test" data-provider-test="edge">Тест Edge</button>
+          </section>
+
+          <section class="card provider-card">
+            <div class="card-title"><h2>Yandex SpeechKit</h2><span class="badge-soft">необязательный</span></div>
+            <label class="checkbox-line"><input id="yandexEnabledInput" type="checkbox" />Провайдер включён</label>
+            <label>Endpoint<input id="yandexEndpointInput" /></label>
+            <div class="form-row">
+              <label>Авторизация<select id="yandexAuthModeInput"><option value="api_key">API key</option><option value="iam_token">IAM token</option></select></label>
+              <label>Folder ID<input id="yandexFolderInput" /></label>
+            </div>
+            <label>API key<input id="yandexApiKeyInput" type="password" autocomplete="off" /></label>
+            <label>IAM token<input id="yandexIamTokenInput" type="password" autocomplete="off" /></label>
+            <div class="form-row">
+              <label>Голос<input id="yandexVoiceInput" value="marina" /></label>
+              <label>Эмоция / роль<input id="yandexEmotionInput" value="friendly" /></label>
+            </div>
+            <div class="form-row"><label>Скорость<input id="yandexSpeedInput" value="1.0" /></label><label>Формат<select id="yandexFormatInput"><option value="mp3">MP3</option><option value="oggopus">OggOpus</option><option value="lpcm">LPCM/WAV</option></select></label></div>
+            <button type="button" class="secondary provider-test" data-provider-test="yandex">Тест Yandex</button>
+          </section>
+        </section>
+
+        <section class="grid">
+          <section class="card provider-card">
+            <div class="card-title"><h2>XTTS Local</h2><span class="badge-soft">локальный сервер</span></div>
+            <label class="checkbox-line"><input id="xttsEnabledInput" type="checkbox" />Провайдер включён</label>
+            <label>Endpoint<input id="xttsEndpointInput" placeholder="http://127.0.0.1:8020/tts_to_audio/" /></label>
+            <div class="form-row"><label>Язык<input id="xttsLanguageInput" value="ru" /></label><label>Формат<input id="xttsFormatInput" value="wav" /></label></div>
+            <label>Reference WAV на этом ПК<input id="xttsSpeakerInput" placeholder="C:\\voices\\reference.wav" /></label>
+            <label>Тип ответа<select id="xttsResponseTypeInput"><option value="audio">Готовое аудио</option><option value="json_url">JSON с URL</option><option value="json_base64">JSON с base64</option></select></label>
+            <button type="button" class="secondary provider-test" data-provider-test="xtts">Тест XTTS</button>
+            <p class="hint">Модель запускается отдельным сервером. VicDonationGoal не устанавливает веса XTTS автоматически.</p>
+          </section>
+
+          <section class="card provider-card">
+            <div class="card-title"><h2>Custom HTTP</h2><span class="badge-soft">универсальный API</span></div>
+            <label class="checkbox-line"><input id="httpEnabledInput" type="checkbox" />Провайдер включён</label>
+            <div class="form-row"><label>Метод<select id="httpMethodInput"><option>POST</option><option>GET</option><option>PUT</option><option>PATCH</option></select></label><label>Тип тела<select id="httpBodyTypeInput"><option value="json">JSON</option><option value="form">Form</option></select></label></div>
+            <label>URL<input id="httpUrlInput" /></label>
+            <label>Заголовки JSON<textarea id="httpHeadersInput" rows="3" placeholder='{"Authorization":"Bearer ..."}'></textarea></label>
+            <label>Тело JSON<textarea id="httpBodyInput" rows="5" placeholder='{"text":"{text}","voice":"{voice}"}'></textarea></label>
+            <div class="form-row"><label>Voice<input id="httpVoiceInput" /></label><label>Language<input id="httpLanguageInput" value="ru" /></label></div>
+            <label>Тип ответа<select id="httpResponseTypeInput"><option value="audio">Готовое аудио</option><option value="json_url">JSON с URL аудио</option><option value="json_base64">JSON с base64</option></select></label>
+            <div class="form-row"><label>Путь к URL<input id="httpAudioUrlFieldInput" value="audioUrl" /></label><label>Путь к base64<input id="httpAudioBase64FieldInput" value="audio" /></label></div>
+            <button type="button" class="secondary provider-test" data-provider-test="http">Тест Custom HTTP</button>
+          </section>
+        </section>
+      </section>
+
+      <section id="ttsProfilesView" class="tts-view">
+        <section class="grid profile-editor-grid">
+          <section class="card">
+            <div class="card-title"><h2>Профили</h2><button type="button" id="ttsNewProfileButton" class="secondary">Новый</button></div>
+            <div id="ttsProfilesList" class="select-list"></div>
+          </section>
+          <section class="card">
+            <div class="card-title"><div><h2>Редактор профиля</h2><p class="hint">Профиль хранит голос и провайдер. Значение «Автоматически» использует основной провайдер.</p></div></div>
+            <input id="ttsProfileOriginalId" type="hidden" />
+            <div class="form-row"><label>ID<input id="ttsProfileIdInput" placeholder="donations" /></label><label>Название<input id="ttsProfileNameInput" placeholder="Donations" /></label></div>
+            <label>Провайдер<select id="ttsProfileProviderInput"><option value="auto">Автоматически</option><option value="speakerbot">Speaker.bot</option><option value="edge">Microsoft Edge</option><option value="yandex">Yandex SpeechKit</option><option value="xtts">XTTS Local</option><option value="http">Custom HTTP</option></select></label>
+            <div class="form-row"><label>Voice Alias Speaker.bot<input id="ttsProfileAliasInput" placeholder="Donations" /></label><label>Edge voice<input id="ttsProfileEdgeVoiceInput" placeholder="ru-RU-SvetlanaNeural" /></label></div>
+            <div class="form-row"><label>Yandex voice<input id="ttsProfileYandexVoiceInput" placeholder="marina" /></label><label>Yandex emotion<input id="ttsProfileYandexEmotionInput" placeholder="friendly" /></label><label>Yandex speed<input id="ttsProfileYandexSpeedInput" placeholder="1.0" /></label></div>
+            <div class="form-row"><label>XTTS Reference WAV<input id="ttsProfileXttsSpeakerInput" /></label><label>XTTS language<input id="ttsProfileXttsLanguageInput" value="ru" /></label></div>
+            <div class="form-row"><label>Custom HTTP voice<input id="ttsProfileHttpVoiceInput" /></label><label>Custom HTTP language<input id="ttsProfileHttpLanguageInput" value="ru" /></label></div>
+            <div class="form-row"><label>Rate<input id="ttsProfileRateInput" value="+0%" /></label><label>Pitch<input id="ttsProfilePitchInput" value="+0Hz" /></label><label>Volume<input id="ttsProfileVolumeInput" value="+0%" /></label></div>
+            <label class="checkbox-line"><input id="ttsProfileBadWordsInput" type="checkbox" />Bad Word Filter Speaker.bot</label>
+            <label class="checkbox-line"><input id="ttsProfileEnabledInput" type="checkbox" checked />Профиль включён</label>
+            <div class="danger-zone inline"><button type="button" id="ttsSaveProfileButton">Сохранить профиль</button><button type="button" id="ttsTestProfileButton" class="secondary">Тестировать</button><button type="button" id="ttsDeleteProfileButton" class="danger">Удалить</button></div>
+          </section>
+        </section>
+      </section>
+
+      <section id="ttsRulesView" class="tts-view">
+        <section class="grid rules-layout">
+          <section class="card">
+            <div class="card-title"><div><h2>Правила маршрутизации</h2><p class="hint">Меньшее число — правило проверяется раньше. Срабатывает первое подходящее правило.</p></div><button type="button" id="ttsNewRuleButton" class="secondary">Новое</button></div>
+            <div id="ttsRulesList" class="select-list"></div>
+          </section>
+          <section class="card">
+            <div class="card-title"><h2>Редактор правила</h2></div>
+            <input id="ttsRuleOriginalId" type="hidden" />
+            <div class="form-row"><label>ID<input id="ttsRuleIdInput" placeholder="moderator-rule" /></label><label>Название<input id="ttsRuleNameInput" placeholder="Модераторы" /></label></div>
+            <div class="form-row"><label>Профиль<select id="ttsRuleProfileInput"></select></label><label>Приоритет<input id="ttsRulePriorityInput" type="number" value="100" /></label></div>
+            <label>Типы событий<input id="ttsRuleEventTypesInput" list="ttsEventTypesList" placeholder="donation, channel_reward" /></label>
+            <label>Источники<input id="ttsRuleSourcesInput" list="ttsSourcesList" placeholder="donationalerts, streamerbot" /></label>
+            <div class="form-row"><label>User ID<input id="ttsRuleUserIdsInput" placeholder="постоянный ID Twitch/YouTube" /></label><label>Ники<input id="ttsRuleUsernamesInput" placeholder="ViewerName" /></label></div>
+            <div class="form-row"><label>Роли<input id="ttsRuleRolesInput" list="ttsRolesList" placeholder="moderator, vip" /></label><label>Reward ID<input id="ttsRuleRewardIdsInput" placeholder="ID награды Twitch" /></label></div>
+            <div class="form-row"><label>Минимальная сумма<input id="ttsRuleMinAmountInput" type="number" /></label><label>Максимальная сумма<input id="ttsRuleMaxAmountInput" type="number" /></label></div>
+            <label class="checkbox-line"><input id="ttsRuleEnabledInput" type="checkbox" checked />Правило включено</label>
+            <div class="rule-help">
+              <b>Что сюда вводить</b>
+              <p><code>eventType</code>: donation, channel_reward, character, moderator_command, manual_test или своё значение.</p>
+              <p><code>source</code>: donationalerts, donatty, manual, streamerbot, twitch, youtube, character-service или своё.</p>
+              <p>User ID, роли и Reward ID работают только когда их передал Streamer.bot или другая внешняя система. Пустое поле означает «любое».</p>
+            </div>
+            <div class="danger-zone inline"><button type="button" id="ttsSaveRuleButton">Сохранить правило</button><button type="button" id="ttsDeleteRuleButton" class="danger">Удалить</button></div>
+          </section>
+        </section>
+        <section class="card rule-tester">
+          <div class="card-title"><h2>Проверить маршрутизацию</h2><span class="muted">Показывает правило, профиль и фактический провайдер без озвучки.</span></div>
+          <div class="form-row"><label>Тип события<input id="ttsRouteEventTypeInput" value="donation" /></label><label>Источник<input id="ttsRouteSourceInput" value="donatty" /></label><label>Ник<input id="ttsRouteUsernameInput" value="TestUser" /></label></div>
+          <div class="form-row"><label>User ID<input id="ttsRouteUserIdInput" /></label><label>Роли<input id="ttsRouteRolesInput" placeholder="moderator" /></label><label>Reward ID<input id="ttsRouteRewardInput" /></label></div>
+          <div class="form-row"><label>Сумма<input id="ttsRouteAmountInput" type="number" value="100" /></label><label>Текст<input id="ttsRouteTextInput" value="Тест правила" /></label></div>
+          <button type="button" id="ttsTestRuleButton">Проверить</button>
+          <pre id="ttsRuleTestResult" class="route-result">Результат появится здесь.</pre>
+        </section>
+      </section>
+
+      <section id="ttsQueueView" class="tts-view">
+        <section class="card">
+          <div class="card-title"><h2>Очередь TTS</h2><span class="muted" id="ttsQueueCount">0 задач</span></div>
+          <div class="table-wrap no-horizontal-scroll"><table class="donations-table tts-table responsive-history-table"><thead><tr><th>Время</th><th>Статус</th><th>Событие</th><th>Пользователь</th><th>Текст</th><th></th></tr></thead><tbody id="ttsQueueBody"><tr><td colspan="6" class="empty-cell">Очередь пуста</td></tr></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="ttsHistoryView" class="tts-view">
+        <section class="card">
+          <div class="card-title"><h2>История TTS</h2><div class="history-actions"><input id="ttsHistorySearch" class="compact-input" placeholder="ник, текст, ID..." /><select id="ttsHistoryStatusFilter" class="compact-input"><option value="">Все статусы</option><option value="sent">Отправлено</option><option value="played">Проиграно</option><option value="skipped">Пропущено</option><option value="error">Ошибка</option><option value="cancelled">Отменено</option></select><select id="ttsHistoryProviderFilter" class="compact-input"><option value="">Все провайдеры</option><option value="speakerbot">Speaker.bot</option><option value="edge">Edge</option><option value="yandex">Yandex</option><option value="xtts">XTTS</option><option value="http">Custom HTTP</option></select><span class="muted" id="ttsHistoryCount">0 записей</span><button type="button" id="ttsClearHistoryButton" class="danger">Очистить историю</button></div></div>
+          <div class="table-wrap no-horizontal-scroll"><table class="donations-table tts-table history-table responsive-history-table"><thead><tr><th>Время</th><th>Статус</th><th>Событие</th><th>Пользователь</th><th>Голос</th><th>Текст</th><th></th></tr></thead><tbody id="ttsHistoryBody"><tr><td colspan="7" class="empty-cell">История пуста</td></tr></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="ttsLogsView" class="tts-view">
+        <section class="card"><div class="card-title"><h2>Логи TTS Hub</h2><button type="button" id="ttsRefreshLogsButton" class="secondary">Обновить</button></div><pre id="ttsLogsOutput" class="log-console">Загрузка...</pre></section>
+      </section>
+
+      <datalist id="ttsEventTypesList"><option value="donation"></option><option value="channel_reward"></option><option value="character"></option><option value="moderator_command"></option><option value="manual_test"></option><option value="custom"></option></datalist>
+      <datalist id="ttsSourcesList"><option value="donationalerts"></option><option value="donatty"></option><option value="manual"></option><option value="streamerbot"></option><option value="twitch"></option><option value="youtube"></option><option value="character-service"></option><option value="custom"></option></datalist>
+      <datalist id="ttsRolesList"><option value="moderator"></option><option value="vip"></option><option value="subscriber"></option><option value="broadcaster"></option></datalist>
+    </div>
+
+
+    <div id="integrationsPanel" class="admin-panel">
+      <section id="integrationOnboarding" class="card integration-onboarding" hidden>
+        <div class="card-title">
+          <div>
+            <h2>Первичная настройка интеграций</h2>
+            <p class="hint">Выберите только те сервисы, которыми пользуетесь. Выключенные модули не запускаются и не создают ошибки.</p>
+          </div>
+          <span class="integration-badge setup">первый запуск</span>
+        </div>
+        <div id="integrationOnboardingChoices" class="integration-choice-list"></div>
+        <button type="button" id="integrationFinishOnboarding">Сохранить выбор и продолжить</button>
+      </section>
+
+      <section class="grid integrations-overview-grid">
+        <section class="card big-card">
+          <div class="card-title">
+            <div>
+              <h2>Integrations Hub</h2>
+              <p class="hint">Все внешние донат-сервисы теперь отделены от Core и управляются из одного раздела.</p>
+            </div>
+            <button type="button" id="integrationRefreshButton" class="secondary">Обновить</button>
+          </div>
+          <div class="stats">
+            <div class="stat"><span class="stat-label">Всего</span><span class="stat-value" id="integrationTotalStat">0</span></div>
+            <div class="stat"><span class="stat-label">Включено</span><span class="stat-value" id="integrationEnabledStat">0</span></div>
+            <div class="stat"><span class="stat-label">Подключено</span><span class="stat-value" id="integrationConnectedStat">0</span></div>
+            <div class="stat"><span class="stat-label">Ошибки</span><span class="stat-value" id="integrationErrorStat">0</span></div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-title"><h2>Как это работает</h2></div>
+          <p class="hint">Каждая интеграция приводит событие к единому формату VicDonationGoal. После этого Core одинаково обновляет историю, виджет, TopDonation, Streamer.bot и TTS.</p>
+          <pre class="integration-flow">Сервис → Integration Adapter → /api/donation
+                     ↓
+Core → Goal / History / Top / TTS / Streamer.bot</pre>
+        </section>
+      </section>
+
+      <section class="integration-layout">
+        <section class="card">
+          <div class="card-title"><h2>Донат-сервисы</h2><span class="muted" id="integrationListCount">0 модулей</span></div>
+          <div id="integrationCards" class="integration-cards"><div class="empty-cell">Загрузка...</div></div>
+        </section>
+
+        <section class="card integration-detail-card">
+          <div id="integrationEmptyDetail" class="empty-cell">Выберите сервис слева.</div>
+          <div id="integrationDetail" hidden>
+            <div class="card-title integration-detail-title">
+              <div>
+                <div class="integration-title-line"><span id="integrationDetailIcon" class="integration-icon">?</span><h2 id="integrationDetailName">Интеграция</h2><span id="integrationDetailBadge" class="integration-badge">—</span></div>
+                <p id="integrationDetailDescription" class="hint"></p>
+              </div>
+              <label class="checkbox-line integration-enabled-line"><input id="integrationEnabledInput" type="checkbox" />Интеграция включена</label>
+            </div>
+
+            <div id="integrationConfigFields" class="integration-config-fields"></div>
+
+            <div class="integration-actions">
+              <button type="button" id="integrationSaveButton">Сохранить настройки</button>
+              <button type="button" id="integrationStartButton" class="secondary">Запустить</button>
+              <button type="button" id="integrationStopButton" class="secondary">Остановить</button>
+              <button type="button" id="integrationRestartButton" class="secondary">Переподключить</button>
+              <button type="button" id="integrationTestButton" class="secondary">Проверить</button>
+              <button type="button" id="integrationAuthorizeButton" class="secondary" hidden>Авторизовать</button>
+              <button type="button" id="integrationClearAuthButton" class="danger" hidden>Сбросить авторизацию</button>
+            </div>
+            <div id="integrationActionResult" class="integration-result" hidden></div>
+
+            <div class="integration-detail-tabs">
+              <button type="button" class="integration-detail-tab active" data-integration-view="guide">Инструкция</button>
+              <button type="button" class="integration-detail-tab" data-integration-view="logs">Логи</button>
+              <button type="button" class="integration-detail-tab" data-integration-view="technical">Техническое состояние</button>
+            </div>
+            <div id="integrationGuideView" class="integration-detail-view active"><div id="integrationGuide" class="integration-guide"></div></div>
+            <div id="integrationLogsView" class="integration-detail-view"><pre id="integrationLogs" class="log-console">Логи пока не загружены.</pre></div>
+            <div id="integrationTechnicalView" class="integration-detail-view"><pre id="integrationTechnical" class="route-result">—</pre></div>
+          </div>
+        </section>
+      </section>
+    </div>
+
   </main>
 
   <script src="admin.js"></script>
+  <script src="tts-admin.js"></script>
+  <script src="integrations-admin.js"></script>
   <script src="admin-theme.js"></script>
 </body>
 </html>

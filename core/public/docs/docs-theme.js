@@ -1,5 +1,5 @@
 (function () {
-  const STORAGE_KEY = "vicwanderDocsTheme";
+  const STORAGE_KEY = "vicDonationGoalDocsTheme";
 
   function getTheme() {
     const saved = localStorage.getItem(STORAGE_KEY);

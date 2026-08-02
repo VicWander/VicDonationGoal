@@ -1,72 +1,136 @@
-# VicWander Donation Goal Widget
+# VicDonationGoal v1.4.4 — полное руководство
 
-Полная документация по локальной системе донат-гола, учёта донатов и интеграции с DonationAlerts, Donatty, OBS и Streamer.bot.
+VicDonationGoal — локальная система для управления донат-голом, историей донатов, событиями Streamer.bot и озвучкой сообщений через TTS Hub.
 
----
-
-## 1. Что это такое
-
-**VicWander Donation Goal Widget** — это локальная система для стрима, которая:
-
-- собирает донаты из разных источников;
-- ведёт историю всех донатов;
-- показывает кастомную полоску сбора в OBS;
-- позволяет вручную добавлять донаты;
-- позволяет решать, учитывать донат в текущей цели или нет;
-- позволяет решать, отправлять ли ручной донат в Streamer.bot как оповещение;
-- отправляет события донатов в Streamer.bot;
-- работает локально на компьютере.
-
-Основная идея:
-
-```text
-DonationAlerts ─┐
-                 ├─> Donation Goal Server ──> OBS Widget
-Donatty ─────────┘            │
-                              ├─> Admin Panel
-                              ├─> donations.json
-                              └─> Streamer.bot Bridge ──> Streamer.bot Action ──> OBS Alerts
-Manual donation ──────────────┘
-```
+Версия **1.4.1** расширяет Integrations Hub официальными сервисами StreamElements и Streamlabs. DonationAlerts, Donatty, TopDonation, TTS Hub и Streamer.bot Bridge сохранены.
 
 ---
 
-## 2. Короткий запуск перед стримом
+## 1. Что умеет проект
 
-Если проект уже настроен и зависимости установлены:
+Основные возможности:
 
-1. Открой папку проекта.
-2. Запусти:
+- подключать DonationAlerts, Donatty, StreamElements, Streamlabs, DonatePay, Donate.Stream, DonateX и Tribute через единый Integrations Hub;
+- включать, выключать, проверять и переподключать каждый донат-сервис отдельно;
+- добавлять переводы вручную;
+- учитывать или не учитывать каждый донат в текущей цели;
+- хранить полную историю событий;
+- строить TopDonation за всё время и объединять профили одного человека;
+- показывать кастомный донат-гол в OBS Browser Source;
+- отправлять обычные оповещения в Streamer.bot;
+- запускать дополнительные Streamer.bot actions по сумме доната;
+- озвучивать сообщения через Speaker.bot, Microsoft Edge, Yandex SpeechKit, XTTS Local или Custom HTTP;
+- выбирать разные голоса для донатов, модераторов, VIP, наград, виртуальных персонажей и конкретных зрителей;
+- принимать внешние TTS-события от Streamer.bot, character-ботов и других программ;
+- экспортировать историю донатов в CSV;
+- хранить данные локально без обязательного внешнего сервера.
 
-```text
-01_START_ALL.bat
-```
-
-3. Должны открыться окна:
-
-```text
-Donation Goal Server
-Donatty Listener
-Streamer.bot Bridge
-```
-
-4. Открой админку:
-
-```text
-http://127.0.0.1:3333/admin.html
-```
-
-5. Виджет для OBS:
+Краткая схема:
 
 ```text
-http://127.0.0.1:3333/widget.html
+DonationAlerts Adapter ─┐
+Donatty Adapter ─────────┤
+StreamElements Adapter ──┼──> Integration Manager ──> VicDonationGoal Core
+Streamlabs Adapter ──────┘                              │
+                                                       ├──> JSON storage
+                                                       ├──> Admin / Goal Widget
+                                                       ├──> TopDonation
+                                                       ├──> Streamer.bot Bridge
+                                                       └──> TTS Hub
 ```
 
 ---
 
-## 3. Первый запуск на новом ПК
+## 2. Архитектура
 
-### 3.1. Установить зависимости
+### 2.1. Core Server
+
+Главный файл:
+
+```text
+core/server.py
+```
+
+Core запускает локальный HTTP-сервер на `http://127.0.0.1:3333`, хранит донаты, пересчитывает цель и предоставляет API. Начиная с v1.4.0 Core **не содержит реализацию конкретного донат-сервиса**.
+
+### 2.2. Integration Manager
+
+```text
+core/integration_manager.py
+```
+
+Integration Manager:
+
+- сканирует `integrations/*/manifest.json`;
+- понимает, какие поля настройки нужны сервису;
+- запускает только включённые интеграции;
+- останавливает и переподключает модули;
+- отдаёт в админку статусы, инструкции и логи;
+- не передаёт секреты обратно в браузер.
+
+### 2.3. DonationAlerts Adapter
+
+```text
+integrations/donationalerts/donationalerts_integration.py
+```
+
+Адаптер полностью отвечает за OAuth, refresh token, Centrifugo WebSocket и преобразование события DonationAlerts в единый формат доната.
+
+### 2.4. Donatty Adapter
+
+```text
+integrations/donatty/donatty_listener.py
+```
+
+Donatty остаётся отдельным процессом, потому что использует Playwright и длительное SSE-соединение. Процесс запускается и останавливается Integration Manager автоматически.
+
+### 2.5. StreamElements Adapter
+
+```text
+integrations/streamelements/streamelements_listener.py
+```
+
+Отдельный процесс подключается к официальному Astro WebSocket, подписывается на `channel.tips` и отправляет успешно завершённые tips в Core.
+
+### 2.6. Streamlabs Adapter
+
+```text
+integrations/streamlabs/streamlabs_integration.py
+```
+
+In-process адаптер управляет OAuth, получает Socket Token и принимает Streamlabs Donation events через Socket.IO.
+
+### 2.7. Единый формат события
+
+Любая интеграция в конце передаёт Core объект:
+
+```json
+{
+  "source": "service_name",
+  "externalId": "event-id",
+  "username": "ViewerName",
+  "amount": 100,
+  "currency": "RUB",
+  "message": "Сообщение",
+  "createdAt": "2026-07-30T20:00:00Z"
+}
+```
+
+После этого источник больше не важен: Core одинаково обновляет историю, TopDonation, виджет, TTS и Streamer.bot.
+
+---
+
+## 3. Первый запуск
+
+### 3.1. Требования
+
+- Windows 10/11;
+- Python 3.11 или новее;
+- OBS Studio — для виджетов;
+- Streamer.bot — если нужны оповещения и донат-ивенты;
+- Speaker.bot — только если выбран соответствующий TTS-провайдер.
+
+### 3.2. Установка зависимостей
 
 Запусти:
 
@@ -74,1133 +138,152 @@ http://127.0.0.1:3333/widget.html
 00_INSTALL_ALL.bat
 ```
 
-Он должен установить:
+Устанавливаются `requests`, `websocket-client`, `playwright`, `edge-tts` и Chromium Playwright.
 
-```text
-requests
-websocket-client
-playwright
-Playwright Chromium
-```
+### 3.3. Мастер интеграций
 
-Если установка Chromium занимает несколько минут — это нормально.
-
-### 3.2. Проверить Python
-
-Если батник не запускается, проверь, установлен ли Python.
-
-В консоли:
-
-```text
-python --version
-```
-
-или:
-
-```text
-py -3 --version
-```
-
-Если Python не найден, установи Python 3.11+ с официального сайта и при установке включи галочку:
-
-```text
-Add Python to PATH
-```
-
----
-
-## 4. Структура проекта
-
-После реорганизации проект должен выглядеть примерно так:
-
-```text
-donation_goal_widget/
-├─ 00_INSTALL_ALL.bat
-├─ 01_START_ALL.bat
-├─ 02_START_SERVER_ONLY.bat
-├─ 03_START_DONATTY_ONLY.bat
-├─ 04_START_STREAMERBOT_ONLY.bat
-├─ 05_TEST_STREAMERBOT.bat
-├─ 06_RESET_STREAMERBOT_SENT.bat
-├─ PROJECT_STRUCTURE.txt
-│
-├─ core/
-│  ├─ server.py
-│  ├─ public/
-│  │  ├─ widget.html
-│  │  ├─ widget.js
-│  │  ├─ style.css
-│  │  ├─ admin.html
-│  │  ├─ admin.js
-│  │  ├─ admin.css
-│  │  ├─ admin-theme.css
-│  │  └─ admin-theme.js
-│  │
-│  ├─ data/
-│  │  ├─ state.json
-│  │  └─ donations.json
-│  │
-│  └─ integrations/
-│     └─ donationalerts/
-│        ├─ da_config.json
-│        ├─ da_tokens.json
-│        └─ da_oauth_state.txt
-│
-├─ integrations/
-│  ├─ donatty/
-│  │  ├─ donatty_listener.py
-│  │  └─ donatty_config.json
-│  │
-│  └─ streamerbot/
-│     ├─ streamerbot_bridge.py
-│     ├─ streamerbot_config.json
-│     └─ streamerbot_sent.json
-│
-├─ legacy/
-└─ README/
-```
-
-### Что где лежит
-
-| Путь | Назначение |
-|---|---|
-| `core/server.py` | Основной локальный сервер |
-| `core/public/widget.html` | HTML виджета для OBS |
-| `core/public/style.css` | Оформление OBS-виджета |
-| `core/public/widget.js` | Логика обновления OBS-виджета |
-| `core/public/admin.html` | Админка |
-| `core/public/admin.css` | Основное оформление админки |
-| `core/public/admin-theme.css` | Светлая/тёмная тема админки |
-| `core/public/admin.js` | Логика админки |
-| `core/public/admin-theme.js` | Переключатель темы |
-| `core/data/state.json` | Текущая цель |
-| `core/data/donations.json` | История донатов |
-| `core/integrations/donationalerts/da_config.json` | Настройки DonationAlerts |
-| `core/integrations/donationalerts/da_tokens.json` | Токены DonationAlerts |
-| `integrations/donatty/donatty_listener.py` | Listener Donatty |
-| `integrations/donatty/donatty_config.json` | Настройки Donatty |
-| `integrations/streamerbot/streamerbot_bridge.py` | Bridge в Streamer.bot |
-| `integrations/streamerbot/streamerbot_config.json` | Настройки Streamer.bot |
-| `integrations/streamerbot/streamerbot_sent.json` | Список уже отправленных в Streamer.bot событий |
-
----
-
-## 5. Основной сервер
-
-Основной сервер запускается через:
-
-```text
-02_START_SERVER_ONLY.bat
-```
-
-или вместе со всем проектом через:
-
-```text
-01_START_ALL.bat
-```
-
-После запуска доступны адреса:
-
-```text
-Админка: http://127.0.0.1:3333/admin.html
-Виджет:  http://127.0.0.1:3333/widget.html
-API:     http://127.0.0.1:3333/api/state
-```
-
----
-
-## 6. OBS-виджет
-
-### 6.1. Как добавить в OBS
-
-1. Открой OBS.
-2. В источниках нажми `+`.
-3. Выбери `Браузер` / `Browser Source`.
-4. URL:
-
-```text
-http://127.0.0.1:3333/widget.html
-```
-
-5. Рекомендуемый стартовый размер:
-
-```text
-Ширина: 800
-Высота: 220
-```
-
-6. Включи прозрачный фон, если OBS предлагает такую настройку.
-
-### 6.2. Где менять внешний вид
-
-Оформление полоски лежит в:
-
-```text
-core/public/style.css
-```
-
-Основные блоки:
-
-```css
-.goal-card
-.goal-title
-.goal-bar
-.goal-fill
-.goal-bottom
-```
-
-### 6.3. Частые настройки
-
-#### Длина полоски
-
-```css
-.goal-card {
-  width: 700px;
-}
-```
-
-#### Высота полоски
-
-```css
-.goal-bar {
-  height: 55px;
-}
-```
-
-#### Фон незаполненной части
-
-```css
-.goal-bar {
-  background: rgba(83, 83, 83, 0.747);
-}
-```
-
-#### Заполненная часть
-
-```css
-.goal-fill {
-  background: linear-gradient(45deg, #23489e, #3bc7da, #35a9d4);
-}
-```
-
-#### Текст внутри полоски
-
-```css
-.goal-bottom {
-  font-size: 26px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.95);
-}
-```
-
----
-
-## 7. Админка
-
-Админка открывается по адресу:
+После первого запуска открой:
 
 ```text
 http://127.0.0.1:3333/admin.html
 ```
 
-В ней можно:
+Перейди в раздел **Интеграции**. На чистой установке появится мастер:
 
-- смотреть текущий прогресс цели;
-- менять название цели;
-- менять стартовую сумму;
-- менять итоговую сумму цели;
-- вручную добавлять донаты;
-- выбирать, добавлять ли ручной донат в текущий сбор;
-- выбирать, отправлять ли ручной донат в Streamer.bot;
-- смотреть историю всех донатов;
-- фильтровать историю;
-- редактировать донаты;
-- удалять донаты;
-- включать/выключать донат из текущего сбора;
-- включать/выключать оповещение в Streamer.bot для ручного доната;
-- переключать светлую/тёмную тему.
+1. выбрать DonationAlerts, Donatty или оба сервиса;
+2. заполнить настройки выбранных сервисов;
+3. сохранить конфигурацию;
+4. авторизовать DonationAlerts, если он выбран;
+5. нажать **Проверить**.
 
-### 7.1. Стартовая сумма
+Выключенные модули не запускаются и не показывают ошибки.
 
-Стартовая сумма — это деньги, которые уже есть, но не связаны с отдельным донатом.
-
-Пример:
+### 3.4. Проверка
 
 ```text
-До запуска системы уже было собрано 500 RUB.
+09_STABILITY_CHECK.bat
 ```
 
-Тогда ставишь:
-
-```text
-Стартовая сумма: 500
-```
-
-### 7.2. В сбор / не в сбор
-
-У каждого доната есть флаг:
-
-```text
-В сбор
-```
-
-Если включено — донат прибавляется к текущей цели.
-
-Если выключено — донат остаётся в истории, но не влияет на текущую полоску.
-
-### 7.3. Оповещение в Streamer.bot
-
-У ручных донатов есть флаг:
-
-```text
-Отправить оповещение в Streamer.bot
-```
-
-Если включено — bridge отправит событие в Streamer.bot.
-
-Если выключено — донат останется только в истории и/или сборе.
+Проверка валидирует Python, JSON, manifests интеграций, конфиги, TTS, TopDonation и основные файлы.
 
 ---
 
-## 8. DonationAlerts
-
-### 8.1. Что делает интеграция
-
-DonationAlerts подключается к real-time событиям через WebSocket/Centrifugo.
-
-Когда приходит донат:
-
-```text
-DonationAlerts -> core/server.py -> donations.json -> widget/admin -> Streamer.bot bridge
-```
-
-### 8.2. Создание приложения DonationAlerts
-
-Нужно создать OAuth-приложение в DonationAlerts:
-
-```text
-https://www.donationalerts.com/application/clients
-```
-
-Redirect URL должен быть **точно**:
-
-```text
-http://127.0.0.1:3333/auth/donationalerts/callback
-```
-
-Важно: `127.0.0.1` и `localhost` считаются разными адресами. Если в конфиге стоит `127.0.0.1`, в DonationAlerts тоже должен быть `127.0.0.1`.
-
-### 8.3. Настройка da_config.json
-
-Файл:
-
-```text
-core/integrations/donationalerts/da_config.json
-```
-
-Пример:
-
-```json
-{
-  "enabled": true,
-  "client_id": "ТВОЙ_CLIENT_ID",
-  "client_secret": "ТВОЙ_CLIENT_SECRET",
-  "redirect_uri": "http://127.0.0.1:3333/auth/donationalerts/callback",
-  "scopes": "oauth-user-show oauth-donation-subscribe oauth-donation-index"
-}
-```
-
-Нужные права:
-
-```text
-oauth-user-show
-oauth-donation-subscribe
-oauth-donation-index
-```
-
-### 8.4. Авторизация DonationAlerts
-
-1. Запусти основной сервер:
-
-```text
-02_START_SERVER_ONLY.bat
-```
-
-или:
+## 4. Ежедневный запуск
 
 ```text
 01_START_ALL.bat
 ```
 
-2. Открой:
+Открываются Core Server, Streamer.bot Bridge и TTS Hub. Core самостоятельно запускает только включённые донат-интеграции.
 
 ```text
-http://127.0.0.1:3333/auth/donationalerts/start
+Админка:   http://127.0.0.1:3333/admin.html
+Виджет:    http://127.0.0.1:3333/widget.html
+TTS Player:http://127.0.0.1:3333/tts.html
 ```
 
-3. Разреши доступ.
-4. После успеха токены сохранятся в:
-
-```text
-core/integrations/donationalerts/da_tokens.json
-```
-
-### 8.5. Проверка статуса
-
-Открой:
-
-```text
-http://127.0.0.1:3333/api/da/status
-```
-
-Нормальное состояние:
-
-```json
-{
-  "configured": true,
-  "authorized": true,
-  "connected": true,
-  "running": true
-}
-```
-
-### 8.6. Безопасность
-
-Не показывай на стриме и не отправляй другим:
-
-```text
-da_config.json
-da_tokens.json
-client_secret
-access_token
-refresh_token
-```
+`03_START_DONATTY_ONLY.bat` оставлен только для ручной отладки. В обычной работе Donatty управляется из Integration Hub.
 
 ---
 
-## 9. Donatty
+## 5. Админка: раздел «Донаты»
 
-### 9.1. Что делает интеграция
+### 5.1. Текущая цель
 
-Donatty listener получает донаты из Donatty и отправляет их в основной сервер:
+Можно изменить:
 
-```text
-Donatty -> donatty_listener.py -> http://127.0.0.1:3333/api/donation
-```
+- название;
+- стартовую сумму;
+- целевую сумму;
+- валюту цели.
 
-### 9.2. Почему нужен Auto Listener
+`baseAmount` — деньги, которые уже были собраны, но не представлены отдельными донатами.
 
-В Donatty внутренняя SSE-ссылка вида:
+### 5.2. Ручной донат
 
-```text
-https://api-009.donatty.com/widgets/.../sse?jwt=...
-```
-
-может меняться. Поэтому новый listener не хранит старую SSE-ссылку, а:
-
-1. открывает обычную ссылку виджета Donatty;
-2. ловит свежий `/sse?jwt=...` из Network;
-3. подключается к нему;
-4. при отвале пытается повторить процесс.
-
-### 9.3. Настройка Donatty
-
-Файл:
+Поля:
 
 ```text
-integrations/donatty/donatty_config.json
+Имя
+Сумма
+Валюта
+Сообщение
 ```
 
-Пример:
-
-```json
-{
-  "enabled": true,
-
-  "widget_url": "https://widgets.donatty.com/ТВОЯ_ССЫЛКА_ДЛЯ_OBS",
-
-  "sse_url": "",
-
-  "widget_api_url": "http://127.0.0.1:3333/api/donation",
-
-  "headless_browser": true,
-  "sse_capture_timeout_seconds": 35,
-
-  "prefer_auto_sse": true,
-  "use_old_sse_if_auto_failed": true,
-
-  "reconnect_delay_seconds": 5,
-  "max_reconnect_delay_seconds": 60
-}
-```
-
-В `widget_url` вставляется обычная ссылка Donatty для OBS/встраивания, не внутренняя `sse?jwt`.
-
-### 9.4. Запуск Donatty listener
-
-Отдельно:
+Независимые флаги:
 
 ```text
-03_START_DONATTY_ONLY.bat
+Добавлять в текущий сбор
+Отправить обычное оповещение в Streamer.bot
+Запустить донат-ивенты
+Озвучить сообщение через TTS Hub
 ```
 
-Или вместе со всем:
+Для ручного доната галочка **«Озвучить»** является окончательным решением. Если она включена, ручной донат обходит общий минимальный порог TTS. Это удобно для переводов на карту, разных валют и тестов.
 
-```text
-01_START_ALL.bat
-```
+### 5.3. История донатов
 
-В норме в окне будет:
+Основная строка показывает краткие данные. Нажми **«Развернуть»**, чтобы увидеть:
 
-```text
-[DONATTY] Открываю Donatty-виджет в скрытом браузере...
-[DONATTY] Свежий SSE URL пойман из Network.
-[DONATTY] Подключаюсь к SSE...
-[DONATTY] Подключено. Слушаю донаты Donatty.
-```
+- полное сообщение;
+- даты;
+- сумму после конвертации;
+- external ID;
+- unique key;
+- заметку.
 
-### 9.5. Если Donatty не подключается
+Так таблица не растягивается горизонтально.
 
-Открой `donatty_config.json` и поставь:
+### 5.4. Редактирование и удаление
 
-```json
-"headless_browser": false
-```
-
-Тогда браузер откроется видимо. Можно будет увидеть, грузится ли виджет.
-
-Потом снова запусти:
-
-```text
-03_START_DONATTY_ONLY.bat
-```
-
-### 9.6. Безопасность
-
-Не показывай публично:
-
-```text
-widget_url
-sse_url
-jwt
-```
+- `Изм.` — изменить имя, сумму, валюту и сообщение;
+- `Удал.` — удалить донат;
+- `Повт.` — повторить обычное оповещение Streamer.bot;
+- чекбоксы в истории меняют отдельные флаги события.
 
 ---
 
-## 10. Streamer.bot
+## 6. Данные и валюты
 
-### 10.1. Что делает bridge
-
-Streamer.bot bridge следит за историей донатов и отправляет новые донаты в Streamer.bot.
-
-```text
-donations.json -> streamerbot_bridge.py -> Streamer.bot HTTP Server -> action
-```
-
-Он запускает action и передаёт переменные:
-
-```text
-%user%
-%amount%
-%currency%
-%message%
-```
-
-Дополнительные переменные:
-
-```text
-%username%
-%donationUser%
-%donor%
-%currencyCode%
-%currencySymbol%
-%amountWithCurrency%
-%source%
-%donationId%
-```
-
-### 10.2. Настройка Streamer.bot
-
-В Streamer.bot включи HTTP Server:
-
-```text
-Servers/Clients -> HTTP Server
-```
-
-Рекомендуемые настройки:
-
-```text
-Host: 127.0.0.1
-Port: 7474
-Auto Start: включить
-```
-
-### 10.3. Настройка streamerbot_config.json
-
-Файл:
-
-```text
-integrations/streamerbot/streamerbot_config.json
-```
-
-Пример:
-
-```json
-{
-  "enabled": true,
-  "streamerbot_http_url": "http://127.0.0.1:7474/DoAction",
-
-  "action_name": "оповещение о донате",
-  "action_id": "",
-
-  "poll_interval_seconds": 0.5,
-
-  "send_existing_on_first_start": false,
-  "send_manual_donations": false,
-
-  "send_sources": [
-    "donationalerts",
-    "donatty"
-  ],
-
-  "currency_mode_for_currency_arg": "symbol",
-
-  "currency_symbols": {
-    "RUB": "₽",
-    "USD": "$",
-    "EUR": "€",
-    "KZT": "₸"
-  },
-
-  "extra_args": {
-    "integration": "VicWanderDonationGoal"
-  }
-}
-```
-
-### 10.4. Action ID
-
-Если bridge пишет:
-
-```text
-action not found
-```
-
-лучше запускать action по ID.
-
-Открой:
-
-```text
-http://127.0.0.1:7474/GetActions
-```
-
-Найди нужное действие и скопируй `id`.
-
-Вставь в:
-
-```json
-"action_id": "ТУТ_ID_ACTION"
-```
-
-`action_name` можно оставить для удобства.
-
-### 10.5. Настройка текста в Streamer.bot
-
-В твоём action используется:
-
-```text
-%user% — %amount%%currency%
-```
-
-и сообщение:
-
-```text
-%message%
-```
-
-Bridge передаёт именно эти переменные.
-
-Пример:
-
-```text
-TestUser — 133₽
-Тестовое сообщение доната
-```
-
-### 10.6. Тест Streamer.bot
-
-Запусти:
-
-```text
-05_TEST_STREAMERBOT.bat
-```
-
-Должен запуститься action с тестовыми переменными.
-
-### 10.7. Дубли с MiniChat
-
-Если MiniChat тоже запускает тот же action, может быть двойное оповещение:
-
-```text
-MiniChat -> Streamer.bot
-наш Bridge -> Streamer.bot
-```
-
-Для проверки лучше:
-
-1. сделать копию action;
-2. назвать её `оповещение о донате ТЕСТ`;
-3. прописать её ID в `streamerbot_config.json`;
-4. убедиться, что bridge работает;
-5. потом отключить MiniChat trigger или перевести bridge на основной action.
-
----
-
-## 11. Данные и хранение
-
-### 11.1. state.json
-
-Файл:
+### 6.1. state.json
 
 ```text
 core/data/state.json
 ```
 
-Хранит:
+Хранит состояние цели.
 
-```json
-{
-  "title": "Сбор на цель",
-  "current": 0,
-  "baseAmount": 0,
-  "goal": 10000,
-  "currency": "RUB",
-  "lastDonation": null
-}
-```
-
-`current` пересчитывается автоматически.
-
-### 11.2. donations.json
-
-Файл:
+### 6.2. donations.json
 
 ```text
 core/data/donations.json
 ```
 
-Пример записи:
+Основные поля доната:
 
 ```json
 {
-  "uniqueKey": "donatty:3376e992-7ac9-43b7-b685-334a176ccbb6",
+  "uniqueKey": "donatty:external-id",
   "source": "donatty",
-  "externalId": "3376e992-7ac9-43b7-b685-334a176ccbb6",
-  "username": "3223",
-  "amount": 133,
-  "currency": "RUB",
-  "amountForGoal": 133,
-  "includeInGoal": true,
-  "notifyStreamerBot": true,
-  "message": "12313",
-  "createdAt": "2026-05-31T11:24:59.418570589Z",
-  "receivedAt": "2026-06-01T23:00:00+07:00",
-  "note": ""
-}
-```
-
-### 11.3. Защита от дублей
-
-Донаты не должны учитываться дважды, потому что используется ключ:
-
-```text
-source:externalId
-```
-
-Примеры:
-
-```text
-donationalerts:123456
-donatty:3376e992-7ac9-43b7-b685-334a176ccbb6
-manual:random-uuid
-```
-
----
-
-## 12. Валюты
-
-Текущая базовая логика:
-
-- если валюта совпадает с валютой цели — сумма добавляется как есть;
-- если цель в RUB, для некоторых валют может использоваться ручная таблица курсов;
-- полноценная система курсов пока требует отдельной доработки.
-
-Рекомендуемая будущая логика:
-
-```text
-originalAmount: 10
-originalCurrency: USD
-goalAmount: 900
-goalCurrency: RUB
-rate: 90
-rateSource: manual
-```
-
-То есть история должна хранить оригинал, а в сбор добавлять пересчитанную сумму.
-
----
-
-## 13. Светлая и тёмная тема админки
-
-Файлы:
-
-```text
-core/public/admin-theme.css
-core/public/admin-theme.js
-```
-
-Тема переключается кнопкой в админке.
-
-Выбор сохраняется в браузере через `localStorage`.
-
-Акцентные цвета:
-
-```text
-#23489e
-#35a9d4
-#3bc7da
-```
-
-Если тема выглядит старой после правок:
-
-```text
-Ctrl + F5
-```
-
----
-
-## 14. Настройка оформления админки
-
-Основной CSS:
-
-```text
-core/public/admin.css
-```
-
-Тема:
-
-```text
-core/public/admin-theme.css
-```
-
-Если надо менять общую палитру — лучше править переменные в `admin-theme.css`:
-
-```css
-body[data-theme="light"] {
-  --bg: #edf3f8;
-  --card: #ffffff;
-  --text: #172033;
-  --accent: #35a9d4;
-}
-```
-
-```css
-body[data-theme="dark"] {
-  --bg: #0b0f17;
-  --card: #111827;
-  --text: #e5e7eb;
-  --accent: #35a9d4;
-}
-```
-
----
-
-## 15. API
-
-Основные адреса:
-
-| Метод | Адрес | Что делает |
-|---|---|---|
-| GET | `/api/state` | Текущее состояние цели |
-| GET | `/api/donations` | История донатов |
-| POST | `/api/donation` | Добавить донат |
-| POST | `/api/donation/update` | Обновить донат |
-| POST | `/api/donation/delete` | Удалить донат |
-| POST | `/api/set-goal` | Обновить цель |
-| POST | `/api/reset` | Сбросить текущий сбор, оставив историю |
-| GET | `/api/da/status` | Статус DonationAlerts |
-
-Пример ручного добавления через API:
-
-```json
-{
-  "source": "manual",
-  "externalId": "manual-test-1",
-  "username": "TestUser",
+  "username": "Viewer",
   "amount": 100,
   "currency": "RUB",
-  "message": "Тест",
+  "amountForGoal": 100,
   "includeInGoal": true,
-  "notifyStreamerBot": false
+  "notifyStreamerBot": true,
+  "triggerDonationEvents": true,
+  "speakTTS": true,
+  "message": "Текст сообщения"
 }
 ```
 
----
-
-## 16. Батники
-
-| Батник | Что делает |
-|---|---|
-| `00_INSTALL_ALL.bat` | Установка зависимостей |
-| `01_START_ALL.bat` | Запуск всего перед стримом |
-| `02_START_SERVER_ONLY.bat` | Только основной сервер |
-| `03_START_DONATTY_ONLY.bat` | Только Donatty listener |
-| `04_START_STREAMERBOT_ONLY.bat` | Только Streamer.bot bridge |
-| `05_TEST_STREAMERBOT.bat` | Тестовый запуск Streamer.bot action |
-| `06_RESET_STREAMERBOT_SENT.bat` | Сброс списка отправленных в Streamer.bot событий |
-
----
-
-## 17. Типичные проблемы
-
-### 17.1. Виджет не открывается
-
-Проверь, запущен ли основной сервер.
-
-Должно быть открыто окно:
-
-```text
-Donation Goal Widget запущен
-```
-
-Адрес:
-
-```text
-http://127.0.0.1:3333/widget.html
-```
-
-### 17.2. Админка не обновляется
-
-Попробуй:
-
-```text
-Ctrl + F5
-```
-
-Проверь:
-
-```text
-http://127.0.0.1:3333/api/state
-```
-
-Если API не открывается — сервер не запущен.
-
-### 17.3. DonationAlerts не подключается
-
-Проверь:
-
-```text
-http://127.0.0.1:3333/api/da/status
-```
-
-Частые причины:
-
-- неверный `client_id`;
-- неверный `client_secret`;
-- redirect URL не совпадает символ в символ;
-- не пройдена авторизация;
-- токен протух.
-
-### 17.4. Donatty не подключается
-
-Проверь:
-
-```text
-integrations/donatty/donatty_config.json
-```
-
-Убедись, что вставлена обычная ссылка виджета, а не старая `sse?jwt`.
-
-Если не помогает:
-
-```json
-"headless_browser": false
-```
-
-и перезапусти Donatty listener.
-
-### 17.5. Streamer.bot пишет `action not found`
-
-Открой:
-
-```text
-http://127.0.0.1:7474/GetActions
-```
-
-Найди action и вставь его ID в `streamerbot_config.json`.
-
-### 17.6. Двойные оповещения
-
-Скорее всего, одновременно работают:
-
-```text
-MiniChat trigger
-Streamer.bot Bridge
-```
-
-Отключи MiniChat trigger или используй отдельный test action.
-
-### 17.7. При запуске проигрались старые донаты
-
-Bridge хранит список отправленных событий в:
-
-```text
-integrations/streamerbot/streamerbot_sent.json
-```
-
-Если его удалить или сбросить, старые донаты могут считаться новыми.
-
-### 17.8. Светлая тема выглядит криво
-
-Обнови страницу:
-
-```text
-Ctrl + F5
-```
-
-Проверь, что подключены:
-
-```html
-<link rel="stylesheet" href="admin-theme.css" />
-<script src="admin-theme.js"></script>
-```
-
----
-
-## 18. Безопасность
-
-Не публиковать:
-
-```text
-da_config.json
-da_tokens.json
-donatty_config.json
-streamerbot_config.json
-streamerbot_sent.json
-```
-
-Особенно опасны:
-
-```text
-client_secret
-access_token
-refresh_token
-widget_url Donatty
-sse_url Donatty
-jwt
-```
-
-Если ссылка Donatty засветилась — лучше пересоздать ссылку виджета, если Donatty позволяет.
-
----
-
-## 19. Бэкапы
-
-Перед крупными изменениями делай копию папки:
-
-```text
-donation_goal_widget_BACKUP_дата
-```
-
-Особенно важно сохранить:
-
-```text
-core/data/state.json
-core/data/donations.json
-core/integrations/donationalerts/da_config.json
-core/integrations/donationalerts/da_tokens.json
-integrations/donatty/donatty_config.json
-integrations/streamerbot/streamerbot_config.json
-```
-
----
-
-## 20. Что можно добавить потом
-
-Идеи на будущее:
-
-- нормальный пересчёт валют;
-- ручная таблица курсов в админке;
-- экспорт истории донатов в CSV/Excel;
-- несколько целей;
-- отдельные цели для разных источников;
-- кнопка “повторить оповещение”;
-- очередь оповещений;
-- статусы Donatty/Streamer.bot прямо в админке;
-- встроенная страница настроек;
-- автообновление конфигов из админки;
-- лог ошибок на отдельной странице;
-- упаковка в `.exe`.
-
----
-
-## 21. Быстрый чеклист перед стримом
-
-```text
-[ ] Запустить 01_START_ALL.bat
-[ ] Открыть админку
-[ ] Проверить, что сбор правильный
-[ ] Проверить, что OBS видит widget.html
-[ ] Проверить Streamer.bot HTTP Server
-[ ] Проверить тест Streamer.bot, если были изменения
-[ ] Проверить Donatty listener
-[ ] Проверить DonationAlerts status
-[ ] Не светить приватные ссылки на стриме
-```
-
-
----
-
-## 22. Stage 3: полезные функции
-
-### Экспорт CSV
-
-В админке есть кнопка **Экспорт CSV**. Она скачивает историю донатов в файл `donations_export.csv`.
-
-Прямой адрес:
-
-```text
-http://127.0.0.1:3333/api/donations/export.csv
-```
-
-### Повторить оповещение
-
-В истории донатов есть кнопка **Повт.**. Она ставит выбранный донат обратно в очередь Streamer.bot.
-
-Если `streamerbot_sent.json` ещё не создан, сервер помечает остальные старые донаты как уже обработанные, чтобы при следующем запуске bridge не проиграл всю историю.
-
-### Блок статусов
-
-Админка показывает статусы:
-
-```text
-Локальный сервер
-DonationAlerts
-Donatty
-Streamer.bot
-```
-
-Donatty и Streamer.bot пишут heartbeat-файлы в папку `runtime/`. Если процесс закрыт, статус станет устаревшим.
-
-### Ручные курсы валют
-
-Курсы хранятся в:
+### 6.3. Курсы валют
 
 ```text
 core/data/rates.json
 ```
 
-Пример:
+Курс означает, сколько рублей стоит одна единица валюты. Например:
 
 ```json
 {
@@ -1214,4 +297,1224 @@ core/data/rates.json
 }
 ```
 
-Курс означает, сколько рублей стоит 1 единица валюты.
+---
+
+## 7. DonationAlerts
+
+В v1.4.0 DonationAlerts настраивается в **Админка → Интеграции → DonationAlerts**.
+
+### 7.1. Настройка
+
+1. Создай API Application в DonationAlerts.
+2. Redirect URL должен точно совпадать:
+
+```text
+http://127.0.0.1:3333/auth/donationalerts/callback
+```
+
+3. Введи Client ID и Client Secret в Integration Hub.
+4. Нажми **Сохранить настройки**.
+5. Нажми **Авторизовать**.
+6. После возврата нажми **Проверить**.
+
+Рабочий конфиг и токены:
+
+```text
+integrations/donationalerts/donationalerts_config.json
+integrations/donationalerts/donationalerts_tokens.json
+```
+
+Client Secret и токены не показываются обратно в браузере и не должны попадать в GitHub.
+
+### 7.2. Управление
+
+В карточке доступны:
+
+```text
+Включить / выключить
+Запустить / остановить
+Переподключить
+Проверить
+Авторизовать
+Сбросить авторизацию
+Инструкция / Логи / Техническое состояние
+```
+
+Совместимые адреса `/api/da/status`, `/api/da/start` и `/api/da/stop` сохранены.
+
+---
+
+## 8. Donatty
+
+Donatty настраивается в **Админка → Интеграции → Donatty**.
+
+1. Скопируй обычную OBS-ссылку виджета Donatty.
+2. Вставь её в поле `Ссылка OBS-виджета Donatty`.
+3. Оставь автоматическое получение SSE и скрытый браузер включёнными.
+4. Сохрани и нажми **Проверить**.
+
+Integration Manager запускает `donatty_listener.py` как отдельный процесс. Listener через Playwright получает временный `sse?jwt=...`, слушает поток и при истечении JWT переподключается.
+
+Логи Donatty доступны прямо в Integration Hub. Для визуальной отладки можно временно выключить `Скрытый браузер`.
+
+Не публикуй `widget_url`, `sse_url` и JWT.
+
+---
+
+## 9. Streamer.bot Bridge и Donation Event Rules
+
+Bridge:
+
+```text
+integrations/streamerbot/streamerbot_bridge.py
+```
+
+Конфиг:
+
+```text
+integrations/streamerbot/streamerbot_config.json
+```
+
+### 9.1. Обычное оповещение
+
+Bridge запускает основной Streamer.bot action и передаёт:
+
+```text
+%user%
+%amount%
+%currency%
+%message%
+%source%
+%donationId%
+```
+
+### 9.2. Донат-ивенты
+
+Правила:
+
+```text
+integrations/streamerbot/donation_event_rules.json
+```
+
+Пример:
+
+```json
+{
+  "id": "pet-hand-20",
+  "enabled": true,
+  "sources": ["donationalerts", "donatty", "manual"],
+  "match": "equals",
+  "amount": 20,
+  "currency": "RUB",
+  "action_id": "STREAMERBOT-ACTION-ID"
+}
+```
+
+Каждый донат может независимо:
+
+- запустить обычное оповещение;
+- запустить донат-ивент;
+- попасть в сбор;
+- быть озвучен.
+
+---
+
+# 10. TTS Hub
+
+TTS Hub — единая система озвучки. Она принимает события, очищает текст, выбирает голосовой профиль, применяет правила и передаёт текст выбранному провайдеру.
+
+Файлы:
+
+```text
+integrations/tts/tts_hub.py
+integrations/tts/tts_config.json
+integrations/tts/tts_profiles.json
+integrations/tts/tts_rules.json
+integrations/tts/tts_queue.json
+integrations/tts/tts_history.json
+integrations/tts/tts_log.json
+integrations/tts/providers/
+```
+
+## 10.1. Общая последовательность
+
+```text
+Событие
+  ↓
+Проверка TTS-флага и суммы
+  ↓
+Очистка текста
+  ↓
+Выбор профиля
+  ↓
+Выбор основного провайдера
+  ↓
+Синтез / отправка Speaker.bot
+  ↓
+При подтверждённой ошибке — fallback
+  ↓
+История и лог
+```
+
+## 10.2. Общие настройки
+
+- основной провайдер;
+- резервный провайдер;
+- профиль по умолчанию;
+- минимальная сумма автоматического доната;
+- максимальная длина;
+- удаление ссылок и HTML;
+- пропуск пустого текста;
+- автоматическая озвучка донатов сервисов.
+
+Важно: провайдер, жёстко заданный в профиле, имеет приоритет. Значение **«Автоматически»** заставляет профиль использовать основной провайдер.
+
+---
+
+## 11. Провайдер Speaker.bot
+
+Speaker.bot удобен как общий голосовой центр для донатов, команд, наград и виртуальных персонажей.
+
+### 11.1. Настройка Speaker.bot
+
+1. Открой `Settings -> Speech Engines`.
+2. Добавь и настрой движок.
+3. Открой `Settings -> Voice Aliases`.
+4. Создай alias, например:
+
+```text
+Donations
+moderator
+Rewards
+Character
+```
+
+5. Проверь `Test Speak`.
+6. Открой `Settings -> Websocket Server`.
+7. Включи Auto Start.
+
+Пример текущей конфигурации:
+
+```text
+Address: 127.0.0.1
+Port: 7580
+Endpoint: /
+```
+
+В VicDonationGoal:
+
+```text
+ws://127.0.0.1:7580/
+```
+
+Название Voice Alias в профиле должно совпадать символ в символ.
+
+### 11.2. Очередь Speaker.bot
+
+VicDonationGoal умеет отправлять команды:
+
+```text
+Pause
+Resume
+Stop
+Clear
+```
+
+Fallback запускается только при подтверждённой ошибке отправки. Медленная речь Speaker.bot сама по себе не запускает второй голос.
+
+### 11.3. Типичные ошибки
+
+```text
+speakerbot: выключен
+```
+
+Проверь флаг провайдера, профиль и WebSocket.
+
+```text
+Voice Alias не указан
+```
+
+Создай alias и впиши его в профиль.
+
+---
+
+## 12. Провайдер Microsoft Edge
+
+Edge TTS не требует API-ключа, но использует онлайн-службу Microsoft.
+
+Настройки:
+
+```text
+voice
+rate
+volume
+pitch
+```
+
+Пример голоса:
+
+```text
+ru-RU-SvetlanaNeural
+```
+
+Edge создаёт MP3. Для вывода звука добавь в OBS Browser Source:
+
+```text
+http://127.0.0.1:3333/tts.html
+```
+
+TTS Hub показывает heartbeat этого плеера. Если аудио создано, но Browser Source не открыт, звук не будет воспроизведён.
+
+---
+
+## 13. Провайдер Yandex SpeechKit
+
+Yandex является необязательным облачным провайдером.
+
+Поля:
+
+```text
+Endpoint
+API key или IAM token
+Folder ID
+Voice
+Emotion
+Speed
+Format
+```
+
+Сервисному аккаунту нужны права SpeechKit TTS на выбранный каталог. При ошибке `401/403 PermissionDenied` проверь роль, Folder ID и владельца ключа.
+
+Ключи хранятся в приватном:
+
+```text
+integrations/tts/tts_config.json
+```
+
+Никогда не публикуй его без очистки.
+
+---
+
+## 14. Провайдер XTTS Local
+
+VicDonationGoal не включает модель XTTS и её веса. Провайдер подключается к отдельно запущенному локальному HTTP-серверу.
+
+Ожидаемая схема по умолчанию:
+
+```text
+POST endpoint
+multipart/form-data:
+  text
+  language
+  speaker_wav (необязательно)
+```
+
+Поля настройки:
+
+```text
+Endpoint
+Language
+Reference WAV
+Format
+Response type
+```
+
+Поддерживаются ответы:
+
+- готовое аудио;
+- JSON с URL аудио;
+- JSON с base64.
+
+Если конкретный XTTS-сервер имеет другой API, используй Custom HTTP.
+
+---
+
+## 15. Провайдер Custom HTTP
+
+Универсальный адаптер для внешнего или локального API.
+
+Настройки:
+
+```text
+URL
+HTTP method
+Headers JSON
+Body JSON / Form
+Voice
+Language
+Response type
+```
+
+Шаблоны:
+
+```text
+{text}
+{voice}
+{language}
+```
+
+Пример тела:
+
+```json
+{
+  "text": "{text}",
+  "voice": "{voice}",
+  "language": "{language}"
+}
+```
+
+Типы ответа:
+
+```text
+audio       — бинарный аудиофайл в теле ответа
+json_url    — JSON содержит ссылку на аудиофайл
+json_base64 — JSON содержит base64-аудио
+```
+
+Для вложенного JSON можно указать путь через точку, например:
+
+```text
+data.audio.url
+```
+
+Не выводи приватные заголовки в публичные скриншоты и логи.
+
+---
+
+## 16. Голосовые профили
+
+Профиль — набор настроек голоса для назначения или группы пользователей.
+
+Стандартные профили:
+
+```text
+Default
+Donations
+Rewards
+Character
+Moderator
+VIP
+```
+
+### 16.1. Поля профиля
+
+- ID — постоянный технический идентификатор;
+- название;
+- провайдер;
+- Voice Alias Speaker.bot;
+- Edge voice;
+- Yandex voice/emotion;
+- XTTS reference WAV/language;
+- Custom HTTP voice/language;
+- rate, pitch, volume;
+- Bad Word Filter;
+- включён/выключен.
+
+### 16.2. Провайдер «Автоматически»
+
+```text
+Автоматически -> основной провайдер из общих настроек
+```
+
+Это лучший вариант для обычных профилей, если пользователь часто переключает движки.
+
+### 16.3. Персональный голос
+
+Создай профиль:
+
+```text
+ID: nick-special
+Name: Голос Nick
+Provider: Speaker.bot
+Alias: NickVoice
+```
+
+После этого создай правило по нику или userId.
+
+---
+
+## 17. Правила маршрутизации
+
+Правила выбирают профиль. Они **не задают порядок проигрывания очереди**.
+
+Главное правило:
+
+```text
+меньше число приоритета = правило проверяется раньше
+```
+
+Срабатывает первое подходящее правило.
+
+### 17.1. Типы событий
+
+Стандартные значения:
+
+```text
+donation
+channel_reward
+character
+moderator_command
+manual_test
+custom
+```
+
+Это внутренние значения TTS Hub. Они не появляются автоматически из Twitch или YouTube — их передаёт создатель события.
+
+### 17.2. Источники
+
+Стандартные значения:
+
+```text
+donationalerts
+donatty
+manual
+streamerbot
+twitch
+youtube
+character-service
+custom
+```
+
+Пример:
+
+```text
+eventType = channel_reward
+source = streamerbot
+```
+
+означает, что Streamer.bot получил награду и отправил её в TTS Hub.
+
+### 17.3. User ID
+
+Постоянный ID пользователя Twitch, YouTube или другой платформы. Он надёжнее ника, но доступен только если внешняя система его передала.
+
+### 17.4. Ники
+
+Сравнение выполняется без учёта регистра. У донатов DA/Donatty ник обычно доступен, а platform userId — не всегда.
+
+### 17.5. Роли
+
+Примеры:
+
+```text
+moderator
+vip
+subscriber
+broadcaster
+```
+
+Роль сработает только если Streamer.bot или другая интеграция передала поле `roles`.
+
+### 17.6. Reward ID
+
+ID конкретной награды Twitch. Его можно получить из события Streamer.bot или из настроек награды.
+
+### 17.7. Сумма
+
+Правила могут ограничить минимальную и максимальную сумму. Сначала используется `amountForGoal`, затем обычный `amount`.
+
+### 17.8. Как объединяются условия
+
+Разные заполненные поля работают через **И**. Значения внутри одного поля, перечисленные через запятую, работают через **ИЛИ**.
+
+Пример:
+
+```text
+Тип: donation
+Источник: donatty, donationalerts
+Ник: Nick
+Минимальная сумма: 1000
+```
+
+означает: донат из Donatty или DA, от Nick, не меньше 1000.
+
+### 17.9. Тестер маршрутизации
+
+В разделе правил можно ввести тестовое событие и увидеть:
+
+- совпавшее правило;
+- выбранный профиль;
+- фактический провайдер;
+- голос;
+- fallback.
+
+Озвучка при этом не запускается.
+
+---
+
+## 18. Очередь, история и логи
+
+### 18.1. Очередь
+
+Показывает ожидающие, обрабатываемые и готовые задачи. Длинный текст раскрывается вниз.
+
+### 18.2. История
+
+Фильтры:
+
+- поиск по нику, тексту и ID;
+- статус;
+- провайдер.
+
+Развёрнутая запись показывает:
+
+- оригинальный текст;
+- текст после очистки;
+- удалённые ссылки и фрагменты;
+- профиль;
+- совпавшее правило;
+- провайдер и голос;
+- fallback;
+- ошибку;
+- идентификаторы события.
+
+Статус `Пропущено` не является аварией. Например, сообщение могло состоять только из ссылки и стать пустым после очистки.
+
+### 18.3. Логи
+
+Логи хранят технические события TTS. Секретные ключи нельзя добавлять в текст ошибок вручную.
+
+---
+
+## 19. Внешний TTS API
+
+Главный endpoint:
+
+```text
+POST http://127.0.0.1:3333/api/tts/enqueue
+```
+
+Минимальный пример:
+
+```json
+{
+  "eventType": "channel_reward",
+  "source": "streamerbot",
+  "username": "Viewer",
+  "text": "Сообщение зрителя"
+}
+```
+
+Расширенный пример:
+
+```json
+{
+  "eventType": "channel_reward",
+  "source": "streamerbot",
+  "eventId": "reward-event-id",
+  "username": "Viewer",
+  "userId": "123456789",
+  "roles": ["moderator"],
+  "rewardId": "twitch-reward-id",
+  "text": "Сообщение зрителя",
+  "profileId": "moderator",
+  "priority": 50
+}
+```
+
+Если указан существующий `profileId`, правила пропускаются и профиль выбирается напрямую.
+
+Проверка правил без озвучки:
+
+```text
+POST /api/tts/rules/test
+```
+
+---
+
+## 20. Команда !ттс в Streamer.bot
+
+Можно напрямую использовать встроенный sub-action Speaker.bot, но тогда сообщение не попадёт в историю VicDonationGoal. Для единой истории лучше отправлять POST в TTS Hub.
+
+Пример C# sub-action Streamer.bot:
+
+```csharp
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        CPH.TryGetArg("rawInput", out string text);
+        CPH.TryGetArg("user", out string username);
+        CPH.TryGetArg("userId", out string userId);
+
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var payload = new
+        {
+            eventType = "moderator_command",
+            source = "streamerbot",
+            username = username ?? "Moderator",
+            userId = userId ?? "",
+            roles = new[] { "moderator" },
+            text,
+            profileId = "moderator"
+        };
+
+        using var client = new HttpClient();
+        var json = JsonSerializer.Serialize(payload);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = client.PostAsync(
+            "http://127.0.0.1:3333/api/tts/enqueue",
+            content
+        ).GetAwaiter().GetResult();
+
+        return response.IsSuccessStatusCode;
+    }
+}
+```
+
+Команда должна быть доступна только модераторам.
+
+---
+
+## 21. Награды за баллы канала
+
+Схема:
+
+```text
+Twitch Reward
+  ↓
+Streamer.bot trigger
+  ↓
+POST /api/tts/enqueue
+  ↓
+eventType: channel_reward
+source: streamerbot
+rewardId: ID награды
+  ↓
+Профиль Rewards или правило конкретной награды
+```
+
+Для разных наград можно создавать разные правила по `rewardId`.
+
+---
+
+## 22. Внешний персонаж или бот
+
+Внешний сервис может генерировать реплику персонажа, а TTS Hub отвечает за выбор и воспроизведение голоса.
+
+Пример:
+
+```json
+{
+  "eventType": "character",
+  "source": "character-service",
+  "username": "Персонаж",
+  "text": "Реплика виртуального персонажа",
+  "profileId": "character"
+}
+```
+
+Так персонаж может использовать отдельный Speaker.bot alias, Edge-голос или локальный XTTS-профиль.
+
+---
+
+## 23. Основные API endpoints
+
+| Метод | Endpoint | Назначение |
+|---|---|---|
+| GET | `/api/state` | состояние цели |
+| GET | `/api/donations` | история донатов |
+| POST | `/api/donation` | добавить донат |
+| GET | `/api/donors/top` | TopDonation |
+| GET | `/api/integrations` | список и статусы интеграций |
+| GET | `/api/integrations/detail?id=...` | manifest, настройки и инструкция сервиса |
+| GET | `/api/integrations/logs?id=...` | логи интеграции |
+| POST | `/api/integrations/config` | сохранить настройки сервиса |
+| POST | `/api/integrations/enable` | включить или выключить модуль |
+| POST | `/api/integrations/start` | запустить модуль |
+| POST | `/api/integrations/stop` | остановить модуль |
+| POST | `/api/integrations/restart` | переподключить модуль |
+| POST | `/api/integrations/test` | проверить подключение |
+| POST | `/api/integrations/clear-auth` | удалить OAuth-токены |
+| POST | `/api/integrations/onboarding` | завершить мастер первого запуска |
+| GET | `/api/status` | общий статус системы |
+| GET | `/api/tts/bootstrap` | TTS-конфиг, профили, правила и очередь |
+| POST | `/api/tts/enqueue` | внешнее TTS-событие |
+
+---
+
+## 24. BAT-файлы
+
+```text
+00_INSTALL_ALL.bat              установка зависимостей
+01_START_ALL.bat                Core + включённые интеграции + Bridge + TTS
+02_START_SERVER_ONLY.bat        Core и Integration Manager
+03_START_DONATTY_ONLY.bat       ручная отладка Donatty
+04_START_STREAMERBOT_ONLY.bat   только Streamer.bot Bridge
+05_TEST_STREAMERBOT.bat         тест action Streamer.bot
+06_RESET_STREAMERBOT_SENT.bat   сброс отправленных событий
+07_CREATE_LOCAL_CONFIGS.bat     создание конфигов из примеров
+08_START_TTS_ONLY.bat           только TTS Hub
+09_STABILITY_CHECK.bat          проверка проекта
+```
+
+---
+
+## 25. Структура проекта
+
+```text
+VicDonationGoal/
+├─ core/
+│  ├─ server.py
+│  ├─ integration_manager.py
+│  ├─ donor_store.py
+│  ├─ tts_hub_store.py
+│  ├─ data/
+│  └─ public/
+│     ├─ admin.html/js/css
+│     ├─ integrations-admin.js
+│     ├─ tts-admin.js
+│     ├─ widget.html/js
+│     └─ tts.html/js
+├─ integrations/
+│  ├─ donationalerts/
+│  │  ├─ manifest.json
+│  │  ├─ donationalerts_integration.py
+│  │  ├─ donationalerts_config.json
+│  │  ├─ donationalerts_tokens.json
+│  │  └─ GUIDE.md
+│  ├─ donatty/
+│  │  ├─ manifest.json
+│  │  ├─ donatty_listener.py
+│  │  ├─ donatty_config.json
+│  │  └─ GUIDE.md
+│  ├─ streamerbot/
+│  └─ tts/
+├─ runtime/integrations/
+├─ docs/
+├─ backups/
+└─ *.bat
+```
+
+Manifest описывает имя, тип запуска, обязательные поля, секреты, capabilities и встроенный гайд. Благодаря этому следующие сервисы можно добавлять без возврата их логики в Core.
+
+---
+
+## 26. Типичные проблемы TTS
+
+### Профиль продолжает использовать не тот движок
+
+Проверь поле `Провайдер` в профиле. Поставь `Автоматически`, если профиль должен следовать общим настройкам.
+
+### Speaker.bot выключен
+
+- запусти Speaker.bot;
+- включи WebSocket Server;
+- проверь порт;
+- проверь флаг провайдера;
+- проверь Voice Alias.
+
+### Edge создал файл, но звука нет
+
+Добавь `/tts.html` в OBS Browser Source и проверь heartbeat Edge Player в обзоре TTS Hub.
+
+### После очистки сообщение пустое
+
+Сообщение могло состоять только из ссылки или HTML. Это нормальный статус `Пропущено`.
+
+### Сообщение озвучилось дважды
+
+Не запускай одновременно прямой Speaker.bot sub-action и тот же текст через `/api/tts/enqueue`. Выбери одну цепочку.
+
+### Старые сообщения проигрались после сброса sent
+
+Не удаляй `tts_sent.json`, если не хочешь повторно обрабатывать старую историю донатов.
+
+### Yandex 401/403
+
+Проверь API key/IAM token, Folder ID и роль `ai.speechkit-tts.user`.
+
+### XTTS timeout
+
+Модель может долго загружаться. Проверь локальный сервер, GPU/CPU, endpoint и увеличь timeout.
+
+---
+
+## 27. Бэкапы и безопасность
+
+Перед обновлением копируй всю папку проекта.
+
+Особенно важны:
+
+```text
+core/data/state.json
+core/data/donations.json
+core/data/rates.json
+integrations/donationalerts/donationalerts_config.json
+integrations/donationalerts/donationalerts_tokens.json
+integrations/donatty/donatty_config.json
+integrations/streamerbot/streamerbot_config.json
+integrations/tts/tts_config.json
+integrations/tts/tts_profiles.json
+integrations/tts/tts_rules.json
+```
+
+Приватную рабочую сборку нельзя публиковать целиком. Перед GitHub-релизом нужно собрать отдельный sanitized-архив.
+
+
+---
+
+## 28. TopDonation
+
+Версия v1.3 добавляет отдельный рейтинг донатеров. В разделе `Донаты` доступны вкладки:
+
+```text
+История | Топ
+```
+
+### 28.1. Как считается рейтинг
+
+TopDonation считает сумму за всё время и не зависит от текущего донат-гола. Для каждого доната при первом учёте сохраняется отдельная сумма `amountForTop` в RUB. Позднее изменение курса валют не меняет уже сохранённый результат.
+
+Донат участвует в рейтинге, если у него включён флаг:
+
+```text
+Учитывать в TopDonation
+```
+
+Для ручного доната эта галочка находится прямо в форме добавления.
+
+### 28.2. Почему одинаковые ники из разных сервисов разделены
+
+Автоматическое объединение выполняется только внутри одного источника. Например:
+
+```text
+DonationAlerts: Nick
+DonationAlerts: nick
+```
+
+считаются одним профилем, потому что отличается только регистр.
+
+Но:
+
+```text
+DonationAlerts: Nick
+Donatty: Nick
+```
+
+по умолчанию считаются разными донатерами. Это защищает от случайного объединения двух людей с одинаковыми никами. Если это один человек, используй меню `••• → Объединить с другим`.
+
+### 28.3. Профиль донатера
+
+Профиль содержит:
+
+- отображаемое имя;
+- алиасы с указанием источника;
+- общую сумму донатов;
+- сумму ручных корректировок;
+- количество донатов;
+- дату первого и последнего доната;
+- личную заметку;
+- признаки `Закреплён` и `Исключён из топа`.
+
+Данные хранятся в:
+
+```text
+core/data/donor_profiles.json
+core/data/donor_adjustments.json
+```
+
+### 28.4. Закреплённые донатеры
+
+Команда `Закрепить` переносит профиль в отдельный блок над обычным рейтингом. Закреплённый пользователь не занимает номер в общем списке.
+
+### 28.5. Корректировка суммы
+
+Меню `Добавить сумму` создаёт техническую корректировку. Она полезна для старых переводов или денег, полученных вне донат-сервиса.
+
+Корректировка:
+
+- влияет только на TopDonation;
+- не создаёт обычный донат;
+- не меняет текущую цель;
+- отображается в раскрытой истории профиля;
+- может быть отрицательной;
+- может быть удалена отдельно.
+
+### 28.6. Объединение профилей
+
+Чтобы объединить одного человека из разных сервисов:
+
+1. открой вкладку `Топ`;
+2. нажми `•••` у профиля, который нужно присоединить;
+3. выбери `Объединить с другим`;
+4. введи точное имя или ID целевого профиля;
+5. подтверди действие.
+
+Исходные донаты не переписываются и не удаляются. В целевой профиль добавляются алиасы, а записи связываются с одним `donorId`.
+
+### 28.7. Исключение и удаление
+
+`Исключить из топа` скрывает пользователя из рейтинга, но сохраняет историю и донат-гол.
+
+`Удалить все донаты` — опасное действие. Оно удаляет все связанные донаты, корректировки и профиль, а затем пересчитывает текущую цель. Для подтверждения требуется повторно ввести имя донатера.
+
+### 28.8. Поиск
+
+Поиск во вкладке `Топ` работает по:
+
+- отображаемому имени;
+- алиасам;
+- заметке;
+- текстам всех донатов пользователя.
+
+### 28.9. Экспорт одного донатера
+
+Меню `Экспорт CSV` создаёт отдельный файл с:
+
+- общей суммой;
+- суммой корректировок;
+- всеми донатами;
+- исходными валютами;
+- суммой для рейтинга;
+- сообщениями;
+- техническими корректировками.
+
+### 28.10. Массовые флаги истории
+
+Над историей есть общие переключатели:
+
+```text
+Сбор | Опов. | Ивент | TTS | Топ
+```
+
+Они применяются ко всей истории. Смешанное состояние отображается чертой. Это позволяет одним действием убрать все старые донаты из текущего сбора.
+
+### 28.11. TopDonation API
+
+Основные endpoints:
+
+```text
+GET  /api/donors/top
+GET  /api/donors/detail?id=<donorId>
+GET  /api/donors/export.csv?id=<donorId>
+POST /api/donors/update
+POST /api/donors/adjustment/add
+POST /api/donors/adjustment/delete
+POST /api/donors/merge
+POST /api/donors/delete-all
+POST /api/donations/bulk-update
+```
+
+
+---
+
+## 29. Integrations Hub
+
+### 29.1. Состояния
+
+```text
+Не настроено
+Выключено
+Остановлено
+Запуск / подключение
+Подключено
+Ошибка
+```
+
+Карточка показывает фактическое состояние процесса и соединения. Кнопка **Переподключить** выполняет stop/start без перезапуска всей программы.
+
+### 29.2. Секретные поля
+
+Client Secret, widget URL и другие поля, помеченные в manifest как секретные, не отправляются обратно в браузер. Если секрет уже сохранён, поле показывает подсказку «Сохранено»; пустое значение при повторном сохранении не стирает его.
+
+### 29.3. Первый запуск
+
+Файл:
+
+```text
+integrations/integrations_onboarding.json
+```
+
+хранит завершение мастера и выбранные сервисы. На существующей рабочей установке мастер автоматически считается завершённым, если интеграции уже настроены.
+
+### 29.4. Добавление будущего сервиса
+
+Новая интеграция должна иметь собственную папку, `manifest.json`, конфиг, гайд и adapter/listener. Она приводит событие к единому формату и отправляет его в `/api/donation` или вызывает Core callback.
+
+---
+
+
+
+---
+
+## 30. StreamElements
+
+### 30.1. Как работает
+
+```text
+JWT / Overlay Token
+→ wss://astro.streamelements.com/
+→ subscribe channel.tips
+→ completed tip
+→ VicDonationGoal Core
+```
+
+Тема `channel.tips` предназначена для real-time tip/donation events. В событии доступны ID, пользователь, сообщение, сумма, валюта, статус и время.
+
+### 30.2. Подключение
+
+1. Откройте StreamElements Dashboard и переключитесь на нужный канал.
+2. Скопируйте JWT Token или Overlay Token.
+3. Скопируйте StreamElements Channel ID.
+4. Откройте **Админка → Интеграции → StreamElements**.
+5. Заполните Channel ID, тип токена и сам токен.
+6. Включите интеграцию, сохраните и нажмите **Проверить**.
+7. Убедитесь, что в логах появилась подписка `channel.tips`.
+8. Выполните тестовый или маленький настоящий tip.
+
+### 30.3. Статусы и фильтрация
+
+По умолчанию интеграция принимает `status=success` и разрешённые moderation states. Значения меняются в настройках через запятую.
+
+### 30.4. Безопасность
+
+JWT и Overlay Token являются секретами канала. Они хранятся только локально в `streamelements_config.json` и исключены из Git.
+
+---
+
+## 31. Streamlabs — Beta
+
+### 31.1. Создание приложения
+
+1. Войдите в Streamlabs Developer Console.
+2. Создайте OAuth Application.
+3. Укажите Redirect URI:
+
+```text
+http://127.0.0.1:3333/auth/streamlabs/callback
+```
+
+4. Пока приложение не одобрено, добавьте свой аккаунт в whitelist.
+5. Скопируйте Client ID и Client Secret.
+
+### 31.2. Подключение
+
+1. Откройте **Интеграции → Streamlabs**.
+2. Введите Client ID и Client Secret.
+3. Оставьте scope `socket.token`.
+4. Включите интеграцию и сохраните.
+5. Нажмите **Авторизовать** и подтвердите доступ.
+6. После возврата нажмите **Проверить**.
+7. Сделайте тестовый или маленький настоящий донат.
+
+### 31.3. Техническая схема
+
+```text
+OAuth access token
+→ GET /api/v2.0/socket/token
+→ Socket.IO event
+→ type=donation
+→ VicDonationGoal Core
+```
+
+Интеграция автоматически пробует Engine.IO v4 и v3. В v1.4.1 Streamlabs помечен Beta до живого теста на пользовательском приложении.
+
+### 31.4. Whitelist
+
+Неодобренное Streamlabs-приложение разрешает авторизацию только whitelist-пользователям. Это подходит для личной сборки и небольшой закрытой беты.
+
+### 31.5. Безопасность
+
+Не публикуйте Client Secret и `streamlabs_tokens.json`.
+
+
+## 32. v1.4.2 — Russian Services
+
+### DonatePay
+
+DonatePay подключается по официальному API-ключу. Core получает пользователя через `/user`, последние операции через `/transactions`, затем временные токены для Centrifugo и подписывается на личный канал `$public:USER_ID`. Старые операции при первом запуске по умолчанию не импортируются.
+
+### Donate.Stream
+
+Beta-адаптер открывает официальный alert-виджет в Playwright и анализирует WebSocket, EventSource, fetch и сообщения страницы. Если тестовый донат не распознан, используйте `11_INTEGRATION_INSPECTOR.bat` и сохраните диагностический JSONL.
+
+### DonateX
+
+Beta-адаптер поддерживает личный API-токен. Endpoint и схема авторизации оставлены редактируемыми до подтверждения текущей документации живым аккаунтом. Также предусмотрен widget-режим.
+
+### Tribute
+
+Tribute использует подписанный webhook. Для закрытого теста `12_INSTALL_CLOUDFLARED.bat` устанавливает Cloudflare Quick Tunnel. После запуска интеграции скопируйте `publicWebhookUrl` из технического состояния в настройки Tribute. Адрес Quick Tunnel меняется после перезапуска.
+
+### Integration Inspector
+
+`11_INTEGRATION_INSPECTOR.bat` открывает виджет в обычном Chromium и записывает URL запросов, WebSocket-фреймы и консоль. Значения параметров `token`, `jwt`, `key`, `secret` и `access_token` маскируются автоматически.
+
+
+## 33. v1.4.3 — Integration Stability
+
+### 33.1. Полная цепочка новых сервисов
+
+Все автоматические источники (`donationalerts`, `donatty`, `streamelements`, `streamlabs`, `donatepay`, `donatestream`, `donatex`, `tribute`) теперь по умолчанию разрешены в Streamer.bot Bridge, Donation Event Rules и TTS Hub. Пустой список `send_sources` означает «все автоматические сервисы».
+
+Существующие события, которые старая версия уже ошибочно отметила отправленными, автоматически повторно не воспроизводятся. Для проверки старой записи используйте кнопку `Повт.` в истории либо создайте новый тестовый донат.
+
+### 33.2. DonatePay
+
+DonatePay использует сохранённый `User ID` и не запрашивает `/user` при каждом переподключении. Восстановление истории через `/transactions` необязательно и по умолчанию выключено из-за строгих лимитов API. Новые события приходят через Centrifugo независимо от catch-up истории. API-ключи маскируются в статусах и логах интерфейса.
+
+### 33.3. DonateX
+
+DonateX работает опросом API. Успешный опрос считается подключением; временная ошибка после успешного ответа отображается как предупреждение `polling_degraded`, а не как полное отключение. Рекомендуемый интервал — 15–30 секунд.
+
+### 33.4. Tribute и Cloudflare Quick Tunnel
+
+При включённом `auto_install_cloudflared` интеграция сама скачивает `tools/cloudflared.exe`, запускает Quick Tunnel и показывает готовый `publicWebhookUrl` в техническом состоянии. В Tribute вставляется весь адрес целиком. Адрес Quick Tunnel временный и может измениться после перезапуска.
+
+### 33.5. Остановка и блокировки файлов
+
+`13_STOP_ALL.bat` завершает Core, Streamer.bot Bridge, TTS Hub, cloudflared и все скрытые listener-процессы. `01_START_ALL.bat` запускает эту очистку автоматически. Интеграции, запущенные Core, помещаются в Windows Job Object и завершаются вместе с Core даже при закрытии окна крестиком.
+
+JSON теперь читается и записывается с повторными попытками при кратких Windows sharing violations. Core больше не переписывает `donations.json` на каждом обновлении админки.
+
+
+## 34. v1.4.4 — Beta Readiness
+
+### 34.1. Статусы на главной
+
+Главная страница разделяет **системные модули** и **донат-сервисы**. Core Server, Integration Manager, Streamer.bot Bridge и TTS Hub имеют собственные лампочки. Донат-сервисы показываются компактной сеткой; красные и жёлтые состояния поднимаются выше работающих. Кнопка «Показать подробности» раскрывает heartbeat, последнее событие и переход в Integration Hub.
+
+Цвета: зелёный — работает, голубой — подключается, жёлтый — degraded, красный — ошибка, серый — выключен или не настроен.
+
+### 34.2. Центральный реестр источников
+
+Файл `source_registry.py` содержит официальные ID всех источников. Streamer.bot Bridge, TTS Hub, фильтры и проверки используют этот реестр. При добавлении нового сервиса его ID больше не нужно вручную дублировать в нескольких модулях.
+
+### 34.3. Диагностический отчёт
+
+Кнопка «Диагностический отчёт» либо `14_CREATE_DIAGNOSTIC_REPORT.bat` создаёт ZIP в папке `diagnostics`. API-ключи, OAuth-токены, JWT, widget URL и webhook secrets маскируются. Тексты донатов не включаются; сохраняются только количество и распределение по источникам.
+
+### 34.4. Beta Readiness Check
+
+`15_BETA_READINESS_CHECK.bat` запускает Stability Check, импортирует исполняемые модули, проверяет manifests и source registry, пропуск источников через Streamer.bot/TTS, конкурентную JSON-запись и построение dashboard API.
+
+### 34.5. Tribute и cloudflared
+
+Tribute остаётся Experimental и выключен по умолчанию. `cloudflared.exe` больше не включается в архив, поскольку занимает около 52 МБ. Для Tribute запустите `12_INSTALL_CLOUDFLARED.bat` или разрешите автоматическую установку в карточке интеграции. Для остальных сервисов cloudflared не нужен.
+
+### 34.6. Уровни готовности
+
+- Stable: DonationAlerts, Donatty, StreamElements, Donate.Stream, DonateX.
+- Beta: DonatePay, Streamlabs.
+- Experimental: Tribute.
+
+
+## 35. Roadmap
+
+```text
+v1.4.4.x — исправления закрытой беты
+v1.5     — Core & Storage Refactor
+v1.6     — Donation Goal Customisation
+v2.0     — Desktop Application
+Later    — optional cloud backup
+```
+
+До завершения закрытой беты в ветку `v1.4.4.x` не добавляются новые донат-сервисы, TTS-движки или крупные функции. Полный план находится в `ROADMAP.md`.

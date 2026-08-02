@@ -1,0 +1,127 @@
+{
+  "id": "donatex",
+  "name": "DonateX",
+  "shortName": "DonateX",
+  "icon": "DX",
+  "order": 70,
+  "kind": "subprocess",
+  "entrypoint": "donatex_listener.py",
+  "description": "Личный External Token DonateX: официальный GET /api/v1/donations с периодической проверкой.",
+  "configFile": "donatex_config.json",
+  "configExampleFile": "donatex_config.example.json",
+  "guideFile": "GUIDE.md",
+  "statusFile": "runtime/integrations/donatex_status.json",
+  "statusStaleSeconds": 120,
+  "testWaitSeconds": 12,
+  "requiredFields": [
+    "api_token"
+  ],
+  "secretFields": [
+    "api_token",
+    "widget_url"
+  ],
+  "capabilities": {
+    "oauth": false,
+    "realtime": false,
+    "test": true,
+    "logs": true,
+    "clearAuth": false
+  },
+  "fields": [
+    {
+      "key": "api_token",
+      "label": "Личный API-токен DonateX",
+      "type": "password",
+      "placeholder": "Токен из настроек аккаунта"
+    },
+    {
+      "key": "mode",
+      "label": "Режим",
+      "type": "select",
+      "default": "api",
+      "options": [
+        {
+          "value": "api",
+          "label": "API polling"
+        },
+        {
+          "value": "widget",
+          "label": "Alert widget (экспериментально)"
+        }
+      ]
+    },
+    {
+      "key": "api_url",
+      "label": "URL API донатов (необязательно)",
+      "type": "text",
+      "placeholder": "https://donatex.gg/api/v1/donations",
+      "help": "Если поле пустое, используется официальный endpoint автоматически.",
+      "default": "https://donatex.gg/api/v1/donations"
+    },
+    {
+      "key": "auth_mode",
+      "label": "Способ передачи токена",
+      "type": "select",
+      "default": "query",
+      "options": [
+        {
+          "value": "bearer",
+          "label": "Authorization: Bearer"
+        },
+        {
+          "value": "x-api-key",
+          "label": "X-API-Key"
+        },
+        {
+          "value": "api-key",
+          "label": "Api-Key"
+        },
+        {
+          "value": "query",
+          "label": "Query: ?token="
+        }
+      ]
+    },
+    {
+      "key": "query_token_name",
+      "label": "Имя query-параметра токена",
+      "type": "text",
+      "default": "token",
+      "placeholder": "token",
+      "help": "Для официального External Token DonateX используется token."
+    },
+    {
+      "key": "items_path",
+      "label": "Путь к массиву событий в JSON",
+      "type": "text",
+      "placeholder": "data, rows, items или data.items",
+      "help": "Если ответ API содержит массив не в корне."
+    },
+    {
+      "key": "widget_url",
+      "label": "Ссылка виджета (для режима widget)",
+      "type": "password",
+      "placeholder": "https://..."
+    },
+    {
+      "key": "take",
+      "label": "Сколько последних донатов запрашивать",
+      "type": "number",
+      "default": 20
+    },
+    {
+      "key": "poll_interval_seconds",
+      "label": "Интервал проверки API, сек.",
+      "type": "number",
+      "default": 20
+    },
+    {
+      "key": "headless_browser",
+      "label": "Скрытый браузер в режиме widget",
+      "type": "checkbox",
+      "default": true
+    }
+  ],
+  "stability": "stable",
+  "dashboardVisible": true
+}

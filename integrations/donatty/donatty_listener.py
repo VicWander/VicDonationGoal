@@ -1,6 +1,9 @@
 import json
+import os
+import shutil
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,9 +20,18 @@ except ImportError:
 
 ROOT = Path(__file__).parent
 PROJECT_ROOT = ROOT.parent.parent
+if str(PROJECT_ROOT) not in os.sys.path:
+    os.sys.path.insert(0, str(PROJECT_ROOT))
+
+from safe_json import load_json as _robust_load_json, save_json as _robust_save_json
+
+BROKEN_JSON_DIR = PROJECT_ROOT / "backups" / "broken_json"
+_BROKEN_JSON_BACKED_UP = set()
 RUNTIME_DIR = PROJECT_ROOT / "runtime"
 CONFIG_FILE = ROOT / "donatty_config.json"
 STATUS_FILE = RUNTIME_DIR / "donatty_status.json"
+VERSION_FILE = PROJECT_ROOT / "VERSION"
+APP_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "dev"
 
 DEFAULT_CONFIG = {
     "enabled": True,
@@ -37,7 +49,10 @@ DEFAULT_CONFIG = {
     "use_old_sse_if_auto_failed": True,
 
     "reconnect_delay_seconds": 5,
-    "max_reconnect_delay_seconds": 60
+    "max_reconnect_delay_seconds": 60,
+
+    "widget_send_attempts": 3,
+    "widget_send_retry_seconds": 1.0
 }
 
 
@@ -47,21 +62,35 @@ def ensure_config():
         save_json(CONFIG_FILE, DEFAULT_CONFIG)
 
 
-def load_json(path, fallback):
+def _backup_broken_json(path, error):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return fallback
+        path = Path(path)
+        marker = str(path.resolve())
+        if marker in _BROKEN_JSON_BACKED_UP or not path.exists() or path.stat().st_size == 0:
+            return
+        BROKEN_JSON_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = BROKEN_JSON_DIR / f"{path.stem}_{stamp}{path.suffix}.broken.bak"
+        shutil.copy2(path, backup_path)
+        _BROKEN_JSON_BACKED_UP.add(marker)
+        print(f"[JSON] Повреждённый файл сохранён: {backup_path}")
+        print(f"[JSON] Причина: {type(error).__name__}: {error}")
+    except Exception as backup_error:
+        print(f"[JSON] Не удалось создать резервную копию {path}: {backup_error}")
+
+
+def load_json(path, fallback):
+    return _robust_load_json(path, fallback, retries=16, backup_dir=BROKEN_JSON_DIR)
 
 
 def save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    _robust_save_json(path, data, retries=120)
 
 
 def write_status(status="starting", running=True, connected=False, last_error=None, last_event=None):
     payload = {
         "service": "donatty",
+        "version": APP_VERSION,
         "status": status,
         "running": running,
         "connected": connected,
@@ -288,31 +317,41 @@ def send_donation_to_widget(donation, config):
         return False
 
     url = str(config.get("widget_api_url") or "http://127.0.0.1:3333/api/donation").strip()
+    attempts = max(1, int(float(config.get("widget_send_attempts") or 3)))
+    retry_delay = max(0.2, float(config.get("widget_send_retry_seconds") or 1.0))
+    last_error = None
 
-    try:
-        response = requests.post(url, json=donation, timeout=8)
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.post(url, json=donation, timeout=8)
 
-        if 200 <= response.status_code < 300:
-            last_event = f"{donation['username']} — {donation['amount']} {donation['currency']}"
-            write_status("connected", running=True, connected=True, last_event=last_event)
-            print(f"[DONATTY] Донат: {donation['username']} — {donation['amount']} {donation['currency']} | отправлено в виджет")
-            return True
+            if 200 <= response.status_code < 300:
+                last_event = f"{donation['username']} — {donation['amount']} {donation['currency']}"
+                write_status("connected", running=True, connected=True, last_event=last_event)
+                print(f"[DONATTY] Донат: {donation['username']} — {donation['amount']} {donation['currency']} | отправлено в виджет")
+                return True
 
-        # Дубль — не критичная проблема: значит сервер уже видел этот refId.
-        if response.status_code == 400 and "уже" in response.text.lower():
-            print(f"[DONATTY] Донат уже был учтён: {donation.get('externalId')}")
-            return True
+            # Дубль безопасен: уникальный refId уже был сохранён сервером.
+            if response.status_code == 400 and "уже" in response.text.lower():
+                print(f"[DONATTY] Донат уже был учтён: {donation.get('externalId')}")
+                return True
 
-        error_text = f"Виджет ответил HTTP {response.status_code}: {response.text[:300]}"
-        write_status("error", running=True, connected=True, last_error=error_text)
-        print(f"[DONATTY] {error_text}")
-        return False
+            last_error = f"Виджет ответил HTTP {response.status_code}: {response.text[:300]}"
+            # 4xx обычно не исправятся повтором, кроме временных 408/429.
+            if 400 <= response.status_code < 500 and response.status_code not in (408, 429):
+                break
 
-    except Exception as e:
-        error_text = f"{type(e).__name__}: {e}"
-        write_status("error", running=True, connected=True, last_error=error_text)
-        print(f"[DONATTY] Не удалось отправить донат в виджет: {error_text}")
-        return False
+        except Exception as error:
+            last_error = f"{type(error).__name__}: {error}"
+
+        if attempt < attempts:
+            print(f"[DONATTY] Не удалось отправить донат (попытка {attempt}/{attempts}): {last_error}")
+            time.sleep(retry_delay * attempt)
+
+    error_text = last_error or "Неизвестная ошибка отправки доната"
+    write_status("error", running=True, connected=True, last_error=error_text)
+    print(f"[DONATTY] Не удалось отправить донат в виджет: {error_text}")
+    return False
 
 
 def process_sse_event(data_lines, config):
@@ -400,7 +439,7 @@ def main():
 
     print("")
     print("================================================")
-    print(" Donatty Auto Listener для Donation Goal Widget")
+    print(f" Donatty Auto Listener v{APP_VERSION} для VicDonationGoal")
     print("================================================")
     print(" Этот listener сам открывает Donatty-виджет,")
     print(" ловит свежий sse?jwt=... из Network и слушает донаты.")

@@ -1,0 +1,116 @@
+[
+  {
+    "id": "personal-example",
+    "name": "Персональный голос — пример",
+    "enabled": false,
+    "priority": 10,
+    "profileId": "default",
+    "conditions": {
+      "eventTypes": [],
+      "sources": [],
+      "userIds": [],
+      "usernames": [
+        "ViewerName"
+      ],
+      "roles": [],
+      "rewardIds": [],
+      "minAmount": null,
+      "maxAmount": null
+    }
+  },
+  {
+    "id": "moderator-rule",
+    "name": "Модераторы",
+    "enabled": true,
+    "priority": 20,
+    "profileId": "moderator",
+    "conditions": {
+      "eventTypes": [],
+      "sources": [],
+      "userIds": [],
+      "usernames": [],
+      "roles": [
+        "moderator"
+      ],
+      "rewardIds": [],
+      "minAmount": null,
+      "maxAmount": null
+    }
+  },
+  {
+    "id": "vip-rule",
+    "name": "VIP",
+    "enabled": true,
+    "priority": 30,
+    "profileId": "vip",
+    "conditions": {
+      "eventTypes": [],
+      "sources": [],
+      "userIds": [],
+      "usernames": [],
+      "roles": [
+        "vip"
+      ],
+      "rewardIds": [],
+      "minAmount": null,
+      "maxAmount": null
+    }
+  },
+  {
+    "id": "character-example",
+    "name": "Персонаж — пример",
+    "enabled": false,
+    "priority": 100,
+    "profileId": "character",
+    "conditions": {
+      "eventTypes": [
+        "character"
+      ],
+      "sources": [],
+      "userIds": [],
+      "usernames": [],
+      "roles": [],
+      "rewardIds": [],
+      "minAmount": null,
+      "maxAmount": null
+    }
+  },
+  {
+    "id": "rewards-rule",
+    "name": "Баллы канала",
+    "enabled": true,
+    "priority": 110,
+    "profileId": "rewards",
+    "conditions": {
+      "eventTypes": [
+        "channel_reward"
+      ],
+      "sources": [],
+      "userIds": [],
+      "usernames": [],
+      "roles": [],
+      "rewardIds": [],
+      "minAmount": null,
+      "maxAmount": null
+    }
+  },
+  {
+    "id": "donations-rule",
+    "name": "Донаты",
+    "enabled": true,
+    "priority": 120,
+    "profileId": "donations",
+    "conditions": {
+      "eventTypes": [
+        "donation"
+      ],
+      "sources": [],
+      "userIds": [],
+      "usernames": [],
+      "roles": [],
+      "rewardIds": [],
+      "minAmount": null,
+      "maxAmount": null
+    }
+  }
+]

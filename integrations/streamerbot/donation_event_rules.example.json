@@ -1,0 +1,50 @@
+{
+  "enabled": false,
+  "process_existing_on_first_start": false,
+  "rules": [
+    {
+      "id": "example_10_rub_event",
+      "enabled": false,
+      "name": "Example 10 RUB event",
+      "sources": [
+        "donationalerts",
+        "donatty",
+        "streamelements",
+        "streamlabs",
+        "donatepay",
+        "donatestream",
+        "donatex",
+        "tribute",
+        "manual"
+      ],
+      "match": "equals",
+      "amount": 10,
+      "currency": "RUB",
+      "amount_field": "amount",
+      "epsilon": 0.001,
+      "action_id": "PASTE_STREAMERBOT_ACTION_ID_HERE",
+      "action_name": "Optional action name"
+    },
+    {
+      "id": "example_1000_rub_or_more",
+      "enabled": false,
+      "name": "Example 1000 RUB or more",
+      "sources": [
+        "donationalerts",
+        "donatty",
+        "streamelements",
+        "streamlabs",
+        "donatepay",
+        "donatestream",
+        "donatex",
+        "tribute",
+        "manual"
+      ],
+      "match": "greater_or_equal",
+      "amount": 1000,
+      "currency": "RUB",
+      "amount_field": "amount",
+      "action_id": "PASTE_STREAMERBOT_ACTION_ID_HERE"
+    }
+  ]
+}

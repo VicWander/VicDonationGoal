@@ -1,24 +1,59 @@
-# Sanitization report
+# Sanitization Report — VicDonationGoal v1.4.4
 
-Removed from the public/GitHub-ready build:
+Дата подготовки: 2 августа 2026 года.
 
-- real DonationAlerts OAuth config and client secret;
-- DonationAlerts access/refresh tokens;
-- DonationAlerts OAuth state file;
-- real Donatty widget URL/token;
-- real Streamer.bot action ID and processed-event list;
-- real donation history;
-- personal current goal state.
+Публичная сборка создана отдельно от личной рабочей папки. Исходная пользовательская установка не изменялась.
 
-Added:
+## Исключено из релиза
 
-- `.gitignore` for local secrets, runtime data, caches and logs;
-- `requirements.txt`;
-- `*.example.json` templates for all runtime configs/data;
-- `SETUP_CLEAN.md` with clean setup notes.
+- реальные OAuth `access_token` и `refresh_token`;
+- `client_secret`, API keys, webhook secrets и OAuth state;
+- приватные widget/SSE URL и длинные ссылки с query-токенами;
+- история донатов, профили TopDonation и личные заметки;
+- текущая личная цель и последний донат;
+- история, очередь, логи и cache TTS;
+- обработанные события Streamer.bot и Donation Event Rules;
+- личные Streamer.bot Action ID;
+- runtime, логи, backups, diagnostics и inspector reports;
+- `cloudflared.exe`, Playwright Chromium, Python virtualenv и другие зависимости;
+- legacy-код, private README, промежуточные test reports и инструкции наложения старых патчей.
 
-Basic clean-start check performed:
+## Оставлено
 
-- Python files compile successfully;
-- core server can create fresh placeholder runtime files;
-- `/api/state` and `/api/donations` respond on a clean data directory.
+- исходный код приложения и интеграций;
+- безопасные `*.example.json`;
+- пустая демонстрационная цель `Сбор на цель — 0 / 10 000 RUB`;
+- мастер первого запуска;
+- локальная документация и руководства интеграций;
+- Stability Check, Beta Readiness Check и безопасный диагностический отчёт;
+- единый `CHANGELOG.md`, roadmap, лицензия и внешний лендинг.
+
+## Проверки
+
+Перед упаковкой выполняются:
+
+- компиляция и runtime-import Python-модулей;
+- проверка JSON-примеров и manifests;
+- API smoke-test на чистой временной копии;
+- создание локальных файлов с нуля;
+- проверка отсутствия запрещённых runtime-файлов;
+- поиск JWT, OAuth-токенов, API keys, widget tokens, webhook secrets и URL с секретными query-параметрами;
+- проверка архива после упаковки, а не только исходной папки.
+
+Повторяемая проверка доступна командой `python tools/release_sanitization_check.py <папка-или-архив.zip>`. Она выводит только категорию и имя файла, но не найденное секретное значение.
+
+Строки вида `PASTE_...`, `CHANGE_ME` и пустые значения в примерах являются намеренными безопасными заглушками.
+
+Итоговая проверка чистой сборки:
+
+- Release Sanitization Check: **0 находок**;
+- Beta Readiness Check: **41 OK / 0 WARN / 0 ERR**;
+- Stability Check на чистой временной установке: **124 OK / 8 ожидаемых WARN / 0 ERR**;
+- Python compile, JavaScript syntax, 27 JSON-файлов и относительные HTML-ссылки: **OK**;
+- первый запуск, пустой мастер, 8 выключенных интеграций и ручной end-to-end донат: **OK**.
+
+Предупреждения Stability Check в изолированной проверке ожидаемы: зависимости не устанавливались, реальные сервисы не настраивались, Streamer.bot Action ID отсутствует, а Core был остановлен перед финальным офлайн-аудитом.
+
+## Локальные файлы после запуска
+
+При установке и первом запуске программа создаёт локальные `*.json`, runtime и diagnostics. Они перечислены в `.gitignore` и не должны попадать в коммиты или публичные архивы.

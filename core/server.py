@@ -1,66 +1,74 @@
+import base64
 import csv
+import hashlib
+import hmac
+import atexit
 import io
 import json
 import mimetypes
+import os
 import secrets
+import shutil
 import time
 import threading
 import uuid
+import sys
 from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, parse_qs, urlencode, unquote
 
-try:
-    import requests
-    import websocket
-except ImportError:
-    requests = None
-    websocket = None
+
+import tts_hub_store as tts_store
+import donor_store
+from integration_manager import IntegrationManager
 
 
 ROOT = Path(__file__).parent
 PROJECT_ROOT = ROOT.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from safe_json import load_json as _robust_load_json, save_json as _robust_save_json
+from source_registry import public_registry
+from tools.create_diagnostic_report import create_report
+from integrations.donationalerts.donationalerts_integration import DonationAlertsIntegration
+from integrations.streamlabs.streamlabs_integration import StreamlabsIntegration
+
 PUBLIC = ROOT / "public"
 
 DATA_DIR = ROOT / "data"
-DA_DIR = ROOT / "integrations" / "donationalerts"
 RUNTIME_DIR = PROJECT_ROOT / "runtime"
 
 STATE_FILE = DATA_DIR / "state.json"
 DONATIONS_FILE = DATA_DIR / "donations.json"
 RATES_FILE = DATA_DIR / "rates.json"
 
-DA_CONFIG_FILE = DA_DIR / "da_config.json"
-DA_TOKENS_FILE = DA_DIR / "da_tokens.json"
-DA_OAUTH_STATE_FILE = DA_DIR / "da_oauth_state.txt"
 
 DONATTY_STATUS_FILE = RUNTIME_DIR / "donatty_status.json"
 STREAMERBOT_STATUS_FILE = RUNTIME_DIR / "streamerbot_status.json"
 STREAMERBOT_SENT_FILE = PROJECT_ROOT / "integrations" / "streamerbot" / "streamerbot_sent.json"
 
+TTS_DIR = PROJECT_ROOT / "integrations" / "tts"
+TTS_QUEUE_FILE = TTS_DIR / "tts_queue.json"
+TTS_AUDIO_DIR = TTS_DIR / "audio_cache"
+TTS_CONFIG_FILE = TTS_DIR / "tts_config.json"
+TTS_STATUS_FILE = RUNTIME_DIR / "tts_status.json"
+
 HOST = "127.0.0.1"
 PORT = 3333
 
-DA_AUTH_URL = "https://www.donationalerts.com/oauth/authorize"
-DA_TOKEN_URL = "https://www.donationalerts.com/oauth/token"
-DA_API_BASE = "https://www.donationalerts.com/api/v1"
-DA_WS_URL = "wss://centrifugo.donationalerts.com/connection/websocket"
+VERSION_FILE = PROJECT_ROOT / "VERSION"
+APP_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "dev"
+SERVER_STARTED_AT = time.time()
+BROKEN_JSON_DIR = PROJECT_ROOT / "backups" / "broken_json"
+_BROKEN_JSON_BACKED_UP = set()
+
 
 FILE_LOCK = threading.RLock()
 
-DA_STATUS = {
-    "configured": False,
-    "authorized": False,
-    "connected": False,
-    "running": False,
-    "channel": None,
-    "last_error": None,
-    "last_event": None,
-}
-
-DA_THREAD = None
-DA_STOP = threading.Event()
+INTEGRATION_MANAGER = None
+DA_INTEGRATION = None
+STREAMLABS_INTEGRATION = None
 
 
 DEFAULT_RATES = {
@@ -74,46 +82,65 @@ DEFAULT_RATES = {
 }
 
 
+def _backup_broken_json(path, error):
+    """Сохраняет повреждённый JSON один раз за запуск, прежде чем использовать fallback."""
+    try:
+        path = Path(path)
+        marker = str(path.resolve())
+        if marker in _BROKEN_JSON_BACKED_UP or not path.exists() or path.stat().st_size == 0:
+            return
+
+        BROKEN_JSON_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_name = f"{path.stem}_{stamp}{path.suffix}.broken.bak"
+        backup_path = BROKEN_JSON_DIR / backup_name
+        shutil.copy2(path, backup_path)
+        _BROKEN_JSON_BACKED_UP.add(marker)
+        print(f"[JSON] Повреждённый файл сохранён: {backup_path}")
+        print(f"[JSON] Причина: {type(error).__name__}: {error}")
+    except Exception as backup_error:
+        print(f"[JSON] Не удалось создать резервную копию {path}: {backup_error}")
+
+
+def load_json(path, fallback):
+    return _robust_load_json(
+        path,
+        fallback,
+        retries=16,
+        backup_dir=BROKEN_JSON_DIR,
+        backup_decode_errors=True,
+    )
+
+
+def save_json(path, data):
+    _robust_save_json(path, data, retries=120)
+
+
 def ensure_files():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    DA_DIR.mkdir(parents=True, exist_ok=True)
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    TTS_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    BROKEN_JSON_DIR.mkdir(parents=True, exist_ok=True)
+    tts_store.ensure_tts_files()
+    donor_store.ensure_files()
 
     if not STATE_FILE.exists():
-        STATE_FILE.write_text(json.dumps({
+        save_json(STATE_FILE, {
             "title": "Сбор на цель",
             "current": 0,
             "baseAmount": 0,
             "goal": 10000,
             "currency": "RUB",
             "lastDonation": None
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
+        })
 
     if not DONATIONS_FILE.exists():
-        DONATIONS_FILE.write_text(json.dumps([], ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json(DONATIONS_FILE, [])
 
     if not RATES_FILE.exists():
-        RATES_FILE.write_text(json.dumps(DEFAULT_RATES, ensure_ascii=False, indent=2), encoding="utf-8")
+        save_json(RATES_FILE, DEFAULT_RATES)
 
-    if not DA_CONFIG_FILE.exists():
-        DA_CONFIG_FILE.write_text(json.dumps({
-            "enabled": True,
-            "client_id": "ВСТАВЬ_CLIENT_ID_СЮДА",
-            "client_secret": "ВСТАВЬ_CLIENT_SECRET_СЮДА",
-            "redirect_uri": "http://127.0.0.1:3333/auth/donationalerts/callback",
-            "scopes": "oauth-user-show oauth-donation-subscribe oauth-donation-index"
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def load_json(path, fallback):
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return fallback
-
-
-def save_json(path, data):
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_rates():
@@ -229,6 +256,16 @@ def normalize_donation_record(donation, state=None):
         "amountForGoal": round(amount_for_goal, 2),
         "includeInGoal": bool_from_any(donation.get("includeInGoal"), True),
         "notifyStreamerBot": bool_from_any(donation.get("notifyStreamerBot"), default_notify_streamerbot),
+        "triggerDonationEvents": bool_from_any(donation.get("triggerDonationEvents"), source != "manual"),
+        "speakTTS": bool_from_any(donation.get("speakTTS"), source != "manual"),
+        "includeInTop": bool_from_any(donation.get("includeInTop"), True),
+        "donorId": str(donation.get("donorId") or ""),
+        "amountForTop": round(to_number(
+            donation.get("amountForTop") if donation.get("amountForTop") is not None
+            else convert_to_goal_currency(amount, currency, donor_store.TOP_CURRENCY),
+            0
+        ), 2),
+        "topCurrency": donor_store.TOP_CURRENCY,
         "message": str(donation.get("message") or ""),
         "createdAt": created_at,
         "receivedAt": received_at,
@@ -237,15 +274,23 @@ def normalize_donation_record(donation, state=None):
 
 
 def normalize_storage():
-    with FILE_LOCK:
-        state = normalize_state(load_json(STATE_FILE, {}))
-        donations = load_json(DONATIONS_FILE, [])
-        if not isinstance(donations, list):
-            donations = []
+    """Load and normalize persistent storage without rewriting unchanged files.
 
+    The admin UI polls `/api/state` and `/api/donations` frequently. Older builds
+    rewrote both JSON files on every GET, which created Windows sharing races with
+    Streamer.bot Bridge and antivirus software. v1.4.3 writes only when migration
+    or recalculation actually changes data.
+    """
+    with FILE_LOCK:
+        raw_state = load_json(STATE_FILE, {})
+        raw_donations = load_json(DONATIONS_FILE, [])
+        if not isinstance(raw_donations, list):
+            raw_donations = []
+
+        state = normalize_state(dict(raw_state) if isinstance(raw_state, dict) else {})
         normalized = []
         seen = set()
-        for donation in donations:
+        for donation in raw_donations:
             if not isinstance(donation, dict):
                 continue
             item = normalize_donation_record(donation, state)
@@ -254,9 +299,13 @@ def normalize_storage():
             seen.add(item["uniqueKey"])
             normalized.append(item)
 
+        normalized, _profiles = donor_store.sync_donations(normalized)
         recalc_goal_current(state, normalized)
-        save_json(DONATIONS_FILE, normalized)
-        save_json(STATE_FILE, state)
+
+        if normalized != raw_donations:
+            save_json(DONATIONS_FILE, normalized)
+        if state != raw_state:
+            save_json(STATE_FILE, state)
         return state, normalized
 
 
@@ -351,6 +400,7 @@ def add_donation(donation):
             return state, False, "Сумма должна быть больше нуля"
 
         donations.append(normalized)
+        donations, _profiles = donor_store.sync_donations(donations)
         recalc_goal_current(state, donations)
 
         save_json(DONATIONS_FILE, donations)
@@ -387,6 +437,12 @@ def update_donation(update_data):
                 old["includeInGoal"] = bool_from_any(update_data.get("includeInGoal"), True)
             if "notifyStreamerBot" in update_data:
                 old["notifyStreamerBot"] = bool_from_any(update_data.get("notifyStreamerBot"), False)
+            if "triggerDonationEvents" in update_data:
+                old["triggerDonationEvents"] = bool_from_any(update_data.get("triggerDonationEvents"), False)
+            if "speakTTS" in update_data:
+                old["speakTTS"] = bool_from_any(update_data.get("speakTTS"), False)
+            if "includeInTop" in update_data:
+                old["includeInTop"] = bool_from_any(update_data.get("includeInTop"), True)
             if "amount" in update_data:
                 old["amount"] = to_number(update_data.get("amount"), old.get("amount", 0))
             if "currency" in update_data:
@@ -397,6 +453,13 @@ def update_donation(update_data):
                 old.get("currency", "RUB"),
                 state.get("currency", "RUB")
             ), 2)
+            if "amount" in update_data or "currency" in update_data:
+                old["amountForTop"] = round(convert_to_goal_currency(
+                    to_number(old.get("amount"), 0),
+                    old.get("currency", "RUB"),
+                    donor_store.TOP_CURRENCY
+                ), 2)
+                old["topCurrency"] = donor_store.TOP_CURRENCY
 
             donations[index] = old
             changed = old
@@ -405,6 +468,7 @@ def update_donation(update_data):
         if changed is None:
             return state, False, "Донат не найден"
 
+        donations, _profiles = donor_store.sync_donations(donations)
         recalc_goal_current(state, donations)
         save_json(DONATIONS_FILE, donations)
         save_json(STATE_FILE, state)
@@ -457,148 +521,35 @@ def reset_goal_progress_keep_history():
         return state
 
 
-def load_da_config():
-    config = load_json(DA_CONFIG_FILE, {})
-    client_id = str(config.get("client_id", "")).strip()
-    client_secret = str(config.get("client_secret", "")).strip()
-
-    configured = (
-        bool(config.get("enabled", True)) and
-        client_id and
-        client_secret and
-        "ВСТАВЬ" not in client_id and
-        "ВСТАВЬ" not in client_secret
-    )
-
-    DA_STATUS["configured"] = configured
-    return config
-
-
-def load_da_tokens():
-    tokens = load_json(DA_TOKENS_FILE, {})
-    DA_STATUS["authorized"] = bool(tokens.get("access_token"))
-    return tokens
-
-
-def save_da_tokens(tokens):
-    if "expires_in" in tokens:
-        tokens["expires_at"] = time.time() + int(tokens.get("expires_in", 0)) - 120
-    save_json(DA_TOKENS_FILE, tokens)
-    DA_STATUS["authorized"] = bool(tokens.get("access_token"))
-
-
-def clear_da_tokens():
-    try:
-        DA_TOKENS_FILE.unlink()
-    except FileNotFoundError:
-        pass
-    DA_STATUS["authorized"] = False
-
-
-def da_libraries_ok():
-    return requests is not None and websocket is not None
-
-
-def get_valid_da_access_token():
-    config = load_da_config()
-    tokens = load_da_tokens()
-
-    access_token = tokens.get("access_token")
-    refresh_token = tokens.get("refresh_token")
-    expires_at = float(tokens.get("expires_at") or 0)
-
-    if not access_token:
-        return None
-
-    if time.time() < expires_at:
-        return access_token
-
-    if not refresh_token:
-        DA_STATUS["last_error"] = "Access token истёк, refresh_token отсутствует. Нужно заново авторизоваться."
-        return None
-
-    if requests is None:
-        DA_STATUS["last_error"] = "Не установлена библиотека requests. Запусти 00_INSTALL_ALL.bat."
-        return None
-
-    try:
-        response = requests.post(
-            DA_TOKEN_URL,
-            data={
-                "grant_type": "refresh_token",
-                "refresh_token": refresh_token,
-                "client_id": config.get("client_id"),
-                "client_secret": config.get("client_secret")
-            },
-            timeout=20
+def get_integration_manager():
+    global INTEGRATION_MANAGER, DA_INTEGRATION, STREAMLABS_INTEGRATION
+    if INTEGRATION_MANAGER is None:
+        DA_INTEGRATION = DonationAlertsIntegration(
+            PROJECT_ROOT,
+            add_donation=add_donation,
+            load_json=load_json,
+            save_json=save_json,
         )
-        response.raise_for_status()
-        new_tokens = response.json()
-
-        if "refresh_token" not in new_tokens:
-            new_tokens["refresh_token"] = refresh_token
-
-        save_da_tokens(new_tokens)
-        return new_tokens.get("access_token")
-    except Exception as e:
-        DA_STATUS["last_error"] = f"Не удалось обновить токен DA: {type(e).__name__}: {e}"
-        return None
-
-
-def da_api_request(method, endpoint, json_data=None):
-    if requests is None:
-        raise RuntimeError("Не установлена библиотека requests. Запусти 00_INSTALL_ALL.bat.")
-
-    token = get_valid_da_access_token()
-    if not token:
-        raise RuntimeError("Нет access_token. Открой /auth/donationalerts/start и авторизуйся.")
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
-    }
-
-    url = DA_API_BASE + endpoint
-
-    response = requests.request(
-        method,
-        url,
-        headers=headers,
-        json=json_data,
-        timeout=20
-    )
-
-    if response.status_code == 401:
-        clear_da_tokens()
-        raise RuntimeError("DonationAlerts вернул 401. Нужно заново авторизоваться.")
-
-    response.raise_for_status()
-
-    if not response.text:
-        return {}
-
-    return response.json()
+        STREAMLABS_INTEGRATION = StreamlabsIntegration(
+            PROJECT_ROOT,
+            add_donation=add_donation,
+            load_json=load_json,
+            save_json=save_json,
+        )
+        INTEGRATION_MANAGER = IntegrationManager(PROJECT_ROOT)
+        INTEGRATION_MANAGER.register_adapter("donationalerts", DA_INTEGRATION)
+        INTEGRATION_MANAGER.register_adapter("streamlabs", STREAMLABS_INTEGRATION)
+    return INTEGRATION_MANAGER
 
 
-def exchange_code_for_token(code):
-    config = load_da_config()
+def get_da_integration():
+    get_integration_manager()
+    return DA_INTEGRATION
 
-    response = requests.post(
-        DA_TOKEN_URL,
-        data={
-            "grant_type": "authorization_code",
-            "client_id": config.get("client_id"),
-            "client_secret": config.get("client_secret"),
-            "redirect_uri": config.get("redirect_uri"),
-            "code": code
-        },
-        timeout=20
-    )
 
-    response.raise_for_status()
-    tokens = response.json()
-    save_da_tokens(tokens)
-    return tokens
+def get_streamlabs_integration():
+    get_integration_manager()
+    return STREAMLABS_INTEGRATION
 
 
 def html_page(title, body):
@@ -608,227 +559,13 @@ def html_page(title, body):
   <meta charset="UTF-8">
   <title>{title}</title>
   <style>
-    body {{
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #111827;
-      color: #f9fafb;
-      font-family: Arial, sans-serif;
-    }}
-    .card {{
-      width: min(720px, calc(100% - 32px));
-      padding: 28px;
-      border-radius: 18px;
-      background: #1f2937;
-      line-height: 1.55;
-    }}
-    a {{ color: #67e8f9; }}
-    code {{
-      background: #111827;
-      padding: 2px 6px;
-      border-radius: 6px;
-    }}
+    body {{ margin:0; min-height:100vh; display:grid; place-items:center; background:#111827; color:#f9fafb; font-family:Arial,sans-serif; }}
+    .card {{ width:min(720px,calc(100% - 32px)); padding:28px; border-radius:18px; background:#1f2937; line-height:1.55; }}
+    a {{ color:#67e8f9; }} code {{ background:#111827; padding:2px 6px; border-radius:6px; }}
   </style>
 </head>
-<body>
-  <div class="card">
-    {body}
-  </div>
-</body>
+<body><div class="card">{body}</div></body>
 </html>"""
-
-
-def extract_da_donation(message):
-    try:
-        data = json.loads(message)
-    except Exception:
-        return None
-
-    if not isinstance(data, dict):
-        return None
-
-    if data == {}:
-        return None
-
-    result = data.get("result", {})
-    if not isinstance(result, dict):
-        return None
-
-    channel = result.get("channel", "")
-    if not str(channel).startswith("$alerts:donation_"):
-        return None
-
-    outer_data = result.get("data", {})
-    if not isinstance(outer_data, dict):
-        return None
-
-    donation_data = outer_data.get("data")
-    if not isinstance(donation_data, dict):
-        return None
-
-    donation_id = donation_data.get("id")
-    if donation_id is None:
-        return None
-
-    return {
-        "source": "donationalerts",
-        "externalId": donation_id,
-        "username": donation_data.get("username") or donation_data.get("name") or "Аноним",
-        "amount": donation_data.get("amount"),
-        "currency": donation_data.get("currency") or "RUB",
-        "message": donation_data.get("message") or "",
-        "createdAt": donation_data.get("created_at") or ""
-    }
-
-
-def da_listener_loop():
-    global DA_STATUS
-
-    if not da_libraries_ok():
-        DA_STATUS["last_error"] = "Не установлены requests/websocket-client. Запусти 00_INSTALL_ALL.bat."
-        return
-
-    reconnect_delay = 5
-    DA_STATUS["running"] = True
-
-    while not DA_STOP.is_set():
-        ws = None
-
-        try:
-            load_da_config()
-
-            if not DA_STATUS["configured"]:
-                DA_STATUS["last_error"] = "da_config.json не настроен: вставь client_id и client_secret."
-                time.sleep(reconnect_delay)
-                continue
-
-            if not load_da_tokens().get("access_token"):
-                DA_STATUS["last_error"] = "DonationAlerts не авторизован. Открой http://127.0.0.1:3333/auth/donationalerts/start."
-                time.sleep(reconnect_delay)
-                continue
-
-            user_response = da_api_request("GET", "/user/oauth")
-            user_data = user_response.get("data", {})
-
-            user_id = user_data.get("id")
-            socket_token = user_data.get("socket_connection_token")
-
-            if not user_id or not socket_token:
-                raise RuntimeError("В /user/oauth нет id или socket_connection_token.")
-
-            channel_name = f"$alerts:donation_{user_id}"
-            DA_STATUS["channel"] = channel_name
-
-            print(f"[DA] Подключаюсь к WebSocket: {DA_WS_URL}")
-            ws = websocket.create_connection(DA_WS_URL, timeout=30)
-
-            auth_payload = {
-                "params": {
-                    "token": socket_token
-                },
-                "id": 1
-            }
-            ws.send(json.dumps(auth_payload))
-
-            auth_raw = ws.recv()
-            auth_response = json.loads(auth_raw)
-            client_id = auth_response.get("result", {}).get("client")
-
-            if not client_id:
-                raise RuntimeError(f"Не получил client id от Centrifugo: {auth_raw}")
-
-            sub_response = da_api_request(
-                "POST",
-                "/centrifuge/subscribe",
-                json_data={
-                    "channels": [channel_name],
-                    "client": client_id
-                }
-            )
-
-            subscription_token = None
-            for item in sub_response.get("channels", []):
-                if item.get("channel") == channel_name:
-                    subscription_token = item.get("token")
-                    break
-
-            if not subscription_token:
-                raise RuntimeError(f"Не получил subscription token: {sub_response}")
-
-            subscribe_payload = {
-                "params": {
-                    "channel": channel_name,
-                    "token": subscription_token
-                },
-                "method": 1,
-                "id": 2
-            }
-            ws.send(json.dumps(subscribe_payload))
-
-            confirm_raw = ws.recv()
-            print(f"[DA] Ответ подписки: {confirm_raw}")
-
-            DA_STATUS["connected"] = True
-            DA_STATUS["last_error"] = None
-            reconnect_delay = 5
-
-            print(f"[DA] Готово. Слушаю канал {channel_name}")
-
-            while not DA_STOP.is_set():
-                raw = ws.recv()
-
-                if raw.strip() == "{}":
-                    ws.send("{}")
-                    continue
-
-                donation = extract_da_donation(raw)
-                if not donation:
-                    continue
-
-                state, ok, message = add_donation(donation)
-
-                DA_STATUS["last_event"] = {
-                    "ok": ok,
-                    "message": message,
-                    "donation": donation,
-                    "time": time.strftime("%Y-%m-%d %H:%M:%S")
-                }
-
-                print(f"[DA] Донат: {donation['username']} — {donation['amount']} {donation['currency']} | {message}")
-
-        except Exception as e:
-            DA_STATUS["connected"] = False
-            DA_STATUS["last_error"] = f"{type(e).__name__}: {e}"
-            print(f"[DA] Ошибка: {DA_STATUS['last_error']}")
-
-            try:
-                if ws:
-                    ws.close()
-            except Exception:
-                pass
-
-            time.sleep(reconnect_delay)
-            reconnect_delay = min(reconnect_delay * 2, 60)
-
-    DA_STATUS["running"] = False
-    DA_STATUS["connected"] = False
-
-
-def start_da_listener():
-    global DA_THREAD
-
-    if DA_THREAD and DA_THREAD.is_alive():
-        return
-
-    DA_STOP.clear()
-    DA_THREAD = threading.Thread(target=da_listener_loop, daemon=True)
-    DA_THREAD.start()
-
-
-def stop_da_listener():
-    DA_STOP.set()
 
 
 def read_json_file_status(path, stale_after=20):
@@ -843,19 +580,170 @@ def read_json_file_status(path, stale_after=20):
     return data
 
 
-def build_system_status():
-    load_da_config()
-    load_da_tokens()
+
+
+def load_tts_queue():
+    data = load_json(TTS_QUEUE_FILE, [])
+    if isinstance(data, dict):
+        data = data.get("queue", [])
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict)]
+
+
+def save_tts_queue(queue):
+    TTS_DIR.mkdir(parents=True, exist_ok=True)
+    save_json(TTS_QUEUE_FILE, [item for item in queue if isinstance(item, dict)])
+
+
+def load_tts_public_config():
+    config = load_json(TTS_CONFIG_FILE, {})
+    if not isinstance(config, dict):
+        config = {}
+
+    volume = to_number(config.get("volume"), 0.9)
+    volume = max(0, min(volume, 1))
 
     return {
+        "enabled": bool_from_any(config.get("enabled"), False),
+        "volume": volume,
+        "pollIntervalMs": int(max(250, to_number(config.get("browser_poll_interval_ms"), 700))),
+        "delayAfterDoneMs": int(max(0, to_number(config.get("delay_after_done_ms"), 500)))
+    }
+
+
+def build_tts_status():
+    queue = load_tts_queue()
+    file_count = 0
+    try:
+        if TTS_AUDIO_DIR.exists():
+            file_count = len([p for p in TTS_AUDIO_DIR.iterdir() if p.is_file()])
+    except Exception:
+        file_count = 0
+
+    listener_status = read_json_file_status(TTS_STATUS_FILE, stale_after=20)
+
+    return {
+        "listener": listener_status,
+        "queueLength": len(queue),
+        "audioFiles": file_count,
+        "publicConfig": load_tts_public_config()
+    }
+
+
+def remove_tts_task(task_id):
+    task_id = str(task_id or "")
+    if not task_id:
+        return False
+
+    with FILE_LOCK:
+        queue = load_tts_queue()
+        new_queue = [item for item in queue if str(item.get("id") or "") != task_id]
+        changed = len(new_queue) != len(queue)
+        if changed:
+            save_tts_queue(new_queue)
+        return changed
+
+
+def build_system_status():
+    manager = get_integration_manager()
+    bootstrap = manager.bootstrap()
+    integrations = bootstrap.get("integrations", []) if isinstance(bootstrap, dict) else []
+    by_id = {item.get("id"): item for item in integrations if isinstance(item, dict)}
+    da_summary = by_id.get("donationalerts", {})
+    donatty_summary = by_id.get("donatty", {})
+    da_status = dict(da_summary.get("status", {}))
+    da_status.update({"configured": da_summary.get("configured", False), "enabled": da_summary.get("enabled", False), "running": da_summary.get("running", False), "connected": da_summary.get("connected", False)})
+    donatty_status = dict(donatty_summary.get("status", {}))
+    donatty_status.update({"configured": donatty_summary.get("configured", False), "enabled": donatty_summary.get("enabled", False), "running": donatty_summary.get("running", False), "connected": donatty_summary.get("connected", False)})
+
+    enabled_integrations = [item for item in integrations if item.get("enabled")]
+    configured_integrations = [item for item in integrations if item.get("configured")]
+    connected_integrations = [item for item in enabled_integrations if item.get("commonState") == "connected"]
+    attention_integrations = [item for item in enabled_integrations if item.get("commonState") in {"degraded", "error", "stopped", "unconfigured"}]
+
+    streamerbot = read_json_file_status(STREAMERBOT_STATUS_FILE, stale_after=15)
+    streamerbot_config = load_json(PROJECT_ROOT / "integrations/streamerbot/streamerbot_config.json", {})
+    sb_enabled = bool(streamerbot_config.get("enabled", True)) if isinstance(streamerbot_config, dict) else True
+    if not sb_enabled:
+        sb_state = "disabled"
+    elif streamerbot.get("running") and not streamerbot.get("stale"):
+        sb_state = "degraded" if streamerbot.get("lastError") else "connected"
+    elif streamerbot.get("lastError"):
+        sb_state = "error"
+    elif streamerbot.get("stale"):
+        sb_state = "error"
+    else:
+        sb_state = "stopped"
+    streamerbot["enabled"] = sb_enabled
+    streamerbot["commonState"] = sb_state
+
+    tts = tts_store.public_status()
+    tts_config = tts.get("config", {}) if isinstance(tts, dict) else {}
+    tts_runtime = tts.get("runtime", {}) if isinstance(tts, dict) else {}
+    tts_enabled = bool(tts_config.get("enabled", True))
+    if not tts_enabled:
+        tts_state = "disabled"
+    elif tts_runtime.get("running") and not tts_runtime.get("stale"):
+        tts_state = "degraded" if tts_runtime.get("lastError") else "connected"
+    elif tts_runtime.get("lastError"):
+        tts_state = "error"
+    elif tts_runtime.get("stale"):
+        tts_state = "error"
+    else:
+        tts_state = "stopped"
+    tts["commonState"] = tts_state
+
+    integration_manager_state = "connected"
+    if any(item.get("commonState") == "error" for item in enabled_integrations):
+        integration_manager_state = "degraded"
+
+    system_modules = [
+        {
+            "id": "core", "name": "Core Server", "commonState": "connected",
+            "text": "локальный сервер работает", "detail": f"v{APP_VERSION}; uptime {round(max(0, time.time() - SERVER_STARTED_AT))} сек.",
+        },
+        {
+            "id": "integration-manager", "name": "Integration Manager", "commonState": integration_manager_state,
+            "text": f"{len(connected_integrations)} из {len(enabled_integrations)} включённых подключены",
+            "detail": f"Всего {len(integrations)}; настроено {len(configured_integrations)}; требуют внимания {len(attention_integrations)}",
+        },
+        {
+            "id": "streamerbot", "name": "Streamer.bot Bridge", "commonState": sb_state,
+            "text": "bridge работает" if sb_state == "connected" else (streamerbot.get("lastError") or "bridge не отвечает"),
+            "detail": streamerbot.get("lastEvent") or (f"heartbeat {streamerbot.get('ageSeconds')} сек. назад" if streamerbot.get("ageSeconds") is not None else ""),
+        },
+        {
+            "id": "tts", "name": "TTS Hub", "commonState": tts_state,
+            "text": str(tts_runtime.get("provider") or tts_config.get("activeProvider") or "провайдер не выбран"),
+            "detail": f"очередь {tts.get('queueLength', 0)}; история {tts.get('historyCount', 0)}" + (f"; {tts_runtime.get('lastError')}" if tts_runtime.get("lastError") else ""),
+        },
+    ]
+
+    return {
+        "version": APP_VERSION,
         "server": {
             "running": True,
+            "version": APP_VERSION,
             "updatedAt": time.time(),
-            "time": now_iso()
+            "time": now_iso(),
+            "uptimeSeconds": round(max(0, time.time() - SERVER_STARTED_AT), 1)
         },
-        "donationAlerts": DA_STATUS,
-        "donatty": read_json_file_status(DONATTY_STATUS_FILE, stale_after=120),
-        "streamerbot": read_json_file_status(STREAMERBOT_STATUS_FILE, stale_after=15)
+        "systemModules": system_modules,
+        "integrationManager": {
+            "commonState": integration_manager_state,
+            "total": len(integrations),
+            "enabled": len(enabled_integrations),
+            "configured": len(configured_integrations),
+            "connected": len(connected_integrations),
+            "attention": len(attention_integrations),
+        },
+        "sourceRegistry": public_registry(),
+        "integrations": bootstrap,
+        "donationAlerts": da_status,
+        "donatty": donatty_status,
+        "streamerbot": streamerbot,
+        "tts": tts
     }
 
 
@@ -922,9 +810,61 @@ def replay_donation(replay_data):
         return state, True, "Оповещение поставлено в очередь Streamer.bot"
 
 
+def bulk_update_donations(data):
+    allowed = {"includeInGoal", "notifyStreamerBot", "triggerDonationEvents", "speakTTS", "includeInTop"}
+    field = str(data.get("field") or "")
+    if field not in allowed:
+        return False, "Неизвестный флаг", 0
+    value = bool_from_any(data.get("value"), False)
+    with FILE_LOCK:
+        state = normalize_state(load_json(STATE_FILE, {}))
+        donations = load_json(DONATIONS_FILE, [])
+        if not isinstance(donations, list):
+            donations = []
+        normalized = []
+        for donation in donations:
+            if not isinstance(donation, dict):
+                continue
+            item = normalize_donation_record(donation, state)
+            item[field] = value
+            normalized.append(item)
+        normalized, _profiles = donor_store.sync_donations(normalized)
+        recalc_goal_current(state, normalized)
+        save_json(DONATIONS_FILE, normalized)
+        save_json(STATE_FILE, state)
+        return True, f"Флаг {field} изменён у всех донатов", len(normalized)
+
+
+def donor_top_payload(query=""):
+    state, donations = normalize_storage()
+    return donor_store.build_top(donations, query=query)
+
+
+def donor_detail_payload(profile_id):
+    state, donations = normalize_storage()
+    return donor_store.get_detail(profile_id, donations)
+
+
+def _csv_safe_text(value):
+    """Защита Excel/LibreOffice от выполнения пользовательского текста как формулы."""
+    text = str(value if value is not None else "")
+    if text.startswith(("=", "+", "-", "@")):
+        return "'" + text
+    return text
+
+
+def _csv_force_text(value):
+    """Сохраняет длинные ID и ISO-даты как текст, а не scientific notation."""
+    text = str(value if value is not None else "")
+    if not text:
+        return ""
+    return '="' + text.replace('"', '""') + '"'
+
+
 def donations_to_csv_bytes(donations):
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=";")
+    output = io.StringIO(newline="")
+    output.write("sep=;\r\n")
+    writer = csv.writer(output, delimiter=";", lineterminator="\r\n")
     writer.writerow([
         "receivedAt",
         "createdAt",
@@ -935,6 +875,12 @@ def donations_to_csv_bytes(donations):
         "amountForGoal",
         "includeInGoal",
         "notifyStreamerBot",
+        "triggerDonationEvents",
+        "speakTTS",
+        "includeInTop",
+        "donorId",
+        "amountForTop",
+        "topCurrency",
         "message",
         "note",
         "uniqueKey",
@@ -943,19 +889,25 @@ def donations_to_csv_bytes(donations):
 
     for donation in donations:
         writer.writerow([
-            donation.get("receivedAt", ""),
-            donation.get("createdAt", ""),
-            donation.get("source", ""),
-            donation.get("username", ""),
+            _csv_force_text(donation.get("receivedAt", "")),
+            _csv_force_text(donation.get("createdAt", "")),
+            _csv_safe_text(donation.get("source", "")),
+            _csv_safe_text(donation.get("username", "")),
             donation.get("amount", ""),
-            donation.get("currency", ""),
+            _csv_safe_text(donation.get("currency", "")),
             donation.get("amountForGoal", ""),
             donation.get("includeInGoal", ""),
             donation.get("notifyStreamerBot", ""),
-            donation.get("message", ""),
-            donation.get("note", ""),
-            donation.get("uniqueKey", ""),
-            donation.get("externalId", "")
+            donation.get("triggerDonationEvents", ""),
+            donation.get("speakTTS", ""),
+            donation.get("includeInTop", ""),
+            _csv_force_text(donation.get("donorId", "")),
+            donation.get("amountForTop", ""),
+            _csv_safe_text(donation.get("topCurrency", donor_store.TOP_CURRENCY)),
+            _csv_safe_text(donation.get("message", "")),
+            _csv_safe_text(donation.get("note", "")),
+            _csv_force_text(donation.get("uniqueKey", "")),
+            _csv_force_text(donation.get("externalId", ""))
         ])
 
     return ("\ufeff" + output.getvalue()).encode("utf-8")
@@ -969,6 +921,8 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -977,6 +931,8 @@ class Handler(BaseHTTPRequestHandler):
         body = html.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -984,6 +940,7 @@ class Handler(BaseHTTPRequestHandler):
     def send_bytes(self, body, content_type="application/octet-stream", code=200, extra_headers=None):
         self.send_response(code)
         self.send_header("Content-Type", content_type)
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         if extra_headers:
             for key, value in extra_headers.items():
@@ -991,12 +948,48 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def read_body_json(self):
-        length = int(self.headers.get("Content-Length") or 0)
-        if length <= 0:
-            return {}
+    def _read_chunked_body(self, max_bytes=4 * 1024 * 1024):
+        chunks = []
+        total = 0
+        while True:
+            size_line = self.rfile.readline(128)
+            if not size_line:
+                break
+            size_text = size_line.strip().split(b";", 1)[0]
+            try:
+                size = int(size_text, 16)
+            except ValueError as error:
+                raise ValueError("Некорректное chunked-тело запроса") from error
+            if size == 0:
+                # Consume optional trailer headers and the final empty line.
+                while True:
+                    trailer = self.rfile.readline(8192)
+                    if trailer in (b"", b"\r\n", b"\n"):
+                        break
+                break
+            total += size
+            if total > max_bytes:
+                raise ValueError("Тело запроса превышает 4 МБ")
+            chunks.append(self.rfile.read(size))
+            ending = self.rfile.read(2)
+            if ending not in (b"\r\n", b"\n"):
+                raise ValueError("Некорректное завершение chunked-блока")
+        return b"".join(chunks)
 
-        raw = self.rfile.read(length).decode("utf-8")
+    def read_body_json(self):
+        transfer_encoding = str(self.headers.get("Transfer-Encoding") or "").lower()
+        if "chunked" in transfer_encoding:
+            raw_bytes = self._read_chunked_body()
+        else:
+            length = int(self.headers.get("Content-Length") or 0)
+            if length < 0 or length > 4 * 1024 * 1024:
+                raise ValueError("Некорректный размер тела запроса")
+            raw_bytes = self.rfile.read(length) if length else b""
+
+        self._last_raw_body = raw_bytes
+        if not raw_bytes:
+            return {}
+        raw = raw_bytes.decode("utf-8", errors="replace")
 
         try:
             return json.loads(raw)
@@ -1008,8 +1001,23 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        host = str(self.headers.get("Host") or "").split(":", 1)[0].lower()
+        if host not in {"127.0.0.1", "localhost", "::1", ""}:
+            self.send_json({"ok": False, "message": "External access is limited to signed integration webhooks"}, 404)
+            return
+
         if path == "/":
             self.redirect("/widget.html")
+            return
+
+        if path == "/api/health":
+            self.send_json({
+                "ok": True,
+                "service": "VicDonationGoal",
+                "version": APP_VERSION,
+                "time": now_iso(),
+                "uptimeSeconds": round(max(0, time.time() - SERVER_STARTED_AT), 1)
+            })
             return
 
         if path == "/api/state":
@@ -1031,6 +1039,34 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
+        if path == "/api/donors/top":
+            qs = parse_qs(parsed.query)
+            query = str(qs.get("q", [""])[0])
+            self.send_json(donor_top_payload(query))
+            return
+
+        if path == "/api/donors/detail":
+            qs = parse_qs(parsed.query)
+            profile_id = str(qs.get("id", [""])[0])
+            detail = donor_detail_payload(profile_id)
+            self.send_json({"ok": bool(detail), "detail": detail}, 200 if detail else 404)
+            return
+
+        if path == "/api/donors/export.csv":
+            qs = parse_qs(parsed.query)
+            profile_id = str(qs.get("id", [""])[0])
+            state, donations = normalize_storage()
+            body, filename = donor_store.donor_csv_bytes(profile_id, donations)
+            if body is None:
+                self.send_json({"ok": False, "message": "Донатер не найден"}, 404)
+                return
+            self.send_bytes(
+                body,
+                content_type="text/csv; charset=utf-8",
+                extra_headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+            )
+            return
+
         if path == "/api/rates":
             self.send_json(load_rates())
             return
@@ -1039,10 +1075,127 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(build_system_status())
             return
 
+        if path == "/api/tts/status":
+            self.send_json(tts_store.public_status())
+            return
+
+        if path == "/api/tts/bootstrap":
+            self.send_json({
+                "ok": True,
+                "config": tts_store.get_config(),
+                "profiles": tts_store.get_profiles(),
+                "rules": tts_store.get_rules(),
+                "queue": tts_store.get_queue(),
+                "control": tts_store.get_control(),
+                "status": tts_store.public_status()
+            })
+            return
+
+        if path == "/api/tts/config":
+            self.send_json(tts_store.get_config())
+            return
+
+        if path == "/api/tts/profiles":
+            self.send_json(tts_store.get_profiles())
+            return
+
+        if path == "/api/tts/rules":
+            self.send_json(tts_store.get_rules())
+            return
+
+        if path == "/api/tts/queue":
+            self.send_json(tts_store.get_queue())
+            return
+
+        if path == "/api/tts/history":
+            qs = parse_qs(parsed.query)
+            limit = int(max(1, to_number(qs.get("limit", ["200"])[0], 200)))
+            self.send_json(tts_store.get_history(limit))
+            return
+
+        if path == "/api/tts/logs":
+            qs = parse_qs(parsed.query)
+            limit = int(max(1, to_number(qs.get("limit", ["200"])[0], 200)))
+            self.send_json(tts_store.get_logs(limit))
+            return
+
+        if path == "/api/tts/control-state":
+            self.send_json(tts_store.get_control())
+            return
+
+        if path == "/api/tts/player-status":
+            self.send_json(tts_store.get_player_status())
+            return
+
+        if path == "/api/tts/next":
+            config = tts_store.get_config()
+            queue = tts_store.get_queue()
+            ready = next((item for item in queue if str(item.get("status")) == "ready" and item.get("audioUrl")), None)
+            public_config = {
+                "provider": config.get("activeProvider"),
+                "volume": max(0, min(to_number(config.get("browserVolume"), 0.9), 1)),
+                "pollIntervalMs": int(max(250, to_number(config.get("queue", {}).get("browserPollIntervalMs"), 500))),
+                "delayAfterDoneMs": int(max(0, to_number(config.get("queue", {}).get("browserDelayAfterDoneMs"), 250))),
+                "maxPlayAttempts": int(max(1, to_number(config.get("queue", {}).get("browserMaxPlayAttempts"), 3))),
+                "stopToken": int(tts_store.get_control().get("stopToken", 0) or 0)
+            }
+            if ready:
+                updated = tts_store.update_job(str(ready.get("id")), {"status": "playing", "startedPlayingAt": now_iso()})
+                task = updated or ready
+                task = dict(task)
+                task["text"] = task.get("cleanedText") or task.get("originalText") or ""
+                task["volume"] = public_config["volume"]
+                self.send_json({"ok": True, "task": task, "queueLength": len(queue), "config": public_config})
+            else:
+                self.send_json({"ok": False, "task": None, "queueLength": len(queue), "config": public_config})
+            return
+
+        if path.startswith("/api/tts/audio/"):
+            filename = Path(unquote(path.split("/api/tts/audio/", 1)[1])).name
+            if not filename:
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            file_path = tts_store.AUDIO_DIR / filename
+            if not file_path.exists() or not file_path.is_file():
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            content_type = mimetypes.guess_type(str(file_path))[0] or "audio/mpeg"
+            self.send_bytes(file_path.read_bytes(), content_type=content_type)
+            return
+
+        if path == "/api/source-registry":
+            self.send_json({"ok": True, "sources": public_registry()})
+            return
+
+        if path == "/api/integrations":
+            self.send_json(get_integration_manager().bootstrap())
+            return
+
+        if path == "/api/integrations/detail":
+            qs = parse_qs(parsed.query)
+            integration_id = str(qs.get("id", [""])[0])
+            try:
+                self.send_json(get_integration_manager().detail(integration_id))
+            except KeyError as error:
+                self.send_json({"ok": False, "message": str(error)}, 404)
+            return
+
+        if path == "/api/integrations/logs":
+            qs = parse_qs(parsed.query)
+            integration_id = str(qs.get("id", [""])[0])
+            limit = int(max(1, to_number(qs.get("limit", ["250"])[0], 250)))
+            try:
+                self.send_json(get_integration_manager().logs(integration_id, limit))
+            except KeyError as error:
+                self.send_json({"ok": False, "message": str(error)}, 404)
+            return
+
         if path == "/api/da/status":
-            load_da_config()
-            load_da_tokens()
-            self.send_json(DA_STATUS)
+            self.send_json(get_da_integration().public_status())
             return
 
         if path == "/admin/add":
@@ -1055,7 +1208,9 @@ class Handler(BaseHTTPRequestHandler):
                 "currency": qs.get("currency", ["RUB"])[0],
                 "message": qs.get("message", [""])[0],
                 "includeInGoal": qs.get("includeInGoal", ["true"])[0],
-                "notifyStreamerBot": qs.get("notifyStreamerBot", ["false"])[0]
+                "notifyStreamerBot": qs.get("notifyStreamerBot", ["false"])[0],
+                "triggerDonationEvents": qs.get("triggerDonationEvents", ["false"])[0],
+                "speakTTS": qs.get("speakTTS", ["false"])[0]
             }
             state, ok, message = add_donation(donation)
             self.send_json({"ok": ok, "message": message, "state": state})
@@ -1069,12 +1224,394 @@ class Handler(BaseHTTPRequestHandler):
             self.da_auth_callback(parsed)
             return
 
+        if path == "/auth/streamlabs/start":
+            self.streamlabs_auth_start()
+            return
+
+        if path == "/auth/streamlabs/callback":
+            self.streamlabs_auth_callback(parsed)
+            return
+
         self.serve_static(path)
 
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
         data = self.read_body_json()
+
+        if path.startswith("/api/integrations/tribute/webhook/"):
+            status_path = PROJECT_ROOT / "runtime/integrations/tribute_status.json"
+            debug_path = PROJECT_ROOT / "runtime/integrations/tribute_last_webhook.json"
+
+            def update_tribute_status(**values):
+                status = load_json(status_path, {})
+                status.update(values)
+                status["updatedAt"] = time.time()
+                save_json(status_path, status)
+
+            try:
+                manifest_config = get_integration_manager()._load_config("tribute")
+                expected_secret = str(manifest_config.get("webhook_secret") or "")
+                actual_secret = unquote(path.rsplit("/", 1)[-1])
+                raw_body = getattr(self, "_last_raw_body", b"")
+                event_name = str(data.get("name") or data.get("event") or data.get("type") or "unknown") if isinstance(data, dict) else "unknown"
+                request_meta = {
+                    "receivedAt": now_iso(),
+                    "eventName": event_name,
+                    "bodyBytes": len(raw_body),
+                    "contentType": str(self.headers.get("Content-Type") or ""),
+                    "transferEncoding": str(self.headers.get("Transfer-Encoding") or ""),
+                    "signaturePresent": bool(self.headers.get("trbt-signature")),
+                    "topLevelKeys": sorted(str(key) for key in data.keys()) if isinstance(data, dict) else [],
+                    "payloadKeys": sorted(str(key) for key in (data.get("payload") or {}).keys()) if isinstance(data, dict) and isinstance(data.get("payload"), dict) else [],
+                }
+
+                if not expected_secret or not secrets.compare_digest(actual_secret, expected_secret):
+                    update_tribute_status(
+                        lastWebhookAt=now_iso(), lastWebhookHttpStatus=404,
+                        lastWebhookReason="webhook_secret_mismatch", lastWebhookMeta=request_meta,
+                        lastError="Webhook URL secret не совпадает",
+                    )
+                    self.send_json({"status": "error", "message": "Webhook not found"}, 404)
+                    return
+
+                api_key = str(manifest_config.get("api_key") or "")
+                raw_signature = str(self.headers.get("trbt-signature") or "").strip().strip('"')
+                signature_candidates = []
+                if raw_signature:
+                    signature_candidates.append(raw_signature)
+                    for part in raw_signature.split(","):
+                        part = part.strip()
+                        if "=" in part:
+                            key, value = part.split("=", 1)
+                            if key.strip().lower() in {"sha256", "v1", "signature", "sig"}:
+                                signature_candidates.append(value.strip().strip('"'))
+                    for prefix in ("sha256=", "v1="):
+                        if raw_signature.lower().startswith(prefix):
+                            signature_candidates.append(raw_signature[len(prefix):].strip())
+
+                digest = hmac.new(api_key.encode("utf-8"), raw_body, hashlib.sha256).digest()
+                expected_hex = digest.hex()
+                expected_b64 = base64.b64encode(digest).decode("ascii")
+                expected_b64url = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
+                signature_ok = bool(api_key and signature_candidates) and any(
+                    hmac.compare_digest(candidate.lower(), expected_hex.lower())
+                    or hmac.compare_digest(candidate, expected_b64)
+                    or hmac.compare_digest(candidate.rstrip("="), expected_b64.rstrip("="))
+                    or hmac.compare_digest(candidate.rstrip("="), expected_b64url)
+                    for candidate in signature_candidates
+                )
+                if not signature_ok:
+                    update_tribute_status(
+                        lastWebhookAt=now_iso(), lastWebhookHttpStatus=401,
+                        lastWebhookReason="invalid_signature", lastWebhookMeta=request_meta,
+                        lastError="Tribute webhook дошёл, но подпись trbt-signature не совпала",
+                    )
+                    self.send_json({"status": "error", "message": "Invalid Tribute signature"}, 401)
+                    return
+
+                # Save the last verified payload locally for private debugging.
+                save_json(debug_path, {"meta": request_meta, "data": data})
+
+                from integrations.base.common import extract_donations
+                donations = [] if event_name == "vicdonationgoal_test" else extract_donations(data, "tribute", "RUB", "Tribute webhook")
+                accepted = 0
+                messages = []
+                for donation in donations:
+                    _state, ok, message = add_donation(donation)
+                    messages.append(message)
+                    accepted += 1 if ok else 0
+
+                payload_uuid = ""
+                if isinstance(data, dict) and isinstance(data.get("payload"), dict):
+                    payload_uuid = str((data.get("payload") or {}).get("uuid") or "")
+                event_id = str((donations[0] if donations else {}).get("externalId") or payload_uuid)
+                if not event_id:
+                    event_id = str(data.get("id") or data.get("name") or "unknown") if isinstance(data, dict) else "unknown"
+                update_tribute_status(
+                    running=True, connected=True, status="webhook_received",
+                    lastEvent=event_id, lastError=None, lastWebhookAt=now_iso(),
+                    lastWebhookHttpStatus=200, lastWebhookReason="ok",
+                    lastWebhookMeta=request_meta, lastWebhookFound=len(donations),
+                    lastWebhookAccepted=accepted,
+                )
+                self.send_json({"status": "ok", "accepted": accepted, "found": len(donations), "messages": messages}, 200)
+            except Exception as error:
+                try:
+                    update_tribute_status(
+                        lastWebhookAt=now_iso(), lastWebhookHttpStatus=400,
+                        lastWebhookReason="handler_error",
+                        lastError=f"{type(error).__name__}: {error}",
+                    )
+                except Exception:
+                    pass
+                self.send_json({"status": "error", "message": f"{type(error).__name__}: {error}"}, 400)
+            return
+
+        host = str(self.headers.get("Host") or "").split(":", 1)[0].lower()
+        if host not in {"127.0.0.1", "localhost", "::1", ""}:
+            self.send_json({"ok": False, "message": "External access is limited to signed integration webhooks"}, 404)
+            return
+
+        if path == "/api/diagnostics/create":
+            try:
+                archive = create_report(PROJECT_ROOT)
+                self.send_json({"ok": True, "message": "Диагностический отчёт создан", "path": str(archive)})
+            except Exception as error:
+                self.send_json({"ok": False, "message": f"{type(error).__name__}: {error}"}, 500)
+            return
+
+
+        if path == "/api/tts/config":
+            try:
+                saved = tts_store.save_config(data)
+                self.send_json({"ok": True, "message": "Настройки TTS сохранены", "config": saved})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/profiles":
+            try:
+                saved = tts_store.save_profiles(data)
+                self.send_json({"ok": True, "message": "Голосовые профили сохранены", "profiles": saved})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/rules":
+            try:
+                saved = tts_store.save_rules(data)
+                self.send_json({"ok": True, "message": "Правила TTS сохранены", "rules": saved})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/rules/test":
+            try:
+                result = tts_store.test_routing(data)
+                self.send_json(result, 200 if result.get("ok") else 400)
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/enqueue":
+            try:
+                job, created, message = tts_store.enqueue_job(data)
+                self.send_json({"ok": True, "created": created, "message": message, "job": job})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/test":
+            payload = {
+                "eventType": str(data.get("eventType") or "manual_test"),
+                "source": str(data.get("source") or "admin"),
+                "username": str(data.get("username") or "TTS Test"),
+                "userId": str(data.get("userId") or ""),
+                "roles": data.get("roles") or [],
+                "rewardId": str(data.get("rewardId") or ""),
+                "amount": data.get("amount"),
+                "amountForGoal": data.get("amountForGoal"),
+                "text": str(data.get("text") or "Это тестовое сообщение VicDonationGoal."),
+                "profileId": str(data.get("profileId") or ""),
+                "provider": str(data.get("provider") or ""),
+                "bypassMinAmount": True,
+                "priority": 1,
+                "origin": "admin-test"
+            }
+            try:
+                job, created, message = tts_store.enqueue_job(payload)
+                self.send_json({"ok": True, "created": created, "message": message, "job": job})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/job/update":
+            job_id = data.get("id") or data.get("jobId")
+            patch = data.get("patch") if isinstance(data.get("patch"), dict) else {}
+            job = tts_store.update_job(job_id, patch)
+            self.send_json(
+                {"ok": bool(job), "message": "TTS задача обновлена" if job else "TTS задача не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/tts/job/complete":
+            job_id = data.get("id") or data.get("jobId")
+            status = str(data.get("status") or "played")
+            error = str(data.get("error") or "")
+            job = tts_store.complete_job(job_id, status=status, error=error)
+            self.send_json(
+                {"ok": bool(job), "message": "TTS задача завершена" if job else "TTS задача не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/tts/job/retry":
+            job_id = data.get("id") or data.get("jobId")
+            job = tts_store.retry_history_job(job_id)
+            self.send_json(
+                {"ok": bool(job), "message": "TTS задача повторно поставлена в очередь" if job else "Запись истории не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/tts/job/delete":
+            job_id = data.get("id") or data.get("jobId")
+            job = tts_store.remove_job(job_id)
+            self.send_json(
+                {"ok": bool(job), "message": "TTS задача удалена" if job else "TTS задача не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/tts/history/delete":
+            job_id = data.get("id") or data.get("jobId")
+            job = tts_store.delete_history_job(job_id)
+            self.send_json(
+                {"ok": bool(job), "message": "Запись TTS удалена" if job else "Запись истории не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/tts/history/clear":
+            count = tts_store.clear_history()
+            self.send_json({"ok": True, "message": f"История TTS очищена: {count}", "count": count})
+            return
+
+        if path == "/api/tts/clear":
+            count = tts_store.clear_queue()
+            self.send_json({"ok": True, "message": f"Очередь очищена: {count}", "count": count})
+            return
+
+        if path == "/api/tts/control":
+            try:
+                action = str(data.get("action") or "")
+                command = tts_store.enqueue_command(action)
+                self.send_json({"ok": True, "message": f"TTS команда: {action}", "command": command, "control": tts_store.get_control()})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/control/consume":
+            command_id = data.get("id") or data.get("commandId")
+            ok = tts_store.consume_command(command_id)
+            self.send_json({"ok": ok, "message": "Команда обработана" if ok else "Команда не найдена"}, 200 if ok else 404)
+            return
+
+        if path == "/api/tts/player-heartbeat":
+            try:
+                status = tts_store.update_player_status(data)
+                self.send_json({"ok": True, "player": status})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/tts/done":
+            task_id = data.get("id") or data.get("taskId")
+            job = tts_store.complete_job(task_id, status="played")
+            self.send_json(
+                {"ok": bool(job), "message": "TTS проигран" if job else "TTS задача не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/tts/fail":
+            task_id = str(data.get("id") or data.get("taskId") or "")
+            error_message = str(data.get("error") or "Ошибка проигрывания")
+            queue = tts_store.get_queue()
+            job = next((item for item in queue if str(item.get("id")) == task_id), None)
+            if not job:
+                self.send_json({"ok": False, "message": "TTS задача не найдена"}, 404)
+                return
+
+            config = tts_store.get_config()
+            max_attempts = int(max(1, to_number(config.get("queue", {}).get("browserMaxPlayAttempts"), 3)))
+            attempts = int(max(0, to_number(job.get("playAttempts"), 0))) + 1
+            if attempts >= max_attempts:
+                completed = tts_store.complete_job(task_id, status="error", error=error_message)
+                self.send_json({"ok": True, "removed": True, "attempts": attempts, "job": completed})
+            else:
+                updated = tts_store.update_job(task_id, {
+                    "status": "ready",
+                    "playAttempts": attempts,
+                    "error": error_message,
+                    "lastPlayErrorAt": now_iso()
+                })
+                self.send_json({"ok": True, "removed": False, "attempts": attempts, "job": updated})
+            return
+
+        if path == "/api/tts/skip":
+            task_id = data.get("id") or data.get("taskId")
+            job = tts_store.complete_job(task_id, status="cancelled", error="Пропущено вручную")
+            self.send_json(
+                {"ok": bool(job), "message": "TTS задача пропущена" if job else "TTS задача не найдена", "job": job},
+                200 if job else 404
+            )
+            return
+
+        if path == "/api/donations/bulk-update":
+            ok, message, count = bulk_update_donations(data)
+            self.send_json({"ok": ok, "message": message, "count": count}, 200 if ok else 400)
+            return
+
+        if path == "/api/donors/update":
+            profile_id = str(data.get("id") or data.get("donorId") or "")
+            profile = donor_store.update_profile(profile_id, data)
+            self.send_json({"ok": bool(profile), "message": "Профиль донатера обновлён" if profile else "Донатер не найден", "profile": profile}, 200 if profile else 404)
+            return
+
+        if path == "/api/donors/adjustment/add":
+            profile_id = str(data.get("id") or data.get("donorId") or "")
+            amount = to_number(data.get("amount"), 0)
+            currency = normalize_currency(data.get("currency") or donor_store.TOP_CURRENCY)
+            if amount == 0:
+                self.send_json({"ok": False, "message": "Сумма корректировки не может быть нулевой"}, 400)
+                return
+            amount_for_top = convert_to_goal_currency(amount, currency, donor_store.TOP_CURRENCY)
+            item = donor_store.add_adjustment(profile_id, amount, currency, amount_for_top, data.get("note"), data.get("createdAt"))
+            self.send_json({"ok": bool(item), "message": "Корректировка добавлена" if item else "Донатер не найден", "adjustment": item}, 200 if item else 404)
+            return
+
+        if path == "/api/donors/adjustment/delete":
+            ok = donor_store.delete_adjustment(data.get("id") or data.get("adjustmentId"))
+            self.send_json({"ok": ok, "message": "Корректировка удалена" if ok else "Корректировка не найдена"}, 200 if ok else 404)
+            return
+
+        if path == "/api/donors/merge":
+            target_id = str(data.get("targetId") or "")
+            source_id = str(data.get("sourceId") or "")
+            with FILE_LOCK:
+                state = normalize_state(load_json(STATE_FILE, {}))
+                donations = load_json(DONATIONS_FILE, [])
+                if not isinstance(donations, list):
+                    donations = []
+                donations = [normalize_donation_record(item, state) for item in donations if isinstance(item, dict)]
+                donations, target = donor_store.merge_profiles(target_id, source_id, donations)
+                if not target:
+                    self.send_json({"ok": False, "message": "Не удалось объединить профили"}, 400)
+                    return
+                save_json(DONATIONS_FILE, donations)
+            self.send_json({"ok": True, "message": "Донатеры объединены", "profile": target})
+            return
+
+        if path == "/api/donors/delete-all":
+            profile_id = str(data.get("id") or data.get("donorId") or "")
+            with FILE_LOCK:
+                state = normalize_state(load_json(STATE_FILE, {}))
+                donations = load_json(DONATIONS_FILE, [])
+                if not isinstance(donations, list):
+                    donations = []
+                donations = [normalize_donation_record(item, state) for item in donations if isinstance(item, dict)]
+                donations, removed = donor_store.delete_all_for_profile(profile_id, donations)
+                if removed <= 0:
+                    self.send_json({"ok": False, "message": "У донатера не найдено донатов"}, 404)
+                    return
+                recalc_goal_current(state, donations)
+                save_json(DONATIONS_FILE, donations)
+                save_json(STATE_FILE, state)
+            self.send_json({"ok": True, "message": f"Удалено донатов: {removed}", "removed": removed, "state": state})
+            return
 
         if path == "/api/donation":
             state, ok, message = add_donation(data)
@@ -1166,119 +1703,105 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, "message": "Последний донат удалён", "state": state})
             return
 
+        if path.startswith("/api/integrations/"):
+            manager = get_integration_manager()
+            integration_id = str(data.get("id") or "")
+            try:
+                if path == "/api/integrations/config":
+                    result = manager.save_config(integration_id, data.get("config") or {})
+                    self.send_json(result)
+                elif path == "/api/integrations/enable":
+                    self.send_json(manager.set_enabled(integration_id, bool_from_any(data.get("enabled"), False)))
+                elif path == "/api/integrations/start":
+                    self.send_json(manager.start(integration_id))
+                elif path == "/api/integrations/stop":
+                    self.send_json(manager.stop(integration_id))
+                elif path == "/api/integrations/restart":
+                    self.send_json(manager.restart(integration_id))
+                elif path == "/api/integrations/test":
+                    result = manager.test(integration_id)
+                    self.send_json(result, 200 if result.get("ok") else 400)
+                elif path == "/api/integrations/clear-auth":
+                    result = manager.clear_auth(integration_id)
+                    self.send_json(result, 200 if result.get("ok") else 400)
+                elif path == "/api/integrations/onboarding":
+                    self.send_json(manager.save_onboarding(data))
+                else:
+                    self.send_json({"ok": False, "message": "Неизвестная команда Integration Hub"}, 404)
+            except KeyError as error:
+                self.send_json({"ok": False, "message": str(error)}, 404)
+            except Exception as error:
+                self.send_json({"ok": False, "message": f"{type(error).__name__}: {error}"}, 400)
+            return
+
         if path == "/api/da/start":
-            start_da_listener()
-            self.send_json({"ok": True, "message": "DA listener запущен", "status": DA_STATUS})
+            self.send_json(get_integration_manager().start("donationalerts"))
             return
 
         if path == "/api/da/stop":
-            stop_da_listener()
-            self.send_json({"ok": True, "message": "DA listener остановлен", "status": DA_STATUS})
+            self.send_json(get_integration_manager().stop("donationalerts"))
             return
 
         self.send_json({"ok": False, "message": "Неизвестный адрес"}, 404)
 
     def da_auth_start(self):
-        if not da_libraries_ok():
+        try:
+            target = get_da_integration().begin_oauth()
+            self.redirect(target)
+        except Exception as error:
             self.send_html(html_page(
-                "Нужно установить библиотеки",
-                """
-                <h1>Не установлены библиотеки</h1>
-                <p>Закрой сервер, запусти <code>install.bat</code>, потом снова запусти <code>start.bat</code>.</p>
-                """
-            ), 500)
-            return
-
-        config = load_da_config()
-
-        if not DA_STATUS["configured"]:
-            self.send_html(html_page(
-                "DonationAlerts не настроен",
-                """
-                <h1>DonationAlerts не настроен</h1>
-                <p>Открой файл <code>da_config.json</code> и вставь туда <code>client_id</code> и <code>client_secret</code>.</p>
-                <p>Redirect URL в приложении DonationAlerts должен быть точно таким:</p>
-                <p><code>http://127.0.0.1:3333/auth/donationalerts/callback</code></p>
-                """
+                "DonationAlerts не готов",
+                f"<h1>Не удалось начать авторизацию</h1><p><code>{type(error).__name__}: {error}</code></p><p>Откройте <a href='/admin.html'>Integration Hub</a>, заполните настройки и повторите.</p>"
             ), 400)
-            return
-
-        oauth_state = secrets.token_urlsafe(24)
-        DA_OAUTH_STATE_FILE.write_text(oauth_state, encoding="utf-8")
-
-        params = {
-            "client_id": config.get("client_id"),
-            "redirect_uri": config.get("redirect_uri"),
-            "response_type": "code",
-            "scope": config.get("scopes", "oauth-user-show oauth-donation-subscribe oauth-donation-index"),
-            "state": oauth_state
-        }
-
-        self.redirect(DA_AUTH_URL + "?" + urlencode(params))
 
     def da_auth_callback(self, parsed):
-        if requests is None:
-            self.send_html(html_page(
-                "Ошибка",
-                "<h1>Не установлена библиотека requests</h1><p>Запусти <code>install.bat</code>.</p>"
-            ), 500)
-            return
-
         qs = parse_qs(parsed.query)
         error = qs.get("error", [None])[0]
         code = qs.get("code", [None])[0]
         state = qs.get("state", [None])[0]
-
         if error:
-            self.send_html(html_page(
-                "Ошибка DonationAlerts",
-                f"<h1>DonationAlerts вернул ошибку</h1><p><code>{error}</code></p>"
-            ), 400)
+            self.send_html(html_page("Ошибка DonationAlerts", f"<h1>DonationAlerts вернул ошибку</h1><p><code>{error}</code></p>"), 400)
             return
-
-        expected_state = ""
         try:
-            expected_state = DA_OAUTH_STATE_FILE.read_text(encoding="utf-8").strip()
-        except FileNotFoundError:
-            pass
-
-        if not code:
-            self.send_html(html_page(
-                "Ошибка",
-                "<h1>Нет code в callback</h1><p>Авторизация не завершилась.</p>"
-            ), 400)
-            return
-
-        if not expected_state or state != expected_state:
-            self.send_html(html_page(
-                "Ошибка state",
-                "<h1>Не совпал OAuth state</h1><p>Открой <code>/auth/donationalerts/start</code> ещё раз.</p>"
-            ), 400)
-            return
-
-        try:
-            exchange_code_for_token(code)
-            start_da_listener()
-
+            get_da_integration().finish_oauth(code, state)
             self.send_html(html_page(
                 "DonationAlerts подключен",
-                """
-                <h1>DonationAlerts подключен</h1>
-                <p>Токены сохранены в <code>da_tokens.json</code>.</p>
-                <p>Сервер уже пытается подключиться к real-time каналу донатов.</p>
-                <p>Статус можно проверить тут: <a href="/api/da/status">/api/da/status</a></p>
-                <p>Админка: <a href="/admin.html">/admin.html</a></p>
-                <p>Виджет: <a href="/widget.html">/widget.html</a></p>
-                """
+                "<h1>DonationAlerts подключен</h1><p>Токены сохранены локально, listener запущен.</p><p><a href='/admin.html'>Вернуться в Integration Hub</a></p>"
             ))
-        except Exception as e:
+        except Exception as error:
             self.send_html(html_page(
-                "Ошибка токена",
-                f"""
-                <h1>Не удалось получить токен</h1>
-                <p><code>{type(e).__name__}: {e}</code></p>
-                <p>Проверь <code>client_id</code>, <code>client_secret</code> и Redirect URL.</p>
-                """
+                "Ошибка DonationAlerts",
+                f"<h1>Не удалось завершить авторизацию</h1><p><code>{type(error).__name__}: {error}</code></p><p><a href='/admin.html'>Вернуться в Integration Hub</a></p>"
+            ), 500)
+
+    def streamlabs_auth_start(self):
+        try:
+            target = get_streamlabs_integration().begin_oauth()
+            self.redirect(target)
+        except Exception as error:
+            self.send_html(html_page(
+                "Streamlabs не готов",
+                f"<h1>Не удалось начать авторизацию</h1><p><code>{type(error).__name__}: {error}</code></p><p>Откройте <a href='/admin.html'>Integration Hub</a>, заполните настройки и повторите.</p>"
+            ), 400)
+
+    def streamlabs_auth_callback(self, parsed):
+        qs = parse_qs(parsed.query)
+        error = qs.get("error", [None])[0]
+        code = qs.get("code", [None])[0]
+        state = qs.get("state", [None])[0]
+        if error:
+            self.send_html(html_page("Ошибка Streamlabs", f"<h1>Streamlabs вернул ошибку</h1><p><code>{error}</code></p>"), 400)
+            return
+        try:
+            get_streamlabs_integration().finish_oauth(code, state)
+            self.send_html(html_page(
+                "Streamlabs подключён",
+                "<h1>Streamlabs подключён</h1><p>OAuth-токены сохранены локально, listener запущен.</p><p><a href='/admin.html'>Вернуться в Integration Hub</a></p>"
+            ))
+        except Exception as error:
+            self.send_html(html_page(
+                "Ошибка Streamlabs",
+                f"<h1>Не удалось завершить авторизацию</h1><p><code>{type(error).__name__}: {error}</code></p><p><a href='/admin.html'>Вернуться в Integration Hub</a></p>"
             ), 500)
 
     def redirect(self, target):
@@ -1304,40 +1827,56 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", content_type + "; charset=utf-8")
         else:
             self.send_header("Content-Type", content_type)
+        if content_type.startswith("text/") or content_type == "application/javascript":
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
 
+class VicThreadingHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 def main():
     ensure_files()
     normalize_storage()
-    load_da_config()
-    load_da_tokens()
+    manager = get_integration_manager()
 
     print("")
     print("==============================================")
-    print(" Donation Goal Widget запущен")
+    print(f" VicDonationGoal v{APP_VERSION} запущен")
     print("==============================================")
-    print(f" Виджет для OBS:        http://{HOST}:{PORT}/widget.html")
-    print(f" Админка:               http://{HOST}:{PORT}/admin.html")
-    print(f" DonationAlerts login:  http://{HOST}:{PORT}/auth/donationalerts/start")
-    print(f" DonationAlerts status: http://{HOST}:{PORT}/api/da/status")
+    print(f" Health check:       http://{HOST}:{PORT}/api/health")
+    print(f" Виджет для OBS:     http://{HOST}:{PORT}/widget.html")
+    print(f" TTS Browser Source: http://{HOST}:{PORT}/tts.html")
+    print(f" Админка:            http://{HOST}:{PORT}/admin.html")
+    print(f" Integration Hub:    http://{HOST}:{PORT}/admin.html#integrationsPanel")
     print("")
     print(" Чтобы остановить сервер: закрой это окно или нажми Ctrl+C")
     print("")
 
-    if da_libraries_ok() and DA_STATUS["configured"] and DA_STATUS["authorized"]:
-        start_da_listener()
-    elif not da_libraries_ok():
-        print("[DA] Библиотеки не установлены. Запусти 00_INSTALL_ALL.bat.")
-    elif not DA_STATUS["configured"]:
-        print("[DA] da_config.json ещё не настроен.")
-    elif not DA_STATUS["authorized"]:
-        print("[DA] Нужно авторизоваться: /auth/donationalerts/start")
+    try:
+        server = VicThreadingHTTPServer((HOST, PORT), Handler)
+    except OSError as error:
+        print(f"[SERVER] Не удалось запустить {HOST}:{PORT}: {error}")
+        print("[SERVER] Возможно, сервер уже запущен или порт занят другой программой.")
+        return
 
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
-    server.serve_forever()
+    # External integrations start only after Core is ready to accept their events.
+    manager.start_enabled()
+    atexit.register(manager.stop_all)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\n[SERVER] Остановка...")
+    finally:
+        manager.stop_all()
+        server.server_close()
+        print("[SERVER] Остановлено.")
 
 
 if __name__ == "__main__":

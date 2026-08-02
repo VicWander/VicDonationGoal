@@ -1,0 +1,58 @@
+{
+  "id": "donatestream",
+  "name": "Donate.Stream",
+  "shortName": "Donate.Stream",
+  "icon": "DS",
+  "order": 60,
+  "kind": "subprocess",
+  "entrypoint": "donatestream_listener.py",
+  "description": "Получает донаты из alert-виджета Donate.Stream через подтверждённое Socket.IO событие alert.",
+  "configFile": "donatestream_config.json",
+  "configExampleFile": "donatestream_config.example.json",
+  "guideFile": "GUIDE.md",
+  "statusFile": "runtime/integrations/donatestream_status.json",
+  "statusStaleSeconds": 120,
+  "testWaitSeconds": 12,
+  "requiredFields": [
+    "widget_url"
+  ],
+  "secretFields": [
+    "widget_url"
+  ],
+  "capabilities": {
+    "oauth": false,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": false
+  },
+  "fields": [
+    {
+      "key": "widget_url",
+      "label": "Ссылка alert-виджета Donate.Stream",
+      "type": "password",
+      "placeholder": "https://donate.stream/widget-alert?uid=...&token=...",
+      "help": "Полная ссылка из кабинета. Токен хранится локально."
+    },
+    {
+      "key": "headless_browser",
+      "label": "Скрытый браузер",
+      "type": "checkbox",
+      "default": true
+    },
+    {
+      "key": "capture_console",
+      "label": "Перехватывать сообщения страницы для диагностики",
+      "type": "checkbox",
+      "default": true
+    },
+    {
+      "key": "reconnect_delay_seconds",
+      "label": "Задержка перезапуска браузера, сек.",
+      "type": "number",
+      "default": 5
+    }
+  ],
+  "stability": "stable",
+  "dashboardVisible": true
+}

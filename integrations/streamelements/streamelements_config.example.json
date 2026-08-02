@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "channel_id": "",
+  "token_type": "jwt",
+  "token": "",
+  "websocket_url": "wss://astro.streamelements.com/",
+  "topic": "channel.tips",
+  "widget_api_url": "http://127.0.0.1:3333/api/donation",
+  "accept_statuses": "success",
+  "accept_approval_states": "allowed,approved,",
+  "reconnect_delay_seconds": 3,
+  "max_reconnect_delay_seconds": 60,
+  "request_timeout_seconds": 10
+}

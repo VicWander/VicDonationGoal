@@ -1,0 +1,93 @@
+{
+  "id": "donatepay",
+  "name": "DonatePay",
+  "shortName": "DonatePay",
+  "icon": "DP",
+  "order": 50,
+  "kind": "subprocess",
+  "entrypoint": "donatepay_listener.py",
+  "description": "Официальный API DonatePay: real-time события через Centrifugo и безопасный catch-up истории.",
+  "configFile": "donatepay_config.json",
+  "configExampleFile": "donatepay_config.example.json",
+  "guideFile": "GUIDE.md",
+  "statusFile": "runtime/integrations/donatepay_status.json",
+  "statusStaleSeconds": 120,
+  "testWaitSeconds": 15,
+  "requiredFields": [
+    "api_key"
+  ],
+  "secretFields": [
+    "api_key"
+  ],
+  "capabilities": {
+    "oauth": false,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": false
+  },
+  "fields": [
+    {
+      "key": "api_key",
+      "label": "API-ключ DonatePay",
+      "type": "password",
+      "placeholder": "Вставьте ключ из DonatePay → API",
+      "help": "Хранится только локально. После публикации ключа где-либо перевыпустите его."
+    },
+    {
+      "key": "user_id",
+      "label": "DonatePay User ID",
+      "type": "text",
+      "placeholder": "Определится автоматически",
+      "help": "Сохраняется после первого успешного /user. Нужен, чтобы не запрашивать /user при каждом переподключении."
+    },
+    {
+      "key": "catch_up_enabled",
+      "label": "Восстанавливать пропущенные донаты через /transactions",
+      "type": "checkbox",
+      "default": false,
+      "help": "Не обязателен для новых донатов. DonatePay жёстко ограничивает /transactions, поэтому по умолчанию выключено."
+    },
+    {
+      "key": "catch_up_limit",
+      "label": "Сколько последних операций проверять",
+      "type": "number",
+      "default": 10
+    },
+    {
+      "key": "catch_up_min_interval_seconds",
+      "label": "Минимальный интервал запросов истории, сек.",
+      "type": "number",
+      "default": 1800,
+      "help": "Защита от HTTP 429. На новые real-time донаты не влияет."
+    },
+    {
+      "key": "catch_up_rate_limit_delay_seconds",
+      "label": "Пауза после HTTP 429, сек.",
+      "type": "number",
+      "default": 900,
+      "help": "Используется, если DonatePay не вернул заголовок Retry-After."
+    },
+    {
+      "key": "import_existing_first_run",
+      "label": "Импортировать существующие операции при первом запуске",
+      "type": "checkbox",
+      "default": false,
+      "help": "Обычно выключено, чтобы не добавить старую историю неожиданно."
+    },
+    {
+      "key": "reconnect_delay_seconds",
+      "label": "Начальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 5
+    },
+    {
+      "key": "max_reconnect_delay_seconds",
+      "label": "Максимальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 60
+    }
+  ],
+  "stability": "beta",
+  "dashboardVisible": true
+}

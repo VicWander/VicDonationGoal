@@ -2,17 +2,33 @@
 # VicDonationGoal local files
 # ==============================
 
-# DonationAlerts secrets / OAuth tokens
-core/integrations/donationalerts/da_config.json
-core/integrations/donationalerts/da_tokens.json
-core/integrations/donationalerts/da_oauth_state.txt
+# Integration configs, tokens and listener state
+integrations/*/*_config.json
+integrations/*/*_tokens.json
+integrations/*/*_seen.json
+integrations/*/*_runtime_state.json
+integrations/*/*_catch_up_state.json
+integrations/*/oauth_state.txt
 
-# Donatty private widget links / tokens
-integrations/donatty/donatty_config.json
+# Local Integration Hub selection
+integrations/integrations_onboarding.json
 
 # Streamer.bot local settings and processed events
-integrations/streamerbot/streamerbot_config.json
 integrations/streamerbot/streamerbot_sent.json
+integrations/streamerbot/donation_event_rules.json
+integrations/streamerbot/streamerbot_event_rules_sent.json
+
+
+# TTS local config/cache
+integrations/tts/tts_config.json
+integrations/tts/tts_profiles.json
+integrations/tts/tts_rules.json
+integrations/tts/tts_history.json
+integrations/tts/tts_control.json
+integrations/tts/tts_log.json
+integrations/tts/tts_sent.json
+integrations/tts/tts_queue.json
+integrations/tts/audio_cache/
 
 # Local donation data
 core/data/state.json
@@ -50,3 +66,18 @@ runtime/
 # Runtime temp files
 *.tmp
 *.bak
+
+# Automatic broken JSON backups
+backups/
+
+core/data/donor_profiles.json
+core/data/donor_adjustments.json
+
+# Optional tools downloaded on demand
+tools/cloudflared.exe
+
+# Local diagnostic reports
+diagnostics/
+integration_inspector_reports/
+BETA_READINESS_REPORT_*.json
+BETA_READINESS_REPORT_*.md

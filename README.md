@@ -1,354 +1,95 @@
-# VicDonationGoal
+# VicDonationGoal v1.4.4 — Closed Beta
 
-**VicDonationGoal** is a local donation goal widget and donation management tool for streamers.
+**Одна локальная система для донат-гола, истории, оповещений и озвучки на стриме.**
 
-It runs on your computer, collects donations from different services, keeps a local donation history, shows a customizable OBS browser widget, and can trigger Streamer.bot actions for custom alerts.
+VicDonationGoal собирает события из разных донат-сервисов в единую историю, обновляет цель в OBS, ведёт рейтинг TopDonation, передаёт данные в Streamer.bot и управляет TTS. Всё работает на компьютере стримера: без обязательного облачного аккаунта, подписки и передачи истории на сторонний сервер.
 
-> The project was made as a practical local streaming utility and can also be used as an educational project demonstrating a small client-server application with external integrations.
+> `v1.4.4` распространяется как закрытая бета. Основные сценарии уже работают, но перед важным стримом рекомендуется проверить выбранные интеграции тестовым донатом.
 
-## Features
+## Зачем VicDonationGoal
 
-- Local Python HTTP server.
-- OBS browser widget for a donation goal bar.
-- Web admin panel for managing goals and donation history.
-- Manual donation entry.
-- Donation history stored locally as JSON.
-- Include/exclude each donation from the current goal.
-- Optional Streamer.bot alert trigger for manual donations.
-- DonationAlerts integration via OAuth and realtime events.
-- Donatty integration through an automatic SSE listener.
-- Streamer.bot bridge through the local HTTP API.
-- Light/dark admin theme.
-- CSV export for donation history.
-- Manual currency rates for conversion to the goal currency.
-- Integration status block in the admin panel.
-- Replay button to resend a donation alert to Streamer.bot.
-- Built-in local documentation page.
-- GitHub-ready example configs with secrets excluded.
+| Возможность | Что это даёт стримеру |
+| --- | --- |
+| Единая история | Донаты из разных сервисов выглядят и учитываются одинаково |
+| OBS-виджет | Одна настраиваемая цель вместо нескольких разрозненных виджетов |
+| TopDonation | Рейтинг донатеров, объединение алиасов, заметки и ручные корректировки |
+| Streamer.bot Bridge | Донат может запускать звук, анимацию, сцену или любое другое действие |
+| TTS Hub | Профили голосов, правила, очередь, история, повторы и резервный провайдер |
+| Диагностика | Безопасный ZIP-отчёт помогает разбирать ошибки без публикации токенов и сообщений |
+| Local-first | История, настройки и секреты остаются на вашем компьютере |
 
-## Requirements
+## Поддерживаемые источники
 
-- Windows 10/11.
-- Python 3.11 or newer.
-- OBS Studio, if you want to use the widget on stream.
-- Streamer.bot, if you want custom alert actions.
-- DonationAlerts and/or Donatty accounts, if you want live donation integrations.
+| Статус | Сервисы |
+| --- | --- |
+| Stable | DonationAlerts, Donatty, StreamElements, Donate.Stream, DonateX |
+| Beta | DonatePay, Streamlabs |
+| Experimental | Tribute |
 
-Python dependencies are listed in [`requirements.txt`](requirements.txt):
+Все источники приводятся к одному формату события. После этого Core одинаково обновляет историю, цель, TopDonation, Streamer.bot и TTS.
 
-```txt
-requests
-websocket-client
-playwright
-```
+## Быстрый запуск
 
-The installer also downloads Playwright Chromium because Donatty Auto Listener uses a small hidden browser to capture a fresh SSE URL.
+Требования: Windows 10/11, Python 3.11 или новее, OBS Studio. Streamer.bot и TTS-провайдеры нужны только для соответствующих функций.
 
-## Quick start
+1. Скачайте архив `VicDonationGoal-v1.4.4.zip` и распакуйте его в обычную папку.
+2. Запустите `00_INSTALL_ALL.bat` и дождитесь завершения установки.
+3. Запустите `01_START_ALL.bat`.
+4. Откройте `http://127.0.0.1:3333/admin.html`.
+5. В мастере первого запуска выберите один донат-сервис, заполните его настройки и отправьте тестовый донат.
 
-### 1. Install dependencies
+Подробная инструкция: [быстрый старт](docs/QUICK_START.md) и [полное руководство](docs/MANUAL.md).
 
-Run:
+## Что входит в v1.4.4
 
-```bat
-00_INSTALL_ALL.bat
-```
+- новый статусный dashboard с отдельными состояниями Core, Integration Manager, Streamer.bot Bridge, TTS Hub и донат-сервисов;
+- центральный реестр источников и единая модель статусов;
+- end-to-end проверки импортов, JSON, API и маршрутизации событий;
+- безопасный диагностический отчёт из интерфейса;
+- установка `cloudflared` только по запросу при использовании Tribute;
+- чистый первый запуск без истории, токенов, личных ID и локальных конфигов.
 
-This installs Python packages, downloads Playwright Chromium, and creates local config/data files from examples if they do not exist yet.
+Полный список изменений находится в [CHANGELOG.md](CHANGELOG.md), дальнейшие планы — в [ROADMAP.md](ROADMAP.md).
 
-### 2. Configure services
+## Линейка версий
 
-Edit local config files created from examples:
+- `v1.0.0` — **First Release**
+- `v1.1.1` — **Stability**
+- `v1.2.0` — **TTS Hub**
+- `v1.2.1` — **TTS Stability & Documentation**
+- `v1.3.0` — **TopDonation**
+- `v1.4.0` — **Integrations Hub**
+- `v1.4.1` — **Official Services**
+- `v1.4.2` — **Russian Services**
+- `v1.4.2.1` — **Russian Services Hotfix**
+- `v1.4.3` — **Integration Stability**
+- `v1.4.3.1` — **Integration Hotfix**
+- `v1.4.3.2` — **TTS & Tribute Emergency Hotfix**
+- `v1.4.4` — **Beta Readiness**
 
-```text
-core/integrations/donationalerts/da_config.json
-integrations/donatty/donatty_config.json
-integrations/streamerbot/streamerbot_config.json
-```
+Исправления по итогам закрытой беты выпускаются как `v1.4.4.1`, `v1.4.4.2` и далее. Следующая самостоятельная стабильная версия получит новый обычный номер.
 
-Private config files are ignored by Git.
+## Безопасность и данные
 
-### 3. Start everything
+В релизе нет реальных OAuth-токенов, widget URL, истории донатов, TTS-журналов, логов, runtime-файлов и Streamer.bot Action ID. Локальные файлы создаются из безопасных `*.example.json` при первом запуске и исключены из Git.
 
-Run:
+Перед отправкой диагностического ZIP всё равно можно открыть его и проверить содержимое самостоятельно. Подробности очистки приведены в [SANITIZATION_REPORT.md](SANITIZATION_REPORT.md).
 
-```bat
-01_START_ALL.bat
-```
+## Закрытая бета
 
-It opens three windows:
+Если нашли ошибку, приложите описание действий, версию Windows/Python и диагностический ZIP из админки. Сам отчёт не включает тексты донатов и известные секреты.
 
-```text
-Core server
-Donatty listener
-Streamer.bot bridge
-```
+Спасибо бета-тестерам версии 1.4.4: _список будет добавлен после тестирования._
 
-Admin panel:
+## Автор и поддержка проекта
 
-```text
-http://127.0.0.1:3333/admin.html
-```
+VicDonationGoal создаёт [VicWander](https://www.twitch.tv/vicwander2).
 
-OBS widget:
+- Связаться со мной в Telegram: [t.me/wander_streams](https://t.me/wander_streams)
+- Twitch: [twitch.tv/vicwander2](https://www.twitch.tv/vicwander2)
+- Поддержать разработку: [DA.link](https://dalink.to/vicwander) или [DonationAlerts](https://www.donationalerts.com/r/vicwander)
+- Исходный код и релизы: [GitHub](https://github.com/VicWander/VicDonationGoal)
 
-```text
-http://127.0.0.1:3333/widget.html
-```
+## Лицензия
 
-Documentation page:
-
-```text
-http://127.0.0.1:3333/docs/index.html
-```
-
-## OBS setup
-
-1. Open OBS.
-2. Add a new **Browser Source**.
-3. Set URL:
-
-```text
-http://127.0.0.1:3333/widget.html
-```
-
-Recommended starting size:
-
-```text
-Width: 800
-Height: 220
-```
-
-The widget style is configured in:
-
-```text
-core/public/style.css
-```
-
-## DonationAlerts setup
-
-1. Create an OAuth application in DonationAlerts.
-2. Set redirect URL exactly:
-
-```text
-http://127.0.0.1:3333/auth/donationalerts/callback
-```
-
-3. Copy the example config:
-
-```text
-core/integrations/donationalerts/da_config.example.json
-```
-
-into:
-
-```text
-core/integrations/donationalerts/da_config.json
-```
-
-4. Fill in `client_id` and `client_secret`.
-5. Start the core server.
-6. Open:
-
-```text
-http://127.0.0.1:3333/auth/donationalerts/start
-```
-
-7. Authorize the app.
-
-Status endpoint:
-
-```text
-http://127.0.0.1:3333/api/da/status
-```
-
-## Donatty setup
-
-Donatty internal `sse?jwt=...` links may change. This project uses an Auto Listener:
-
-1. Open:
-
-```text
-integrations/donatty/donatty_config.json
-```
-
-2. Put your normal Donatty OBS/widget URL into `widget_url`.
-3. Keep `sse_url` empty unless you need a fallback.
-4. Start:
-
-```bat
-03_START_DONATTY_ONLY.bat
-```
-
-The listener opens the widget in hidden Chromium, captures a fresh SSE URL from network requests, then listens for donation events.
-
-## Streamer.bot setup
-
-1. In Streamer.bot enable:
-
-```text
-Servers/Clients -> HTTP Server
-```
-
-Recommended settings:
-
-```text
-Host: 127.0.0.1
-Port: 7474
-Auto Start: enabled
-```
-
-2. Open:
-
-```text
-integrations/streamerbot/streamerbot_config.json
-```
-
-3. Set the action name or action ID.
-
-The bridge sends these variables to Streamer.bot:
-
-```text
-%user%
-%amount%
-%currency%
-%message%
-```
-
-Additional variables:
-
-```text
-%username%
-%donationUser%
-%donor%
-%currencyCode%
-%currencySymbol%
-%amountWithCurrency%
-%source%
-%donationId%
-```
-
-Test:
-
-```bat
-05_TEST_STREAMERBOT.bat
-```
-
-If Streamer.bot says `action not found`, open:
-
-```text
-http://127.0.0.1:7474/GetActions
-```
-
-copy the action ID and paste it into `streamerbot_config.json`.
-
-## Stage 3 utilities
-
-The admin panel also includes several practical utilities:
-
-- **Export CSV** — downloads the donation history as `donations_export.csv`.
-- **Replay alert** — sends a selected donation back to Streamer.bot.
-- **Integration statuses** — shows local server, DonationAlerts, Donatty and Streamer.bot bridge status.
-- **Manual exchange rates** — stores simple currency rates to RUB in `core/data/rates.json`.
-
-CSV export endpoint:
-
-```text
-http://127.0.0.1:3333/api/donations/export.csv
-```
-
-Status endpoint:
-
-```text
-http://127.0.0.1:3333/api/status
-```
-
-Rates endpoint:
-
-```text
-http://127.0.0.1:3333/api/rates
-```
-
-## Project structure
-
-```text
-VicDonationGoal/
-├─ 00_INSTALL_ALL.bat
-├─ 01_START_ALL.bat
-├─ 02_START_SERVER_ONLY.bat
-├─ 03_START_DONATTY_ONLY.bat
-├─ 04_START_STREAMERBOT_ONLY.bat
-├─ 05_TEST_STREAMERBOT.bat
-├─ 06_RESET_STREAMERBOT_SENT.bat
-├─ 07_CREATE_LOCAL_CONFIGS.bat
-├─ README.md
-├─ LICENSE
-├─ requirements.txt
-├─ docs/
-│
-├─ core/
-│  ├─ server.py
-│  ├─ public/
-│  ├─ data/
-│  └─ integrations/donationalerts/
-│
-└─ integrations/
-   ├─ donatty/
-   └─ streamerbot/
-```
-
-## Local files and secrets
-
-The repository contains only example configs. Real local files are ignored:
-
-```text
-da_config.json
-da_tokens.json
-donatty_config.json
-streamerbot_config.json
-streamerbot_sent.json
-state.json
-donations.json
-rates.json
-runtime/
-```
-
-Do not publish real service tokens, widget URLs, JWT links, OAuth secrets, or donation history.
-
-## Documentation
-
-A full local manual is available in two places:
-
-Repository docs:
-
-```text
-docs/manual.html
-```
-
-Served by the local app:
-
-```text
-http://127.0.0.1:3333/docs/index.html
-```
-
-Markdown version:
-
-```text
-docs/MANUAL.md
-```
-
-## Development notes
-
-This is a local-first project. It intentionally avoids an external database and stores state in JSON files:
-
-```text
-core/data/state.json
-core/data/donations.json
-core/data/rates.json
-```
-
-That makes it easy to inspect, backup, and move between machines.
-
-## License
-
-MIT License. See [LICENSE](LICENSE).
+Проект распространяется по лицензии MIT. VicDonationGoal не является официальным продуктом перечисленных донат-сервисов, OBS или Streamer.bot.

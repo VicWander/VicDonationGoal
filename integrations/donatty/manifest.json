@@ -1,0 +1,78 @@
+{
+  "id": "donatty",
+  "name": "Donatty",
+  "shortName": "Donatty",
+  "icon": "DT",
+  "order": 20,
+  "kind": "subprocess",
+  "entrypoint": "donatty_listener.py",
+  "description": "Автоматически получает временный SSE URL из OBS-виджета Donatty через Playwright.",
+  "configFile": "donatty_config.json",
+  "configExampleFile": "donatty_config.example.json",
+  "guideFile": "GUIDE.md",
+  "statusFile": "runtime/donatty_status.json",
+  "statusStaleSeconds": 120,
+  "testWaitSeconds": 8,
+  "requiredFields": [
+    "widget_url"
+  ],
+  "secretFields": [
+    "widget_url",
+    "sse_url"
+  ],
+  "capabilities": {
+    "oauth": false,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": false
+  },
+  "fields": [
+    {
+      "key": "widget_url",
+      "label": "Ссылка OBS-виджета Donatty",
+      "type": "password",
+      "placeholder": "https://...",
+      "help": "Обычная ссылка виджета из кабинета Donatty. Программа сама найдёт свежий SSE JWT."
+    },
+    {
+      "key": "headless_browser",
+      "label": "Скрытый браузер",
+      "type": "checkbox",
+      "default": true,
+      "help": "Выключите только для отладки Playwright."
+    },
+    {
+      "key": "prefer_auto_sse",
+      "label": "Автоматически получать SSE URL",
+      "type": "checkbox",
+      "default": true
+    },
+    {
+      "key": "use_old_sse_if_auto_failed",
+      "label": "Использовать сохранённый SSE как резерв",
+      "type": "checkbox",
+      "default": false
+    },
+    {
+      "key": "sse_capture_timeout_seconds",
+      "label": "Таймаут получения SSE, сек.",
+      "type": "number",
+      "default": 35
+    },
+    {
+      "key": "reconnect_delay_seconds",
+      "label": "Начальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 5
+    },
+    {
+      "key": "max_reconnect_delay_seconds",
+      "label": "Максимальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 60
+    }
+  ],
+  "stability": "stable",
+  "dashboardVisible": true
+}

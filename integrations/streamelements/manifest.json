@@ -1,0 +1,95 @@
+{
+  "id": "streamelements",
+  "name": "StreamElements",
+  "shortName": "StreamElements",
+  "icon": "SE",
+  "order": 30,
+  "kind": "subprocess",
+  "entrypoint": "streamelements_listener.py",
+  "description": "Официальный Astro WebSocket: новые tips/donations по теме channel.tips.",
+  "configFile": "streamelements_config.json",
+  "configExampleFile": "streamelements_config.example.json",
+  "guideFile": "GUIDE.md",
+  "statusFile": "runtime/integrations/streamelements_status.json",
+  "statusStaleSeconds": 120,
+  "testWaitSeconds": 10,
+  "requiredFields": [
+    "channel_id",
+    "token"
+  ],
+  "secretFields": [
+    "token"
+  ],
+  "capabilities": {
+    "oauth": false,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": false
+  },
+  "fields": [
+    {
+      "key": "channel_id",
+      "label": "StreamElements Channel ID",
+      "type": "text",
+      "placeholder": "Например: 5ad23dcc18fff500d78c5348",
+      "help": "ID канала/room, для которого нужно получать tips. Берётся из StreamElements Dashboard."
+    },
+    {
+      "key": "token_type",
+      "label": "Тип токена",
+      "type": "select",
+      "default": "jwt",
+      "options": [
+        {
+          "value": "jwt",
+          "label": "JWT Token"
+        },
+        {
+          "value": "apikey",
+          "label": "Overlay Token / API Key"
+        },
+        {
+          "value": "oauth2",
+          "label": "OAuth2 access token"
+        }
+      ],
+      "help": "Для личной установки проще JWT или Overlay Token. Токен должен относиться к выбранному каналу."
+    },
+    {
+      "key": "token",
+      "label": "Токен StreamElements",
+      "type": "password",
+      "placeholder": "JWT / Overlay Token / OAuth2 token",
+      "help": "Хранится только локально и не возвращается обратно в браузер."
+    },
+    {
+      "key": "accept_statuses",
+      "label": "Принимать статусы",
+      "type": "text",
+      "default": "success",
+      "help": "Через запятую. По умолчанию учитываются только успешно завершённые tips."
+    },
+    {
+      "key": "accept_approval_states",
+      "label": "Принимать moderation states",
+      "type": "text",
+      "default": "allowed,approved,",
+      "help": "Через запятую. Пустое значение разрешает события без moderation state."
+    },
+    {
+      "key": "reconnect_delay_seconds",
+      "label": "Начальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 3
+    },
+    {
+      "key": "max_reconnect_delay_seconds",
+      "label": "Максимальная задержка переподключения, сек.",
+      "type": "number",
+      "default": 60
+    }
+  ],
+  "stability": "stable",
+  "dashboardVisible": true
+}

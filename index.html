@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VicDonationGoal — локальная система донат-гола, истории, TopDonation, Streamer.bot и TTS для OBS-стримов.">
+  <meta name="theme-color" content="#071422">
+  <title>VicDonationGoal v1.4.4 — Closed Beta</title>
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">К содержимому</a>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="VicDonationGoal — наверх">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>VicDonationGoal</span>
+    </a>
+    <nav class="nav" aria-label="Основная навигация">
+      <a href="#features">Возможности</a>
+      <a href="#integrations">Сервисы</a>
+      <a href="#versions">Версии</a>
+      <a href="#start">Запуск</a>
+      <a href="docs/index.html">Документация</a>
+    </nav>
+    <a class="button button-small button-ghost" href="https://github.com/VicWander/VicDonationGoal">GitHub</a>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="pulse"></span> v1.4.4 · Closed Beta</div>
+        <h1>Донаты из разных сервисов.<br><span>Одна локальная система.</span></h1>
+        <p class="hero-lead">VicDonationGoal объединяет донат-гол, историю, TopDonation, OBS-виджет, Streamer.bot и TTS — без обязательного облака и ежемесячной подписки.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/VicWander/VicDonationGoal/releases/tag/v1.4.4">Скачать v1.4.4</a>
+          <a class="button button-secondary" href="docs/index.html">Открыть руководство</a>
+        </div>
+        <p class="hero-note">Windows 10/11 · Python 3.11+ · OBS Browser Source</p>
+      </div>
+
+      <div class="product-window" aria-label="Пример статусной панели VicDonationGoal">
+        <div class="window-head">
+          <div class="window-brand"><span class="mini-logo"></span> VicDonationGoal</div>
+          <span class="window-version">1.4.4 · beta</span>
+        </div>
+        <div class="window-body">
+          <div class="window-title-row">
+            <div>
+              <span class="kicker">Состояние системы</span>
+              <h2>Всё важное — на одном экране</h2>
+            </div>
+            <span class="health-pill"><i></i> Core работает</span>
+          </div>
+          <div class="module-grid">
+            <div class="module-card active"><i></i><span><b>Core Server</b><small>Подключён</small></span></div>
+            <div class="module-card active"><i></i><span><b>Integration Manager</b><small>8 источников</small></span></div>
+            <div class="module-card idle"><i></i><span><b>Streamer.bot</b><small>Ожидает настройки</small></span></div>
+            <div class="module-card idle"><i></i><span><b>TTS Hub</b><small>Выключен</small></span></div>
+          </div>
+          <div class="services-head"><span>Донат-сервисы</span><span>3 подключено</span></div>
+          <div class="service-grid">
+            <div><i class="green"></i><span>DonationAlerts</span></div>
+            <div><i class="green"></i><span>Donatty</span></div>
+            <div><i class="green"></i><span>StreamElements</span></div>
+            <div><i></i><span>DonatePay</span></div>
+            <div><i></i><span>Donate.Stream</span></div>
+            <div><i></i><span>Ещё 3</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Ключевые характеристики">
+      <div><strong>8</strong><span>автоматических источников</span></div>
+      <div><strong>Local-first</strong><span>история и токены остаются на ПК</span></div>
+      <div><strong>3 в 1</strong><span>OBS, Streamer.bot и TTS</span></div>
+      <div><strong>0 ₽</strong><span>обязательная стоимость программы</span></div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow plain">Не просто полоска сбора</span>
+          <h2>Один центр управления донатами</h2>
+        </div>
+        <p>Настройте только нужные модули. Остальные не мешают и могут оставаться выключенными.</p>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card feature-wide">
+          <span class="card-number">01</span>
+          <h3>Единая история и донат-гол</h3>
+          <p>События из разных сервисов приводятся к одному формату. Сумма, валюта, источник и сообщение сохраняются локально, а цель в OBS обновляется автоматически.</p>
+          <div class="event-flow" aria-hidden="true">
+            <span>DonationAlerts</span><b>+</b><span>Donatty</span><b>+</b><span>ещё 6</span><em>→</em><span class="flow-core">Vic Core</span>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <span class="card-number">02</span>
+          <h3>TopDonation</h3>
+          <p>Рейтинг донатеров, алиасы разных сервисов, ручное объединение, заметки, закрепление и корректировки без искажения истории.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="card-number">03</span>
+          <h3>Streamer.bot Bridge</h3>
+          <p>Запускайте звуки, анимации, OBS-сцены и отдельные действия по источнику или сумме доната.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="card-number">04</span>
+          <h3>TTS Hub</h3>
+          <p>Голосовые профили, правила маршрутизации, очередь, история, повторы и резервный провайдер озвучки.</p>
+        </article>
+
+        <article class="feature-card">
+          <span class="card-number">05</span>
+          <h3>Безопасная диагностика</h3>
+          <p>Создайте ZIP-отчёт одной кнопкой. Из него удаляются известные токены, секреты и тексты донатов.</p>
+        </article>
+
+        <article class="feature-card feature-accent">
+          <span class="card-number">06</span>
+          <h3>Ваши данные — у вас</h3>
+          <p>Нет обязательной регистрации в VicDonationGoal. Конфиги, история и личные правила хранятся в папке программы.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section integrations-section" id="integrations">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow plain">Integrations Hub</span>
+          <h2>Подключайте только нужные сервисы</h2>
+        </div>
+        <p>У каждого адаптера есть карточка состояния, настройки, лог, встроенная инструкция и тест подключения.</p>
+      </div>
+
+      <div class="integration-columns">
+        <div class="integration-group stable">
+          <div class="group-head"><span><i></i> Stable</span><small>Основные сценарии проверены</small></div>
+          <div class="logo-list">
+            <span>DonationAlerts</span><span>Donatty</span><span>StreamElements</span><span>Donate.Stream</span><span>DonateX</span>
+          </div>
+        </div>
+        <div class="integration-group beta">
+          <div class="group-head"><span><i></i> Beta</span><small>Нужны дополнительные живые тесты</small></div>
+          <div class="logo-list"><span>DonatePay</span><span>Streamlabs</span></div>
+        </div>
+        <div class="integration-group experimental">
+          <div class="group-head"><span><i></i> Experimental</span><small>Выключено по умолчанию</small></div>
+          <div class="logo-list"><span>Tribute</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section pipeline-section">
+      <div class="section-heading centered">
+        <div>
+          <span class="eyebrow plain">Понятная архитектура</span>
+          <h2>Одно событие — несколько полезных действий</h2>
+        </div>
+      </div>
+      <div class="pipeline">
+        <div><span>1</span><b>Сервис</b><small>присылает донат</small></div>
+        <i>→</i>
+        <div><span>2</span><b>Core</b><small>нормализует и сохраняет</small></div>
+        <i>→</i>
+        <div><span>3</span><b>OBS</b><small>обновляет цель</small></div>
+        <i>+</i>
+        <div><span>4</span><b>Автоматизация</b><small>Streamer.bot и TTS</small></div>
+      </div>
+    </section>
+
+    <section class="section" id="versions">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow plain">От виджета до системы</span>
+          <h2>Версии с собственным характером</h2>
+        </div>
+        <a class="text-link" href="CHANGELOG.md">Полная история изменений →</a>
+      </div>
+      <div class="timeline">
+        <div><b>1.0</b><span>First Release</span></div>
+        <div><b>1.1</b><span>Stability</span></div>
+        <div><b>1.2</b><span>TTS Hub</span></div>
+        <div><b>1.3</b><span>TopDonation</span></div>
+        <div><b>1.4</b><span>Integrations Hub</span></div>
+        <div class="current"><b>1.4.4</b><span>Beta Readiness</span><small>текущая</small></div>
+      </div>
+    </section>
+
+    <section class="section start-section" id="start">
+      <div class="start-panel">
+        <div>
+          <span class="eyebrow plain">Первый запуск</span>
+          <h2>От чистой папки до тестового доната</h2>
+          <p>Установщик создаст локальные конфиги. Мастер предложит выбрать один сервис, а встроенная инструкция проведёт по его настройке.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/VicWander/VicDonationGoal/releases/tag/v1.4.4">Скачать релиз</a>
+            <a class="button button-secondary" href="docs/QUICK_START.md">Быстрый старт</a>
+          </div>
+        </div>
+        <ol class="start-steps">
+          <li><span>01</span><div><b>Распакуйте</b><small>в новую обычную папку</small></div></li>
+          <li><span>02</span><div><b>Запустите 00_INSTALL_ALL.bat</b><small>зависимости установятся автоматически</small></div></li>
+          <li><span>03</span><div><b>Откройте админку</b><small>мастер появится при первом запуске</small></div></li>
+          <li><span>04</span><div><b>Подключите сервис</b><small>и отправьте тестовый донат</small></div></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="beta-callout">
+      <div>
+        <span class="eyebrow"><span class="pulse"></span> Закрытая бета</span>
+        <h2>Нашли ошибку? Диагностика уже встроена.</h2>
+        <p>Создайте безопасный отчёт в админке и пришлите его вместе с описанием действий. Не отправляйте токены или widget URL отдельно.</p>
+      </div>
+      <a class="button button-primary" href="https://t.me/wander_streams">Связаться в Telegram</a>
+    </section>
+
+    <section class="creator-section">
+      <div>
+        <span class="eyebrow plain">Создатель проекта</span>
+        <h2>VicWander</h2>
+        <p>Я делаю VicDonationGoal прежде всего для собственного стрима, но хочу, чтобы система была полезна и другим стримерам.</p>
+      </div>
+      <div class="creator-links">
+        <a href="https://t.me/wander_streams"><span>Связаться</span><b>Telegram →</b></a>
+        <a href="https://www.twitch.tv/vicwander2"><span>Стримы</span><b>Twitch →</b></a>
+        <a href="https://dalink.to/vicwander"><span>Поддержать</span><b>DA.link →</b></a>
+        <a href="https://www.donationalerts.com/r/vicwander"><span>Поддержать</span><b>DonationAlerts →</b></a>
+      </div>
+      <p class="thanks">Спасибо бета-тестерам версии 1.4.4: <span>список будет добавлен после тестирования.</span></p>
+    </section>
+  </main>
+
+  <footer>
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>VicDonationGoal</span></a>
+    <p>Локальная система для стримеров · MIT License</p>
+    <div><a href="docs/index.html">Документация</a><a href="ROADMAP.md">Roadmap</a><a href="https://github.com/VicWander/VicDonationGoal">GitHub</a></div>
+  </footer>
+</body>
+</html>

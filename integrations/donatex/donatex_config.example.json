@@ -1,0 +1,18 @@
+{
+  "enabled": false,
+  "api_token": "",
+  "mode": "api",
+  "api_url": "https://donatex.gg/api/v1/donations",
+  "auth_mode": "query",
+  "items_path": "",
+  "widget_url": "",
+  "widget_api_url": "http://127.0.0.1:3333/api/donation",
+  "poll_interval_seconds": 20,
+  "headless_browser": true,
+  "request_timeout_seconds": 15,
+  "default_currency": "RUB",
+  "import_existing_first_run": false,
+  "query_token_name": "token",
+  "skip": 0,
+  "take": 20
+}

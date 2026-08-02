@@ -566,3 +566,254 @@ body[data-theme="light"] .status-item small,
 body[data-theme="light"] .amount-converted {
   color: #64748b !important;
 }
+
+/* v1.2 — TTS Hub light theme */
+body[data-theme="light"] .admin-tabs,
+body[data-theme="light"] .tts-subtabs {
+  background: rgba(255, 255, 255, .82) !important;
+  border-color: rgba(15, 23, 42, .11) !important;
+}
+
+body[data-theme="light"] .admin-tab,
+body[data-theme="light"] .tts-subtab {
+  color: #64748b !important;
+}
+
+body[data-theme="light"] .admin-tab.active,
+body[data-theme="light"] .tts-subtab.active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: rgba(37, 99, 235, .26) !important;
+}
+
+body[data-theme="light"] textarea,
+body[data-theme="light"] .provider-plans > div,
+body[data-theme="light"] .select-list-item {
+  background: #f7fbff !important;
+  color: #172033 !important;
+  border-color: rgba(15, 23, 42, .11) !important;
+}
+
+body[data-theme="light"] .provider-plans span,
+body[data-theme="light"] .select-list-item span {
+  color: #64748b !important;
+}
+
+body[data-theme="light"] .select-list-item.active {
+  background: rgba(14, 165, 233, .10) !important;
+  border-color: rgba(14, 165, 233, .55) !important;
+}
+
+body[data-theme="light"] .log-console {
+  background: #eef4f8 !important;
+  color: #172033 !important;
+  border-color: rgba(15, 23, 42, .11) !important;
+}
+
+body[data-theme="light"] .tts-state-badge,
+body[data-theme="light"] .badge-soft,
+body[data-theme="light"] .source-pill.unknown {
+  background: #e8eef5 !important;
+  color: #475569 !important;
+}
+
+body[data-theme="light"] .tts-state-badge.ok,
+body[data-theme="light"] .source-pill.ok {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+body[data-theme="light"] .tts-state-badge.warn,
+body[data-theme="light"] .source-pill.warn {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+body[data-theme="light"] .tts-state-badge.off,
+body[data-theme="light"] .source-pill.off {
+  background: #ffe4e6 !important;
+  color: #be123c !important;
+}
+
+/* v1.2.1 — TTS Hub light-theme contrast and expandable rows */
+body[data-theme="light"] .admin-tab,
+body[data-theme="light"] .tts-subtab,
+body[data-theme="light"] .admin-tab:not(.active),
+body[data-theme="light"] .tts-subtab:not(.active) {
+  color: #334155 !important;
+  -webkit-text-fill-color: #334155 !important;
+  opacity: 1 !important;
+}
+
+body[data-theme="light"] .admin-tab.active,
+body[data-theme="light"] .tts-subtab.active {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+body[data-theme="light"] .details-row td {
+  background: #f2f7fb !important;
+}
+
+body[data-theme="light"] .detail-item,
+body[data-theme="light"] .provider-card .provider-status,
+body[data-theme="light"] .rule-help,
+body[data-theme="light"] .route-result {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, .11) !important;
+  color: #172033 !important;
+}
+
+body[data-theme="light"] .detail-item b,
+body[data-theme="light"] .rule-help code {
+  color: #0369a1 !important;
+}
+
+body[data-theme="light"] .detail-item div,
+body[data-theme="light"] .rule-help p,
+body[data-theme="light"] .provider-card .provider-status,
+body[data-theme="light"] .flag-grid label {
+  color: #475569 !important;
+}
+
+body[data-theme="light"] .tts-controls button,
+body[data-theme="light"] .provider-test,
+body[data-theme="light"] #ttsSaveGeneralButton,
+body[data-theme="light"] #ttsSaveProfileButton,
+body[data-theme="light"] #ttsTestProfileButton,
+body[data-theme="light"] #ttsSaveRuleButton,
+body[data-theme="light"] #ttsTestRuleButton,
+body[data-theme="light"] #ttsSendTestButton {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+
+/* v1.2.1 UI hotfix — light theme navigation contrast */
+body[data-theme="light"] .admin-tabs,
+body[data-theme="light"] .tts-subtabs {
+  background: rgba(255,255,255,.9) !important;
+}
+body[data-theme="light"] .admin-tab,
+body[data-theme="light"] .tts-subtab,
+body[data-theme="light"] .admin-tab:not(.active),
+body[data-theme="light"] .tts-subtab:not(.active) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: linear-gradient(135deg, #2f70c9, #35b9ce) !important;
+  border-color: rgba(37,99,235,.16) !important;
+  opacity: 1 !important;
+  text-shadow: 0 1px 2px rgba(9,30,66,.28);
+}
+body[data-theme="light"] .admin-tab:hover,
+body[data-theme="light"] .tts-subtab:hover {
+  background: linear-gradient(135deg, #245fb8, #22a9c2) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+body[data-theme="light"] .admin-tab.active,
+body[data-theme="light"] .tts-subtab.active {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 8px 22px rgba(37,99,235,.24) !important;
+}
+body[data-theme="light"] .responsive-history-table tr.summary-row {
+  background: #ffffff !important;
+  border-color: rgba(15,23,42,.10) !important;
+  box-shadow: 0 8px 24px rgba(35,72,158,.07) !important;
+}
+body[data-theme="light"] .responsive-history-table tr.summary-row:hover {
+  background: #f8fbff !important;
+  border-color: rgba(53,169,212,.35) !important;
+}
+body[data-theme="light"] .cell-label { color: #64748b !important; }
+body[data-theme="light"] .cell-value,
+body[data-theme="light"] .strong-value,
+body[data-theme="light"] .message-preview,
+body[data-theme="light"] .responsive-history-table .amount-cell {
+  color: #172033 !important;
+}
+body[data-theme="light"] .flag-grid label {
+  background: #f7fbff !important;
+  color: #475569 !important;
+  border-color: rgba(15,23,42,.09) !important;
+}
+body[data-theme="light"] .responsive-history-table tr.details-row:not([hidden]) {
+  background: #f2f7fb !important;
+  border-color: rgba(53,169,212,.24) !important;
+}
+
+/* v1.3 light theme */
+body[data-theme="light"] .donations-subtabs,
+body[data-theme="light"] .bulk-flags,
+body[data-theme="light"] .donation-history-list,
+body[data-theme="light"] .donor-card,
+body[data-theme="light"] .donor-timeline {
+  border-color: rgba(28,61,99,.13);
+  background: rgba(255,255,255,.78);
+}
+body[data-theme="light"] .donation-entry,
+body[data-theme="light"] .donor-card { background: #ffffff; }
+body[data-theme="light"] .donation-entry:hover,
+body[data-theme="light"] .donor-card:hover { background: #f5faff; }
+body[data-theme="light"] .donation-date,
+body[data-theme="light"] .donation-message-preview,
+body[data-theme="light"] .donation-expanded-message,
+body[data-theme="light"] .timeline-message,
+body[data-theme="light"] .donor-note { color: #334a66; }
+body[data-theme="light"] .donation-user,
+body[data-theme="light"] .donation-amount,
+body[data-theme="light"] .donor-main strong,
+body[data-theme="light"] .donor-total strong,
+body[data-theme="light"] .donor-last strong,
+body[data-theme="light"] .top-summary-strip strong,
+body[data-theme="light"] .donor-detail-summary strong,
+body[data-theme="light"] .timeline-amount { color: #10243d; }
+body[data-theme="light"] .compact-flag,
+body[data-theme="light"] .bulk-flags label,
+body[data-theme="light"] .top-summary-strip > div,
+body[data-theme="light"] .donor-detail-summary > div {
+  border-color: rgba(28,61,99,.12);
+  background: #f4f8fd;
+  color: #3e5876;
+}
+body[data-theme="light"] .message-chevron,
+body[data-theme="light"] .more-button {
+  border-color: rgba(28,61,99,.15);
+  background: #eef5fc;
+  color: #173b64;
+}
+body[data-theme="light"] .action-menu { border-color: rgba(28,61,99,.16); background: #ffffff; }
+body[data-theme="light"] .action-menu button { color: #183b62; }
+body[data-theme="light"] .action-menu button:hover { background: #edf6ff; }
+body[data-theme="light"] .action-menu .danger-text { color: #d72e50; }
+body[data-theme="light"] .donation-expanded-message,
+body[data-theme="light"] .donor-note { border-color: rgba(33,157,187,.18); background: #f1fbfd; }
+body[data-theme="light"] .donor-timeline-item { background: #fbfdff; }
+body[data-theme="light"] .donor-timeline-item:nth-child(even) { background: #f4f8fd; }
+body[data-theme="light"] .donor-timeline-item.adjustment { background: #eefbfa; }
+body[data-theme="light"] .donation-subtab:not(.active) { color: #254d75; }
+body[data-theme="light"] .donation-subtab.active { color: #fff; }
+
+body.light-theme .integration-card,
+body.light-theme .integration-flow,
+body.light-theme .integration-choice,
+body.light-theme .integration-detail-tab {
+  color: var(--text);
+}
+body.light-theme .integration-detail-tab.active,
+body.light-theme .integration-icon {
+  color: #fff;
+}
+
+/* v1.4.4 status dashboard theme */
+.status-dot.starting { background:#38bdf8 !important; box-shadow:0 0 18px rgba(56,189,248,.58) !important; }
+.status-dot.warn { background:var(--warning) !important; box-shadow:0 0 18px color-mix(in srgb,var(--warning) 55%,transparent) !important; }
+.status-dot.error { background:var(--danger) !important; box-shadow:0 0 18px color-mix(in srgb,var(--danger) 55%,transparent) !important; }
+.status-dot.off { background:#64748b !important; box-shadow:0 0 14px rgba(100,116,139,.35) !important; }
+body[data-theme="light"] .status-group + .status-group { border-color:rgba(15,23,42,.09); }
+body[data-theme="light"] .status-group-heading h3 { color:#0f172a; }
+body[data-theme="light"] .status-disabled-summary { background:#eef4f8; color:#64748b; }
+body[data-theme="light"] .status-disabled-summary span { color:#0f172a; }
+body[data-theme="light"] .status-open-button { background:#e6eef6 !important; color:#0f172a !important; border-color:rgba(15,23,42,.12) !important; }

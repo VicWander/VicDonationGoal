@@ -1,0 +1,59 @@
+{
+  "id": "donationalerts",
+  "name": "DonationAlerts",
+  "shortName": "DonationAlerts",
+  "icon": "DA",
+  "order": 10,
+  "kind": "inprocess",
+  "description": "Официальный OAuth 2.0 и real-time WebSocket/Centrifugo для новых донатов.",
+  "configFile": "donationalerts_config.json",
+  "configExampleFile": "donationalerts_config.example.json",
+  "guideFile": "GUIDE.md",
+  "requiredFields": [
+    "client_id",
+    "client_secret"
+  ],
+  "secretFields": [
+    "client_secret"
+  ],
+  "capabilities": {
+    "oauth": true,
+    "realtime": true,
+    "test": true,
+    "logs": true,
+    "clearAuth": true
+  },
+  "fields": [
+    {
+      "key": "client_id",
+      "label": "Client ID",
+      "type": "text",
+      "placeholder": "ID приложения DonationAlerts",
+      "help": "Создаётся в разделе API Applications DonationAlerts."
+    },
+    {
+      "key": "client_secret",
+      "label": "Client Secret",
+      "type": "password",
+      "placeholder": "Секрет приложения",
+      "help": "Хранится только локально и не показывается повторно."
+    },
+    {
+      "key": "redirect_uri",
+      "label": "Redirect URL",
+      "type": "text",
+      "default": "http://127.0.0.1:3333/auth/donationalerts/callback",
+      "help": "Должен точно совпадать с Redirect URL в приложении DonationAlerts."
+    },
+    {
+      "key": "scopes",
+      "label": "OAuth scopes",
+      "type": "text",
+      "default": "oauth-user-show oauth-donation-subscribe oauth-donation-index",
+      "help": "Для получения профиля, подписки на новые донаты и чтения истории."
+    }
+  ],
+  "authStartPath": "/auth/donationalerts/start",
+  "stability": "stable",
+  "dashboardVisible": true
+}

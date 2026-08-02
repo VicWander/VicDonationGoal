@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "client_id": "",
+  "client_secret": "",
+  "redirect_uri": "http://127.0.0.1:3333/auth/streamlabs/callback",
+  "scopes": "socket.token",
+  "api_base": "https://streamlabs.com/api/v2.0",
+  "socket_base": "wss://sockets.streamlabs.com/socket.io/",
+  "engineio_versions": "4,3",
+  "reconnect_delay_seconds": 3,
+  "max_reconnect_delay_seconds": 60
+}

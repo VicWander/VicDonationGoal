@@ -1,9 +1,8 @@
-# VicDonationGoal Documentation
+# Документация VicDonationGoal v1.4.4
 
-Open `index.html` in a browser or use `MANUAL.md` for the Markdown version.
+- [Быстрый старт](QUICK_START.md) — установка и первое подключение.
+- [Полное руководство](MANUAL.md) — все функции, сервисы, TTS, Streamer.bot и диагностика.
+- [Проверка закрытой беты](BETA_TESTING.md) — сценарий для тестировщиков и состав отчёта об ошибке.
+- `index.html` — та же документация в удобном локальном HTML-интерфейсе.
 
-When the local server is running, the same documentation is available at:
-
-```text
-http://127.0.0.1:3333/docs/index.html
-```
+После запуска Core HTML-версия доступна по адресу `http://127.0.0.1:3333/docs/index.html`.

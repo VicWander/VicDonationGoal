@@ -1,0 +1,135 @@
+# История версий VicDonationGoal
+
+Этот файл объединяет прежние отдельные changelog, release notes и инструкции к хотфиксам. Новые изменения добавляются сюда, а не в отдельные файлы в корне проекта.
+
+## v1.4.4 — Beta Readiness
+
+Публичная закрытая бета. Релиз публикуется под тегом `v1.4.4`; исправления по результатам тестирования получают номера `v1.4.4.1`, `v1.4.4.2` и далее.
+
+### Dashboard и статусы
+
+- добавлена компактная сводка Core Server, Integration Manager, Streamer.bot Bridge и TTS Hub;
+- донат-сервисы вынесены в отдельную сетку со статусами `connected`, `starting`, `degraded`, `error`, `stopped`, `disabled` и `unconfigured`;
+- ошибки и предупреждения показываются выше работающих сервисов;
+- добавлен переход из сводки в подробную карточку Integration Hub.
+
+### Архитектура и надёжность
+
+- добавлен центральный `source_registry.py` для всех автоматических источников;
+- Streamer.bot Bridge и TTS Hub используют один реестр источников;
+- manifests получили уровни готовности `stable`, `beta` и `experimental`;
+- добавлены runtime-import, API, source-gate, JSON concurrency и end-to-end проверки;
+- диагностический ZIP маскирует известные секреты и не содержит тексты донатов;
+- `cloudflared.exe` исключён из релиза и скачивается только при включении Tribute;
+- Tribute выключен по умолчанию.
+
+### Интерфейс и релиз
+
+- исправлены русские склонения количества донатов и донатеров;
+- фильтры источников строятся из центрального реестра;
+- подготовлен чистый первый запуск без токенов, истории, runtime и личных Action ID;
+- README и внешний лендинг полностью переработаны под текущую версию;
+- прежние разрозненные changelog и hotfix-файлы объединены в этот документ.
+
+## v1.4.3.2 — TTS & Tribute Emergency Hotfix
+
+- восстановлен runtime-импорт TTS Hub и добавлен smoke-тест `load_sent()`;
+- Core получил поддержку обычных и chunked webhook-запросов;
+- Tribute стал принимать HEX, Base64 и Base64URL HMAC-подписи;
+- проверка Tribute проходит через настоящий публичный tunnel URL;
+- добавлена приватная диагностика последнего webhook-запроса.
+
+## v1.4.3.1 — Integration Hotfix
+
+- тестовые DonatePay-события без `notification.id` начали попадать в историю;
+- восстановлен устойчивый JSON loader Donatty;
+- исправлены подписи Donate.Stream и отображение Tribute webhook URL;
+- Tribute Quick Tunnel переведён на HTTP/2 по умолчанию;
+- тестовые webhook Tribute стабильно возвращают корректный HTTP-статус.
+
+## v1.4.3 — Integration Stability
+
+- Streamer.bot Bridge, Donation Event Rules и TTS Hub расширены на все автоматические источники;
+- выключенные события больше не помечаются обработанными навсегда;
+- исправлены reconnect и парсинг DonatePay/Centrifugo;
+- секреты маскируются в статусах и логах Integration Hub;
+- стабилизированы polling DonateX и установка Cloudflare Tunnel;
+- добавлен `13_STOP_ALL.bat` и завершение скрытых subprocess через Windows Job Object;
+- JSON получил retry, блокировки и атомарную замену;
+- Core перестал переписывать историю при каждом чтении из админки.
+
+## v1.4.2.1 — Russian Services Hotfix
+
+- DonatePay получил обработку HTTP 429, `Retry-After` и безопасный catch-up;
+- Donate.Stream получил точный Socket.IO parser и постоянную защиту от дублей;
+- DonateX переведён на официальный endpoint с гибкой диагностикой ответа;
+- улучшены статусы Tribute и установщик `cloudflared` для Windows;
+- вывод integration subprocess принудительно переведён в UTF-8.
+
+## v1.4.2 — Russian Services
+
+- DonatePay: REST API, Centrifugo WebSocket и catch-up транзакций;
+- Donate.Stream: browser/widget adapter;
+- DonateX: API polling и widget mode;
+- Tribute: подписанный webhook и Cloudflare Quick Tunnel;
+- добавлен Integration Inspector для исследования протоколов виджетов;
+- внешний HTTP-доступ к Core ограничен подписанными webhook-маршрутами.
+
+## v1.4.1 — Official Services
+
+- добавлен StreamElements через официальный Astro WebSocket `channel.tips`;
+- добавлен Streamlabs через OAuth 2.0, Socket Token и Socket.IO;
+- Integration Hub получил универсальный OAuth-start и select-поля из manifest;
+- добавлены встроенные руководства и отдельные логи сервисов.
+
+## v1.4.0 — Integrations Hub
+
+- DonationAlerts вынесен из Core в самостоятельный adapter;
+- добавлен Integration Manager, сканирующий `manifest.json`;
+- Donatty переведён под управление Core;
+- в админке появился Integration Hub с настройками, тестами, логами и инструкциями;
+- добавлен мастер первого запуска с выбором нужных сервисов;
+- сохранена совместимость старых DonationAlerts API-маршрутов.
+
+## v1.3.0 — TopDonation
+
+- добавлен рейтинг донатеров рядом с историей;
+- появились профили, алиасы, объединение пользователей, закрепление и исключение;
+- добавлены личные заметки и корректировки суммы без изменения донат-гола;
+- реализованы поиск, удаление всех донатов пользователя и индивидуальный CSV-экспорт;
+- добавлены `includeInTop`, массовые флаги истории и API `/api/donors/*`.
+
+## v1.2.1 — TTS Stability & Documentation
+
+- добавлены профиль `Автоматически`, явный default profile и тестер маршрутизации;
+- добавлены Yandex SpeechKit, доработанный XTTS Local и расширенный Custom HTTP;
+- улучшены история, fallback, heartbeat, удаление и очистка TTS-событий;
+- длинные тексты истории разворачиваются вниз без горизонтального скролла;
+- исправлен контраст светлой темы;
+- полностью переработана документация TTS, API и типовых ошибок.
+
+## v1.2.0 — TTS Hub
+
+- добавлена единая система озвучки донатов и внешних событий;
+- реализованы Speaker.bot, Microsoft Edge, XTTS Local и Custom HTTP adapters;
+- появились голосовые профили и правила по источнику, пользователю, роли, Reward ID и сумме;
+- добавлены очередь, история, логи, повторы и `POST /api/tts/enqueue`;
+- старый Yandex listener перенесён в legacy и перестал запускаться автоматически.
+
+## v1.1.1 — Stability
+
+- добавлены атомарные JSON-записи и backup повреждённых файлов;
+- появились `/api/health`, uptime и ожидание готовности Core при запуске;
+- улучшены graceful stop, повторная отправка Donatty и защита от дублей;
+- CSV адаптирован для русского Excel и защищён от formula injection;
+- добавлены no-cache/nosniff headers и `09_STABILITY_CHECK.bat`.
+
+## v1.0.0 — First Release
+
+- локальный Python HTTP-сервер и админ-панель;
+- OBS Browser Source для полоски сбора;
+- ручные донаты, история, CSV и курсы валют;
+- DonationAlerts через OAuth и события реального времени;
+- Donatty Auto SSE Listener;
+- Streamer.bot Bridge, повтор оповещения и светлая/тёмная тема;
+- локальная HTML-документация.

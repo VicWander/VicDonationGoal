@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VicDonationGoal Modular TTS Player</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .debug-panel {
+      position: fixed;
+      left: 12px;
+      bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: calc(100% - 24px);
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.58);
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    body.debug .debug-panel {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .status {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    button {
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 7px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="debug-panel">
+    <div class="status" id="status">TTS waiting...</div>
+    <button id="unlockButton" type="button">Разрешить звук</button>
+  </div>
+  <script src="tts.js"></script>
+</body>
+</html>

@@ -1,9 +1,9 @@
 @echo off
 cd /d "%~dp0"
-title VicDonationGoal - Install All
+title VicDonationGoal v1.4.4 - Closed Beta Setup
 
 echo ==============================================
-echo  VicDonationGoal - first setup
+echo  VicDonationGoal v1.4.4 - Closed Beta Setup
  echo ==============================================
 echo.
 echo This will install:
@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [3/3] Creating local config/data files...
-call "%~dp007_CREATE_LOCAL_CONFIGS.bat"
+call "%~dp007_CREATE_LOCAL_CONFIGS.bat" --quiet
 
 echo.
 echo ==============================================

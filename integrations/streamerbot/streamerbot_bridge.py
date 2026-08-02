@@ -1,7 +1,10 @@
 import argparse
 import json
+import os
+import shutil
 import time
 import hashlib
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -12,19 +15,35 @@ except ImportError:
 
 ROOT = Path(__file__).parent
 PROJECT_ROOT = ROOT.parent.parent
+BROKEN_JSON_DIR = PROJECT_ROOT / "backups" / "broken_json"
+_BROKEN_JSON_BACKED_UP = set()
 RUNTIME_DIR = PROJECT_ROOT / "runtime"
 
 CONFIG_FILE = ROOT / "streamerbot_config.json"
 DONATIONS_FILE = PROJECT_ROOT / "core" / "data" / "donations.json"
 SENT_FILE = ROOT / "streamerbot_sent.json"
+
+# Rules for additional donation events, for example:
+# 10 RUB -> small animation, 1000 RUB -> special alert.
+EVENT_RULES_FILE = ROOT / "donation_event_rules.json"
+EVENT_RULES_SENT_FILE = ROOT / "streamerbot_event_rules_sent.json"
+
 STATUS_FILE = RUNTIME_DIR / "streamerbot_status.json"
+VERSION_FILE = PROJECT_ROOT / "VERSION"
+APP_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "dev"
+
+import sys
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from safe_json import load_json as _robust_load_json, save_json as _robust_save_json
+from source_registry import AUTOMATIC_SOURCE_IDS
 
 
 DEFAULT_CONFIG = {
-    "enabled": True,
+    "enabled": False,
     "streamerbot_http_url": "http://127.0.0.1:7474/DoAction",
 
-    "action_name": "оповещение о донате",
+    "action_name": "",
     "action_id": "",
 
     "poll_interval_seconds": 0.5,
@@ -32,10 +51,9 @@ DEFAULT_CONFIG = {
     "send_existing_on_first_start": False,
     "send_manual_donations": False,
 
-    "send_sources": [
-        "donationalerts",
-        "donatty"
-    ],
+    # Empty list means every automatic donation service. Manual donations still
+    # obey their per-donation "Опов." checkbox.
+    "send_sources": [],
 
     "currency_mode_for_currency_arg": "symbol",
 
@@ -49,8 +67,18 @@ DEFAULT_CONFIG = {
     },
 
     "extra_args": {
-        "integration": "VicWanderDonationGoal"
+        "integration": "VicDonationGoal"
     }
+}
+
+KNOWN_SERVICE_SOURCES = set(AUTOMATIC_SOURCE_IDS)
+LEGACY_SOURCE_WHITELIST = {"donationalerts", "donatty"}
+
+
+DEFAULT_EVENT_RULES = {
+    "enabled": False,
+    "process_existing_on_first_start": False,
+    "rules": []
 }
 
 
@@ -58,23 +86,45 @@ def ensure_config():
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     if not CONFIG_FILE.exists():
         save_json(CONFIG_FILE, DEFAULT_CONFIG)
+    if not EVENT_RULES_FILE.exists():
+        save_json(EVENT_RULES_FILE, DEFAULT_EVENT_RULES)
+
+
+def _backup_broken_json(path, error):
+    try:
+        path = Path(path)
+        marker = str(path.resolve())
+        if marker in _BROKEN_JSON_BACKED_UP or not path.exists() or path.stat().st_size == 0:
+            return
+        BROKEN_JSON_DIR.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = BROKEN_JSON_DIR / f"{path.stem}_{stamp}{path.suffix}.broken.bak"
+        shutil.copy2(path, backup_path)
+        _BROKEN_JSON_BACKED_UP.add(marker)
+        print(f"[JSON] Повреждённый файл сохранён: {backup_path}")
+        print(f"[JSON] Причина: {type(error).__name__}: {error}")
+    except Exception as backup_error:
+        print(f"[JSON] Не удалось создать резервную копию {path}: {backup_error}")
 
 
 def load_json(path, fallback):
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return fallback
+    return _robust_load_json(
+        path,
+        fallback,
+        retries=16,
+        backup_dir=BROKEN_JSON_DIR,
+        backup_decode_errors=True,
+    )
 
 
 def save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    _robust_save_json(path, data, retries=120)
 
 
 def write_status(status="running", running=True, last_error=None, last_event=None):
     payload = {
         "service": "streamerbot",
+        "version": APP_VERSION,
         "status": status,
         "running": running,
         "updatedAt": time.time(),
@@ -103,23 +153,47 @@ def load_config():
         **config.get("extra_args", {})
     }
 
+    # v1.4.0-v1.4.2 shipped a hard-coded whitelist containing only DA and
+    # Donatty. That silently discarded all new normalized services. Migrate only
+    # that exact legacy value; custom user whitelists remain untouched.
+    configured_sources = normalize_source_list(config.get("send_sources", []))
+    if set(configured_sources) == LEGACY_SOURCE_WHITELIST:
+        merged["send_sources"] = []
+        config["send_sources"] = []
+        try:
+            save_json(CONFIG_FILE, config)
+            print("[SB] Источник-миграция v1.4.3: новые сервисы разрешены автоматически.")
+        except Exception:
+            pass
+
+    return merged
+
+
+def load_event_rules():
+    ensure_config()
+    data = load_json(EVENT_RULES_FILE, DEFAULT_EVENT_RULES)
+
+    # Backward/quick format support: file may contain just a list of rules.
+    if isinstance(data, list):
+        data = {"enabled": True, "rules": data}
+
+    if not isinstance(data, dict):
+        data = {}
+
+    merged = dict(DEFAULT_EVENT_RULES)
+    merged.update(data)
+
+    rules = merged.get("rules", [])
+    if not isinstance(rules, list):
+        rules = []
+
+    merged["rules"] = rules
     return merged
 
 
 def load_donations():
-    if not DONATIONS_FILE.exists():
-        return []
-
-    # Иногда server.py может прямо в этот момент перезаписывать JSON.
-    # Поэтому делаем несколько попыток.
-    for _ in range(5):
-        try:
-            data = json.loads(DONATIONS_FILE.read_text(encoding="utf-8"))
-            return data if isinstance(data, list) else []
-        except Exception:
-            time.sleep(0.08)
-
-    return []
+    data = _robust_load_json(DONATIONS_FILE, [], retries=24, delay=0.035)
+    return data if isinstance(data, list) else []
 
 
 def load_sent():
@@ -135,6 +209,134 @@ def save_sent(sent):
     save_json(SENT_FILE, {
         "sent": sorted(sent)
     })
+
+
+def load_event_rules_sent():
+    data = load_json(EVENT_RULES_SENT_FILE, {"sent": []})
+
+    if isinstance(data, list):
+        return set(str(x) for x in data)
+
+    return set(str(x) for x in data.get("sent", []))
+
+
+def save_event_rules_sent(sent):
+    save_json(EVENT_RULES_SENT_FILE, {
+        "sent": sorted(sent)
+    })
+
+
+def to_float(value, default=None):
+    try:
+        if value is None:
+            return default
+        return float(str(value).replace(",", "."))
+    except Exception:
+        return default
+
+
+def normalize_source_list(value):
+    if value in (None, "", "any", "*"):
+        return []
+    if isinstance(value, str):
+        return [value.strip().lower()] if value.strip() else []
+    if isinstance(value, list):
+        return [str(x).strip().lower() for x in value if str(x).strip()]
+    return []
+
+
+def rule_id(rule):
+    value = rule.get("id") or rule.get("rule_id") or rule.get("name") or rule.get("action_id") or rule.get("actionId")
+    return str(value or "unnamed_rule").strip()
+
+
+def event_rule_sent_key(donation, rule):
+    return f"{donation_key(donation)}::rule::{rule_id(rule)}"
+
+
+def action_object_from_rule(rule):
+    action_id = str(rule.get("action_id") or rule.get("actionId") or "").strip()
+    action_name = str(rule.get("action_name") or rule.get("actionName") or "").strip()
+
+    if action_id:
+        return {"id": action_id}
+
+    return {"name": action_name}
+
+
+def amount_value_for_rule(donation, rule):
+    field = str(rule.get("amount_field") or rule.get("amountField") or "amount").strip()
+
+    if field in ("amountForGoal", "amount_for_goal", "goal"):
+        return to_float(donation.get("amountForGoal"), None)
+
+    return to_float(donation.get("amount"), None)
+
+
+def event_rule_matches(donation, rule):
+    # Отдельная галочка управляет дополнительными донат-ивентами.
+    # Обычное оповещение Streamer.bot по-прежнему использует notifyStreamerBot.
+    if not bool_from_any(donation.get("triggerDonationEvents"), str(donation.get("source") or "") != "manual"):
+        return False
+
+    if not bool_from_any(rule.get("enabled"), True):
+        return False
+
+    source = str(donation.get("source") or "unknown").lower()
+    allowed_sources = normalize_source_list(rule.get("sources", rule.get("source")))
+    if allowed_sources and source not in allowed_sources:
+        return False
+
+    currency = str(donation.get("currency") or "RUB").upper()
+    rule_currency = str(rule.get("currency") or "").strip().upper()
+    if rule_currency and rule_currency not in ("ANY", "*") and currency != rule_currency:
+        return False
+
+    amount = amount_value_for_rule(donation, rule)
+    if amount is None:
+        return False
+
+    match = str(rule.get("match") or rule.get("operator") or "equals").strip().lower()
+    target = to_float(rule.get("amount"), None)
+    epsilon = to_float(rule.get("epsilon"), 0.001) or 0.001
+
+    if match in ("equals", "equal", "eq", "exact", "=="):
+        return target is not None and abs(amount - target) <= epsilon
+
+    if match in ("greater_or_equal", "gte", ">=", "min", "at_least"):
+        return target is not None and amount >= target - epsilon
+
+    if match in ("greater", "gt", ">"):
+        return target is not None and amount > target
+
+    if match in ("less_or_equal", "lte", "<=", "max", "at_most"):
+        return target is not None and amount <= target + epsilon
+
+    if match in ("less", "lt", "<"):
+        return target is not None and amount < target
+
+    if match in ("between", "range"):
+        min_value = to_float(rule.get("min", rule.get("from")), None)
+        max_value = to_float(rule.get("max", rule.get("to")), None)
+        if min_value is not None and amount < min_value - epsilon:
+            return False
+        if max_value is not None and amount > max_value + epsilon:
+            return False
+        return True
+
+    return False
+
+
+def matching_event_rules(donation, event_rules_config):
+    if not bool_from_any(event_rules_config.get("enabled"), True):
+        return []
+
+    result = []
+    for rule in event_rules_config.get("rules", []):
+        if isinstance(rule, dict) and event_rule_matches(donation, rule):
+            result.append(rule)
+
+    return result
 
 
 def donation_key(donation):
@@ -194,18 +396,15 @@ def bool_from_any(value, default=False):
 
 
 def should_send(donation, config):
-    source = str(donation.get("source") or "unknown")
+    source = str(donation.get("source") or "unknown").strip().lower()
 
-    # Для ручных донатов решает персональная галочка из админки:
-    # notifyStreamerBot=true — отправить оповещение, false — просто сохранить в истории.
-    # Старый глобальный параметр send_manual_donations оставлен как fallback для старых записей.
-    if source == "manual":
-        return bool_from_any(
-            donation.get("notifyStreamerBot"),
-            bool(config.get("send_manual_donations", False))
-        )
+    # The per-donation checkbox is authoritative for every source. Automatic
+    # service donations default to true in Core; manual entries default to false.
+    default_notify = source != "manual"
+    if not bool_from_any(donation.get("notifyStreamerBot"), default_notify):
+        return False
 
-    allowed_sources = config.get("send_sources", [])
+    allowed_sources = normalize_source_list(config.get("send_sources", []))
     if allowed_sources and source not in allowed_sources:
         return False
 
@@ -245,6 +444,8 @@ def build_args(donation, config):
         "amountRaw": amount,
         "amountText": amount_text,
         "amountWithCurrency": f"{amount_text}{currency}",
+        "amountForGoalRaw": donation.get("amountForGoal"),
+        "amountForGoal": format_amount(donation.get("amountForGoal")),
 
         "source": str(donation.get("source") or "unknown"),
         "donationId": donation_key(donation),
@@ -267,7 +468,7 @@ def streamerbot_action_object(config):
     return {"name": action_name}
 
 
-def send_to_streamerbot(donation, config):
+def send_action_to_streamerbot(donation, config, action_object, label="main", extra_args=None):
     if requests is None:
         print("[SB] requests не установлен. Запусти 00_INSTALL_ALL.bat")
         return False
@@ -277,9 +478,13 @@ def send_to_streamerbot(donation, config):
         print("[SB] В streamerbot_config.json не указан streamerbot_http_url")
         return False
 
+    args = build_args(donation, config)
+    if extra_args:
+        args.update(extra_args)
+
     payload = {
-        "action": streamerbot_action_object(config),
-        "args": build_args(donation, config)
+        "action": action_object,
+        "args": args
     }
 
     try:
@@ -290,10 +495,14 @@ def send_to_streamerbot(donation, config):
         )
 
         if 200 <= response.status_code < 300:
-            args = payload["args"]
             last_event = f"{args['user']} — {args['amount']}{args['currency']}"
             write_status("sent", running=True, last_event=last_event)
-            print(f"[SB] Отправлено в Streamer.bot: {args['user']} — {args['amount']}{args['currency']} | {args['message']}")
+
+            if label == "main":
+                print(f"[SB] Отправлено в Streamer.bot: {args['user']} — {args['amount']}{args['currency']} | {args['message']}")
+            else:
+                print(f"[SB] Донат-ивент отправлен: {label} | {args['user']} — {args['amount']}{args['currency']}")
+
             return True
 
         error_text = f"HTTP {response.status_code}: {response.text[:300]}"
@@ -306,6 +515,42 @@ def send_to_streamerbot(donation, config):
         write_status("error", running=True, last_error=error_text)
         print(f"[SB] Не удалось отправить в Streamer.bot: {error_text}")
         return False
+
+
+def send_to_streamerbot(donation, config):
+    return send_action_to_streamerbot(
+        donation,
+        config,
+        streamerbot_action_object(config),
+        label="main"
+    )
+
+
+def send_event_rule_to_streamerbot(donation, config, rule):
+    name = str(rule.get("name") or rule_id(rule))
+    action_object = action_object_from_rule(rule)
+
+    if not action_object.get("id") and not action_object.get("name"):
+        print(f"[SB] Правило '{name}' пропущено: не указан action_id/action_name")
+        return False
+
+    extra_args = {
+        "isDonationEvent": True,
+        "donationEventRuleId": rule_id(rule),
+        "donationEventRuleName": name,
+        "donationEventMatch": str(rule.get("match") or rule.get("operator") or "equals"),
+        "donationEventAmount": rule.get("amount", ""),
+        "donationEventCurrency": str(rule.get("currency") or ""),
+        "donationEventAmountField": str(rule.get("amount_field") or rule.get("amountField") or "amount")
+    }
+
+    return send_action_to_streamerbot(
+        donation,
+        config,
+        action_object,
+        label=name,
+        extra_args=extra_args
+    )
 
 
 def mark_existing_if_needed(config):
@@ -327,15 +572,40 @@ def mark_existing_if_needed(config):
     return sent
 
 
+def mark_existing_event_rules_if_needed(event_rules_config):
+    sent = load_event_rules_sent()
+
+    if EVENT_RULES_SENT_FILE.exists():
+        return sent
+
+    if event_rules_config.get("process_existing_on_first_start", False):
+        save_event_rules_sent(sent)
+        return sent
+
+    donations = load_donations()
+    marked = 0
+    for donation in donations:
+        for rule in matching_event_rules(donation, event_rules_config):
+            sent.add(event_rule_sent_key(donation, rule))
+            marked += 1
+
+    save_event_rules_sent(sent)
+    if marked:
+        print(f"[SB] Первый запуск: старые донат-ивенты помечены как уже обработанные ({marked} шт.)")
+    return sent
+
+
 def run_loop():
     config = load_config()
+    event_rules_config = load_event_rules()
 
     print("")
     print("================================================")
-    print(" Streamer.bot Bridge для Donation Goal Widget")
+    print(f" Streamer.bot Bridge v{APP_VERSION} для VicDonationGoal")
     print("================================================")
     print(f" Action: {config.get('action_name')}")
     print(f" HTTP:   {config.get('streamerbot_http_url')}")
+    print(f" Event rules: {'on' if event_rules_config.get('enabled', True) else 'off'} ({len(event_rules_config.get('rules', []))} rules)")
     print(" Остановить: Ctrl+C или закрыть окно")
     print("")
 
@@ -345,46 +615,82 @@ def run_loop():
         return
 
     sent = mark_existing_if_needed(config)
+    event_rules_sent = mark_existing_event_rules_if_needed(event_rules_config)
     write_status("running", running=True)
 
-    while True:
-        config = load_config()
-        sent = load_sent()
+    try:
+        while True:
+            try:
+                config = load_config()
+                event_rules_config = load_event_rules()
+                sent = load_sent()
+                event_rules_sent = load_event_rules_sent()
 
-        if not config.get("enabled", True):
-            write_status("disabled", running=True)
-            time.sleep(1)
-            continue
+                if not config.get("enabled", True):
+                    write_status("disabled", running=True)
+                    time.sleep(1)
+                    continue
 
-        write_status("running", running=True)
-        donations = load_donations()
+                write_status("running", running=True)
+                donations = load_donations()
 
-        for donation in donations:
-            key = donation_key(donation)
+                should_break = False
 
-            if key in sent:
-                continue
+                for donation in donations:
+                    key = donation_key(donation)
+                    main_failed = False
 
-            if not should_send(donation, config):
-                # Важный момент: ручные донаты с notifyStreamerBot=false НЕ помечаем как отправленные.
-                # Тогда можно позже включить галочку "Опов." в истории, и bridge отправит уведомление.
-                # Остальные отключённые источники помечаем, чтобы не проверять их бесконечно.
-                if str(donation.get("source") or "unknown") != "manual":
-                    sent.add(key)
-                    save_sent(sent)
-                continue
+                    if key not in sent:
+                        if should_send(donation, config):
+                            ok = send_to_streamerbot(donation, config)
 
-            ok = send_to_streamerbot(donation, config)
+                            if ok:
+                                sent.add(key)
+                                save_sent(sent)
+                            else:
+                                # Не помечаем как отправленный, чтобы повторить позже.
+                                # Но выходим из цикла, чтобы не спамить HTTP-запросами.
+                                main_failed = True
+                                should_break = True
+                        else:
+                            # Do not mark skipped donations as sent. The user may later
+                            # enable the per-donation "Опов." checkbox or expand a
+                            # source whitelist, and the bridge should then deliver it.
+                            pass
 
-            if ok:
-                sent.add(key)
-                save_sent(sent)
-            else:
-                # Не помечаем как отправленный, чтобы повторить позже.
-                # Но выходим из цикла, чтобы не спамить HTTP-запросами.
-                break
+                    if main_failed:
+                        break
 
-        time.sleep(float(config.get("poll_interval_seconds") or 0.5))
+                    # Дополнительные донат-ивенты имеют отдельную защиту от дублей:
+                    # donation_unique_key + rule_id.
+                    for rule in matching_event_rules(donation, event_rules_config):
+                        rule_key = event_rule_sent_key(donation, rule)
+
+                        if rule_key in event_rules_sent:
+                            continue
+
+                        ok = send_event_rule_to_streamerbot(donation, config, rule)
+
+                        if ok:
+                            event_rules_sent.add(rule_key)
+                            save_event_rules_sent(event_rules_sent)
+                        else:
+                            should_break = True
+                            break
+
+                    if should_break:
+                        break
+
+            except Exception as error:
+                error_text = f"{type(error).__name__}: {error}"
+                write_status("error", running=True, last_error=error_text)
+                print(f"[SB] Ошибка рабочего цикла: {error_text}")
+                time.sleep(2)
+
+            time.sleep(max(0.2, float(config.get("poll_interval_seconds") or 0.5)))
+    except KeyboardInterrupt:
+        write_status("stopped", running=False)
+        print("\n[SB] Остановлено пользователем.")
 
 
 def send_test():

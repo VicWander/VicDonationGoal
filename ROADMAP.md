@@ -1,147 +1,62 @@
 # VicDonationGoal Roadmap
 
-Roadmap describes the planned development direction of VicDonationGoal after the first public release.
+## Сейчас: v1.4.4 — Closed Beta
 
-The current version, **v1.0.0**, is a working local donation goal system with an OBS widget, admin panel, donation history, CSV export, manual currency rates, DonationAlerts integration, Donatty listener, and Streamer.bot bridge.
+Главная задача ветки — проверить уже существующие функции на чистых установках и реальных стримах. До завершения беты в `v1.4.4.x` не добавляются новые донат-сервисы, TTS-движки или крупные разделы интерфейса.
 
----
+План закрытой беты:
 
-## v1.0.x — Maintenance releases
+1. установка в чистую папку;
+2. прохождение мастера первого запуска;
+3. подключение хотя бы одного сервиса с нуля;
+4. проверка OBS, Streamer.bot и TTS по необходимости;
+5. несколько продолжительных стримов;
+6. сбор безопасных диагностических отчётов;
+7. исправления `v1.4.4.1`, `v1.4.4.2` и далее.
 
-Small updates after the first public release.
+## Выполненные этапы
 
-Planned improvements:
+| Версия | Название | Результат |
+| --- | --- | --- |
+| v1.0.0 | First Release | Донат-гол, история, OBS, DonationAlerts, Donatty и Streamer.bot |
+| v1.1.1 | Stability | Устойчивые JSON, health-check и диагностика запуска |
+| v1.2.0 | TTS Hub | Провайдеры, профили, правила, очередь и API озвучки |
+| v1.2.1 | TTS Stability & Documentation | Полировка TTS и полное руководство |
+| v1.3.0 | TopDonation | Рейтинг, профили, алиасы, заметки и корректировки |
+| v1.4.0 | Integrations Hub | Модульные сервисы и мастер первого запуска |
+| v1.4.1 | Official Services | StreamElements и Streamlabs |
+| v1.4.2 | Russian Services | DonatePay, Donate.Stream, DonateX и Tribute |
+| v1.4.3 | Integration Stability | Общие источники, процессы, JSON и безопасность логов |
+| v1.4.4 | Beta Readiness | Dashboard, единые статусы, диагностика и чистый релиз |
 
-- bug fixes discovered during real stream usage;
-- README and documentation corrections;
-- minor UI polish;
-- safer default configuration;
-- Excel-friendly CSV export improvements;
-- better error messages for first-time setup;
-- small stability fixes without changing the main architecture.
+## Следующие версии
 
-Goal: make the current release more stable, predictable, and easier to install.
+### v1.5 — Core & Storage Refactor
 
----
+- измерить реальные ограничения текущей Python-архитектуры;
+- рассмотреть SQLite вместо части JSON;
+- разделить Core на более компактные модули;
+- добавить типизированные модели и автоматические тесты;
+- не менять язык без доказанной технической необходимости.
 
-## v1.1 — Stabilization
+### v1.6 — Donation Goal Customisation
 
-Focus: polishing the existing system and making it reliable for everyday use.
+- визуальный редактор виджета;
+- live preview;
+- цвета, формы, шрифты, размеры, фон, границы и анимации;
+- простые пресеты и импорт/экспорт тем.
 
-Planned features:
+### v2.0 — Desktop Application
 
-- improved startup diagnostics;
-- better integration status reporting;
-- clearer logs for DonationAlerts, Donatty, and Streamer.bot;
-- improved handling of connection errors and reconnects;
-- better validation for config files;
-- cleaner admin panel UX;
-- safer replay alert behavior;
-- more detailed testing checklist.
+- единое приложение вместо набора BAT-файлов;
+- установка и обновление зависимостей;
+- запуск и остановка модулей;
+- встроенные диагностика, админка и документация;
+- подготовка переносимой Windows-сборки.
 
-Goal: turn the current working version into a stable and comfortable release.
+### Позже — Optional Cloud Backup
 
----
-
-## v1.2 — More donation services
-
-Focus: adding more donation platforms while keeping the current modular architecture.
-
-Possible integrations:
-
-- DonatePay;
-- Donate.Stream;
-- StreamElements;
-- Streamlabs;
-- other services with public APIs, webhooks, WebSocket, or SSE support.
-
-Each new service should be implemented as a separate adapter/listener that converts incoming donation events into the common VicDonationGoal format:
-
-```json
-{
-  "source": "service_name",
-  "externalId": "...",
-  "username": "...",
-  "amount": 100,
-  "currency": "RUB",
-  "message": "...",
-  "createdAt": "..."
-}
-```
-
-Goal: make VicDonationGoal useful for streamers who use different donation platforms.
-
----
-
-## v1.5 — Settings page in the admin panel
-
-Focus: removing the need to manually edit JSON config files.
-
-Planned features:
-
-- settings page inside the admin panel;
-- DonationAlerts settings form;
-- Donatty widget URL settings form;
-- Streamer.bot settings form;
-- manual currency rates editor;
-- widget appearance settings;
-- integration enable/disable switches;
-- config validation from the UI;
-- safe save/reload behavior.
-
-Goal: make the project usable without opening code or editing JSON manually.
-
----
-
-## v2.0 — Desktop application
-
-Focus: turning VicDonationGoal into a user-friendly desktop application.
-
-Possible direction:
-
-- single `.exe` launcher;
-- graphical control panel;
-- start/stop buttons for server, listeners, and bridges;
-- integration setup wizard;
-- built-in logs viewer;
-- status indicators;
-- local web admin panel opened from the app;
-- automatic dependency checks;
-- easier installation for non-technical users.
-
-The current backend, admin panel, and integration architecture should remain the foundation. The desktop app should act as a convenient launcher and control center rather than a full rewrite.
-
-Goal: make VicDonationGoal feel like a normal desktop program instead of a developer-oriented tool.
-
----
-
-## Long-term ideas
-
-Possible future improvements:
-
-- multiple donation goals;
-- alert queue system;
-- custom webhooks;
-- automatic currency exchange rates;
-- export to Excel;
-- import/export settings;
-- plugin system for integrations;
-- packaged installer;
-- multi-language UI;
-- better mobile layout for the admin panel.
-
----
-
-## Development philosophy
-
-VicDonationGoal should stay:
-
-- local-first;
-- transparent;
-- modular;
-- streamer-friendly;
-- easy to back up;
-- safe with private tokens and user data;
-- customizable without depending on one specific donation service.
-
-The project started as a custom OBS donation goal widget, but the long-term goal is to become a flexible local donation dashboard for streamers.
+- необязательная резервная копия минимально необходимых данных;
+- прозрачное согласие пользователя;
+- восстановление истории на новой установке;
+- локальный режим остаётся полноценным и не требует аккаунта.
