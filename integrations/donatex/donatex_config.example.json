@@ -12,7 +12,7 @@
   "request_timeout_seconds": 15,
   "default_currency": "RUB",
   "import_existing_first_run": false,
-  "query_token_name": "token",
+  "query_token_name": "",
   "skip": 0,
   "take": 20
 }

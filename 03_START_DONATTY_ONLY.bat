@@ -2,7 +2,7 @@
 cd /d "%~dp0integrations\donatty"
 echo DEBUG MODE: normally Donatty is started and stopped from Integration Hub.
 echo.
-title VicDonationGoal v1.4.4 - Donatty Debug Listener
+title VicDonationGoal v1.4.4.1 - Donatty Debug Listener
 
 py -3 --version >nul 2>&1
 if %errorlevel%==0 (

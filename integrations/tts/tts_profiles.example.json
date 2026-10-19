@@ -57,11 +57,11 @@
     "httpLanguage": "ru"
   },
   {
-    "id": "character",
-    "name": "Character",
+    "id": "washington",
+    "name": "Washington",
     "enabled": true,
     "provider": "speakerbot",
-    "voiceAlias": "Character",
+    "voiceAlias": "Washington",
     "edgeVoice": "ru-RU-DmitryNeural",
     "rate": "+0%",
     "volume": "+0%",

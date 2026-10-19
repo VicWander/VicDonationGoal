@@ -57,14 +57,14 @@
     }
   },
   {
-    "id": "character-example",
-    "name": "Персонаж — пример",
-    "enabled": false,
+    "id": "washington-rule",
+    "name": "Вашингтон",
+    "enabled": true,
     "priority": 100,
-    "profileId": "character",
+    "profileId": "washington",
     "conditions": {
       "eventTypes": [
-        "character"
+        "washington"
       ],
       "sources": [],
       "userIds": [],

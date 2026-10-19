@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title VicDonationGoal v1.4.4 - Closed Beta
+title VicDonationGoal v1.4.6 - Reliability & Safe Update
 
 echo Stopping stale VicDonationGoal processes from previous runs...
 call "%~dp013_STOP_ALL.bat" --quiet >nul 2>&1
@@ -10,7 +10,7 @@ set APP_VERSION=dev
 if exist "%~dp0VERSION" set /p APP_VERSION=<"%~dp0VERSION"
 
 echo ==============================================
-echo  VicDonationGoal v%APP_VERSION% - Closed Beta
+echo  VicDonationGoal v%APP_VERSION% - Integrations Hub
 echo ==============================================
 echo.
 echo Creating missing local files...

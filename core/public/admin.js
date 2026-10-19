@@ -70,6 +70,18 @@ const rateEURInput = document.getElementById("rateEURInput");
 const rateKZTInput = document.getElementById("rateKZTInput");
 const extraRatesInput = document.getElementById("extraRatesInput");
 const saveRatesButton = document.getElementById("saveRatesButton");
+const backToTopButton = document.getElementById("backToTopButton");
+const pageSectionTitle = document.getElementById("pageSectionTitle");
+const donationSectionTabs = [...document.querySelectorAll(".donation-section-tab")];
+const donationSectionViews = [...document.querySelectorAll(".donation-section-view")];
+
+const donationSectionTitles = {
+  donationMonitoringView: "Мониторинг",
+  donationManagementView: "Управление",
+  donationHistoryTopView: "История и TopDonation",
+  donationStatusView: "Состояние",
+  donationSettingsView: "Настройки"
+};
 
 let inputsFilledOnce = false;
 let cachedState = null;
@@ -282,6 +294,56 @@ function setDonationView(viewId) {
   if (viewId === "topDonorsView") refreshTop(true);
 }
 donationSubtabs.forEach(button => button.addEventListener("click", () => setDonationView(button.dataset.donationView)));
+
+function currentDonationSection() {
+  return donationSectionTabs.find(button => button.classList.contains("active"))?.dataset.donationSection || "donationMonitoringView";
+}
+
+function setDonationSection(sectionId, scroll = false) {
+  const target = document.getElementById(sectionId) ? sectionId : "donationMonitoringView";
+  donationSectionTabs.forEach(button => button.classList.toggle("active", button.dataset.donationSection === target));
+  localStorage.setItem("vic-donation-section", target);
+  if (pageSectionTitle) pageSectionTitle.textContent = donationSectionTitles[target] || "Донаты";
+  if (target === "donationHistoryTopView") {
+    renderTable();
+    if (document.getElementById("topDonorsView")?.classList.contains("active")) refreshTop(true);
+  }
+  if (target === "donationStatusView") refreshStatuses();
+  if (scroll) document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function updateAdminPanelContext(panelId) {
+  document.body.dataset.adminPanel = panelId || "donationsPanel";
+  if (!pageSectionTitle) return;
+  if (panelId === "ttsPanel") {
+    if (typeof window.updateTTSSectionTitle === "function") window.updateTTSSectionTitle();
+    else pageSectionTitle.textContent = "Озвучка (TTS Hub)";
+  }
+  else if (panelId === "integrationsPanel") pageSectionTitle.textContent = "Интеграции";
+  else setDonationSection(currentDonationSection());
+}
+window.updateAdminPanelContext = updateAdminPanelContext;
+
+donationSectionTabs.forEach(button => button.addEventListener("click", () => {
+  if (typeof ttsSetPanel === "function") ttsSetPanel("donationsPanel");
+  setDonationSection(button.dataset.donationSection, true);
+}));
+
+function restoreDonationSection() {
+  const stored = localStorage.getItem("vic-donation-section");
+  setDonationSection(stored && document.getElementById(stored) ? stored : "donationMonitoringView");
+}
+
+if ("IntersectionObserver" in window) {
+  const donationSectionObserver = new IntersectionObserver(entries => {
+    if (document.body.dataset.adminPanel !== "donationsPanel") return;
+    const visible = entries
+      .filter(entry => entry.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visible?.target?.id) setDonationSection(visible.target.id, false);
+  }, { rootMargin: "-110px 0px -58% 0px", threshold: [0.01, 0.15, 0.35] });
+  donationSectionViews.forEach(view => donationSectionObserver.observe(view));
+}
 
 async function refreshTop(force = false) {
   if (!topDonorsList) return;
@@ -755,6 +817,14 @@ refreshStatuses();
 refreshAll();
 refreshTop();
 restoreDonationView();
+restoreDonationSection();
+updateAdminPanelContext("donationsPanel");
+if (backToTopButton) {
+  const updateBackToTop = () => backToTopButton.classList.toggle("visible", window.scrollY > 300);
+  backToTopButton.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  window.addEventListener("scroll", updateBackToTop, { passive: true });
+  updateBackToTop();
+}
 setInterval(refreshAll, 1500);
 setInterval(refreshStatuses, 4000);
 setInterval(() => {

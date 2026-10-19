@@ -2,6 +2,14 @@ const adminTabs = [...document.querySelectorAll(".admin-tab")];
 const adminPanels = [...document.querySelectorAll(".admin-panel")];
 const ttsSubtabs = [...document.querySelectorAll(".tts-subtab")];
 const ttsViews = [...document.querySelectorAll(".tts-view")];
+const TTS_SECTION_TITLES = {
+  ttsQueueView: "Очередь TTS",
+  ttsProfilesView: "Голосовые профили",
+  ttsRulesView: "Правила озвучки",
+  ttsSettingsView: "Настройки TTS",
+  ttsHistoryView: "История TTS",
+  ttsLogsView: "Логи TTS"
+};
 
 const PROVIDERS = [
   ["speakerbot", "Speaker.bot"],
@@ -60,21 +68,43 @@ function ttsSetPanel(panelId) {
   adminTabs.forEach(button => button.classList.toggle("active", button.dataset.panel === panelId));
   adminPanels.forEach(panel => panel.classList.toggle("active", panel.id === panelId));
   localStorage.setItem("vic-admin-panel", panelId);
+  if (typeof window.updateAdminPanelContext === "function") window.updateAdminPanelContext(panelId);
   if (panelId === "ttsPanel") refreshTTSAll(true);
 }
 adminTabs.forEach(button => button.addEventListener("click", () => ttsSetPanel(button.dataset.panel)));
-ttsSubtabs.forEach(button => button.addEventListener("click", () => {
-  ttsSubtabs.forEach(item => item.classList.toggle("active", item === button));
-  ttsViews.forEach(view => view.classList.toggle("active", view.id === button.dataset.ttsView));
-  localStorage.setItem("vic-tts-view", button.dataset.ttsView);
-  if (button.dataset.ttsView === "ttsLogsView") refreshTTSLogs();
-}));
+function setTTSSection(viewId, scroll = false) {
+  const target = byId(viewId) ? viewId : "ttsQueueView";
+  ttsSubtabs.forEach(item => item.classList.toggle("active", item.dataset.ttsView === target));
+  localStorage.setItem("vic-tts-view", target);
+  if (document.body.dataset.adminPanel === "ttsPanel") {
+    const title = byId("pageSectionTitle");
+    if (title) title.textContent = TTS_SECTION_TITLES[target] || "Озвучка (TTS Hub)";
+  }
+  if (target === "ttsLogsView") refreshTTSLogs();
+  if (scroll) byId(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+window.updateTTSSectionTitle = () => {
+  const current = ttsSubtabs.find(item => item.classList.contains("active"))?.dataset.ttsView || "ttsQueueView";
+  const title = byId("pageSectionTitle");
+  if (title) title.textContent = TTS_SECTION_TITLES[current] || "Озвучка (TTS Hub)";
+};
+ttsSubtabs.forEach(button => button.addEventListener("click", () => setTTSSection(button.dataset.ttsView, true)));
 function restoreAdminTabs() {
   const panel = localStorage.getItem("vic-admin-panel");
   if (panel && byId(panel)) ttsSetPanel(panel);
   const viewId = localStorage.getItem("vic-tts-view");
-  const button = ttsSubtabs.find(item => item.dataset.ttsView === viewId);
-  if (button && byId(viewId)) button.click();
+  setTTSSection(viewId && byId(viewId) ? viewId : "ttsQueueView", false);
+}
+
+if ("IntersectionObserver" in window) {
+  const ttsSectionObserver = new IntersectionObserver(entries => {
+    if (document.body.dataset.adminPanel !== "ttsPanel") return;
+    const visible = entries
+      .filter(entry => entry.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visible?.target?.id) setTTSSection(visible.target.id, false);
+  }, { rootMargin: "-130px 0px -58% 0px", threshold: [0.01, 0.15, 0.35] });
+  ttsViews.forEach(view => ttsSectionObserver.observe(view));
 }
 
 function fillProviderSelects(config) {

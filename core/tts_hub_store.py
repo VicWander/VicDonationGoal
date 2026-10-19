@@ -49,13 +49,13 @@ def _load(path: Path, fallback: Any) -> Any:
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "enabled": False,
+    "enabled": True,
     "paused": False,
     "activeProvider": "speakerbot",
     "fallbackProvider": "edge",
     "defaultProfileId": "default",
     "donations": {
-        "enabled": False,
+        "enabled": True,
         "sources": [],  # Empty means every registered automatic source + manual flags
         "amountField": "amountForGoal",
         "minAmount": 100,
@@ -189,11 +189,11 @@ DEFAULT_PROFILES: list[dict[str, Any]] = [
         "badWordFilter": False
     },
     {
-        "id": "character",
-        "name": "Character",
+        "id": "washington",
+        "name": "Washington",
         "enabled": True,
         "provider": "speakerbot",
-        "voiceAlias": "Character",
+        "voiceAlias": "Washington",
         "edgeVoice": "ru-RU-DmitryNeural",
         "rate": "+0%",
         "volume": "+0%",
@@ -279,13 +279,13 @@ DEFAULT_RULES: list[dict[str, Any]] = [
         }
     },
     {
-        "id": "character-example",
-        "name": "Персонаж — пример",
-        "enabled": False,
+        "id": "washington-rule",
+        "name": "Вашингтон",
+        "enabled": True,
         "priority": 100,
-        "profileId": "character",
+        "profileId": "washington",
         "conditions": {
-            "eventTypes": ["character"],
+            "eventTypes": ["washington"],
             "sources": [],
             "userIds": [],
             "usernames": [],

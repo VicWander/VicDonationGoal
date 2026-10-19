@@ -4,7 +4,7 @@
   "rules": [
     {
       "id": "example_10_rub_event",
-      "enabled": false,
+      "enabled": true,
       "name": "Example 10 RUB event",
       "sources": [
         "donationalerts",
@@ -22,7 +22,7 @@
       "currency": "RUB",
       "amount_field": "amount",
       "epsilon": 0.001,
-      "action_id": "PASTE_STREAMERBOT_ACTION_ID_HERE",
+      "action_id": "",
       "action_name": "Optional action name"
     },
     {
@@ -44,7 +44,7 @@
       "amount": 1000,
       "currency": "RUB",
       "amount_field": "amount",
-      "action_id": "PASTE_STREAMERBOT_ACTION_ID_HERE"
+      "action_id": ""
     }
   ]
 }

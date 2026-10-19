@@ -6,7 +6,7 @@
   "order": 20,
   "kind": "subprocess",
   "entrypoint": "donatty_listener.py",
-  "description": "Автоматически получает временный SSE URL из OBS-виджета Donatty через Playwright.",
+  "description": "Получает SSE через API OBS-виджета Donatty; для старых ссылок использует Playwright.",
   "configFile": "donatty_config.json",
   "configExampleFile": "donatty_config.example.json",
   "guideFile": "GUIDE.md",
@@ -29,11 +29,18 @@
   },
   "fields": [
     {
+      "key": "use_system_proxy",
+      "label": "Использовать системный прокси",
+      "type": "checkbox",
+      "default": false,
+      "help": "Обычно выключено: Donatty подключается напрямую, отдельно от прокси браузера. VPN в режиме полного туннеля этой настройкой не обходится."
+    },
+    {
       "key": "widget_url",
       "label": "Ссылка OBS-виджета Donatty",
       "type": "password",
       "placeholder": "https://...",
-      "help": "Обычная ссылка виджета из кабинета Donatty. Программа сама найдёт свежий SSE JWT."
+      "help": "Обычная ссылка виджета из кабинета Donatty. Для ссылки widgets.donatty.com/donations/ поток получается напрямую через API, без скрытого браузера."
     },
     {
       "key": "headless_browser",

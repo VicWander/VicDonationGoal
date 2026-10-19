@@ -24,7 +24,7 @@ DONATIONS_FILE = PROJECT_ROOT / "core" / "data" / "donations.json"
 SENT_FILE = ROOT / "streamerbot_sent.json"
 
 # Rules for additional donation events, for example:
-# 10 RUB -> small animation, 1000 RUB -> special alert.
+# 10 RUB -> poke hand action, 20 RUB -> pet hand action.
 EVENT_RULES_FILE = ROOT / "donation_event_rules.json"
 EVENT_RULES_SENT_FILE = ROOT / "streamerbot_event_rules_sent.json"
 
@@ -40,10 +40,10 @@ from source_registry import AUTOMATIC_SOURCE_IDS
 
 
 DEFAULT_CONFIG = {
-    "enabled": False,
+    "enabled": True,
     "streamerbot_http_url": "http://127.0.0.1:7474/DoAction",
 
-    "action_name": "",
+    "action_name": "оповещение о донате",
     "action_id": "",
 
     "poll_interval_seconds": 0.5,
@@ -67,7 +67,7 @@ DEFAULT_CONFIG = {
     },
 
     "extra_args": {
-        "integration": "VicDonationGoal"
+        "integration": "VicWanderDonationGoal"
     }
 }
 
@@ -76,7 +76,7 @@ LEGACY_SOURCE_WHITELIST = {"donationalerts", "donatty"}
 
 
 DEFAULT_EVENT_RULES = {
-    "enabled": False,
+    "enabled": True,
     "process_existing_on_first_start": False,
     "rules": []
 }

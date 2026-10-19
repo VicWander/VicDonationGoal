@@ -1,9 +1,9 @@
 @echo off
 cd /d "%~dp0"
-title VicDonationGoal v1.4.4 - Closed Beta Setup
+title VicDonationGoal - Install All
 
 echo ==============================================
-echo  VicDonationGoal v1.4.4 - Closed Beta Setup
+echo  VicDonationGoal - first setup
  echo ==============================================
 echo.
 echo This will install:

@@ -25,7 +25,7 @@
 
     const text = document.querySelector(".theme-toggle-text");
     if (text) {
-      text.textContent = theme === "dark" ? "Тёмная тема" : "Светлая тема";
+      text.textContent = theme === "dark" ? "Светлая тема" : "Тёмная тема";
     }
 
     const button = document.querySelector(".theme-toggle");
@@ -42,7 +42,7 @@
     const headerActions = document.querySelector(".header-actions");
     if (!headerActions) return;
 
-    const existing = headerActions.querySelector('a[href="/docs/index.html"], a[href="docs/index.html"], a[data-docs-link="true"]');
+    const existing = document.querySelector('a[href="/docs/index.html"], a[href="docs/index.html"], a[data-docs-link="true"]');
     if (existing) return;
 
     const link = document.createElement("a");
@@ -72,9 +72,12 @@
       applyTheme(current === "dark" ? "light" : "dark");
     });
 
+    const sidebarThemeSlot = document.getElementById("sidebarThemeSlot");
     const headerActions = document.querySelector(".header-actions");
 
-    if (headerActions) {
+    if (sidebarThemeSlot) {
+      sidebarThemeSlot.appendChild(button);
+    } else if (headerActions) {
       headerActions.prepend(button);
     } else {
       button.classList.add("theme-toggle-floating");

@@ -2,7 +2,7 @@
   "enabled": false,
   "api_key": "",
   "api_v1_url": "https://donatepay.ru/api/v1",
-  "socket_token_url": "https://donatepay.ru/api/v2/socket/token",
+  "socket_token_url": "",
   "websocket_url": "wss://centrifugo.donatepay.ru:443/connection/websocket",
   "widget_api_url": "http://127.0.0.1:3333/api/donation",
   "catch_up_enabled": false,

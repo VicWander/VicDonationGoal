@@ -21,6 +21,7 @@ from urllib.parse import urlparse, parse_qs, urlencode, unquote
 
 import tts_hub_store as tts_store
 import donor_store
+import portability
 from integration_manager import IntegrationManager
 
 
@@ -29,6 +30,7 @@ PROJECT_ROOT = ROOT.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from safe_json import load_json as _robust_load_json, save_json as _robust_save_json
+from washington_integration import WashingtonIntegration
 from source_registry import public_registry
 from tools.create_diagnostic_report import create_report
 from integrations.donationalerts.donationalerts_integration import DonationAlertsIntegration
@@ -69,6 +71,7 @@ FILE_LOCK = threading.RLock()
 INTEGRATION_MANAGER = None
 DA_INTEGRATION = None
 STREAMLABS_INTEGRATION = None
+WASHINGTON = WashingtonIntegration(PROJECT_ROOT)
 
 
 DEFAULT_RATES = {
@@ -267,6 +270,7 @@ def normalize_donation_record(donation, state=None):
         ), 2),
         "topCurrency": donor_store.TOP_CURRENCY,
         "message": str(donation.get("message") or ""),
+        "anonymous": bool_from_any(donation.get("anonymous"), str(donation.get("username") or donation.get("name") or "Аноним").lower() in ("аноним", "anonymous")),
         "createdAt": created_at,
         "receivedAt": received_at,
         "note": str(donation.get("note") or "")
@@ -406,6 +410,11 @@ def add_donation(donation):
         save_json(DONATIONS_FILE, donations)
         save_json(STATE_FILE, state)
 
+        # Only newly persisted donations reach this hook; replay/import never do.
+        try:
+            WASHINGTON.submit(normalized, normalize_currency(state.get("currency", "RUB")))
+        except Exception as error:
+            print(f"[Washington] enqueue_failed: {type(error).__name__}")
         return state, True, "Донат добавлен"
 
 
@@ -913,6 +922,266 @@ def donations_to_csv_bytes(donations):
     return ("\ufeff" + output.getvalue()).encode("utf-8")
 
 
+def portability_status_payload():
+    files = portability.collect_user_files(PROJECT_ROOT)
+    return {
+        "ok": True,
+        "appVersion": APP_VERSION,
+        "backupSchemaVersion": portability.BACKUP_SCHEMA_VERSION,
+        "userFileCount": len(files),
+        "userDataSize": sum(path.stat().st_size for path in files if path.exists()),
+        "backups": portability.list_local_backups(PROJECT_ROOT),
+        "categories": sorted({portability.category_for_path(path.relative_to(PROJECT_ROOT).as_posix()) for path in files}),
+    }
+
+
+def _donationalerts_alias_totals(donations):
+    totals = {}
+    for donation in donations:
+        if not isinstance(donation, dict) or str(donation.get("source") or "").lower() != "donationalerts":
+            continue
+        key = donor_store.alias_key("donationalerts", donation.get("username"))
+        totals[key] = round(totals.get(key, 0) + to_number(
+            donation.get("amountForTop") if donation.get("amountForTop") is not None else donation.get("amountForGoal"), 0
+        ), 2)
+    return totals
+
+
+def donationalerts_import_preview(rows, donations):
+    aggregated = {}
+    display_names = {}
+    for row in rows:
+        username = str(row.get("username") or "Аноним").strip() or "Аноним"
+        key = donor_store.alias_key("donationalerts", username)
+        aggregated[key] = round(aggregated.get(key, 0) + to_number(row.get("amount"), 0), 2)
+        display_names.setdefault(key, username)
+
+    actual = _donationalerts_alias_totals(donations)
+    profiles = donor_store.load_profiles()
+    profile_by_alias = {}
+    for profile in profiles:
+        for alias in profile.get("aliases", []):
+            profile_by_alias[donor_store.alias_key(alias.get("source"), alias.get("username"))] = profile
+    adjustments = donor_store.load_adjustments()
+    snapshot_by_key = {
+        str(item.get("snapshotKey") or ""): item
+        for item in adjustments
+        if item.get("kind") == "source_snapshot" and item.get("source") == "donationalerts"
+    }
+    manual_by_profile = {}
+    for item in adjustments:
+        if item.get("kind") == "source_snapshot":
+            continue
+        profile_id = str(item.get("donorId") or "")
+        manual_by_profile[profile_id] = manual_by_profile.get(profile_id, 0) + to_number(item.get("amountForTop"), 0)
+
+    preview_rows = []
+    total_export = 0
+    total_change = 0
+    recommended_change = 0
+    overlap_profiles = set()
+    review_rows = 0
+    for key in sorted(aggregated, key=lambda item: (-aggregated[item], display_names[item].casefold())):
+        exported = round(aggregated[key], 2)
+        recorded = round(actual.get(key, 0), 2)
+        proposed_snapshot = round(max(exported - recorded, 0), 2)
+        current_snapshot = round(to_number(snapshot_by_key.get(key, {}).get("amountForTop"), 0), 2)
+        change = round(proposed_snapshot - current_snapshot, 2)
+        profile = profile_by_alias.get(key)
+        manual_amount = round(manual_by_profile.get(str((profile or {}).get("id") or ""), 0), 2)
+        if profile and abs(manual_amount) >= 0.005:
+            overlap_profiles.add(profile.get("id"))
+        requires_review = bool(abs(change) >= 0.005 and abs(manual_amount) >= 0.005 and abs(current_snapshot) < 0.005)
+        selected_by_default = bool(abs(change) >= 0.005 and not requires_review)
+        if requires_review:
+            review_rows += 1
+        if selected_by_default:
+            recommended_change += change
+        total_export += exported
+        total_change += change
+        preview_rows.append({
+            "importKey": key,
+            "username": display_names[key],
+            "exported": exported,
+            "recordedEvents": recorded,
+            "currentSnapshot": current_snapshot,
+            "proposedSnapshot": proposed_snapshot,
+            "change": change,
+            "profileName": (profile or {}).get("displayName") or display_names[key],
+            "manualAdjustments": manual_amount,
+            "requiresReview": requires_review,
+            "selectedByDefault": selected_by_default,
+        })
+
+    warnings = [
+        "Файл содержит итог по каждому имени, а не отдельные донаты. Он изменит только TopDonation.",
+        "Импорт не запустит TTS, Streamer.bot, донат-ивенты и не изменит текущий сбор.",
+    ]
+    if overlap_profiles:
+        warnings.append(
+            f"У {len(overlap_profiles)} профилей уже есть ручные корректировки. {review_rows} спорных строк сняты с выбора по умолчанию, чтобы не задвоить исторические суммы."
+        )
+    return {
+        "kind": "donationalerts",
+        "compatible": True,
+        "rows": len(preview_rows),
+        "exportedTotal": round(total_export, 2),
+        "topChange": round(total_change, 2),
+        "recommendedTopChange": round(recommended_change, 2),
+        "possibleOverlapProfiles": len(overlap_profiles),
+        "reviewRows": review_rows,
+        "items": preview_rows,
+        "warnings": warnings,
+    }
+
+
+def create_user_backup(reason="manual", group="manual"):
+    # Keep history, donor profiles and TTS stores at one Core state while the
+    # snapshot is read. Separate workers are checked by the stable capture.
+    with FILE_LOCK, donor_store.LOCK, tts_store.LOCK:
+        return portability.write_backup(PROJECT_ROOT, reason=reason, group=group)
+
+
+def apply_staged_import(token, options=None):
+    # No donation may arrive between the rollback snapshot and applying/undoing
+    # an import; otherwise a rollback could erase that new donation.
+    with FILE_LOCK, donor_store.LOCK, tts_store.LOCK:
+        return _apply_staged_import_locked(token, options)
+
+
+def _apply_staged_import_locked(token, options=None):
+    options = options if isinstance(options, dict) else {}
+    metadata, raw = portability.load_stage(PROJECT_ROOT, token)
+    kind = str(metadata.get("kind") or "")
+    if kind in {"backup", "folder"}:
+        from tools.update_from_old import ensure_stopped
+        ensure_stopped(PROJECT_ROOT, allow_core=True)
+    backup_path, backup_manifest = create_user_backup(
+        reason=f"before_{kind}_import",
+        group="automatic",
+    )
+    restart_required = False
+    result = {"kind": kind}
+    new_import_paths = []
+
+    try:
+        with FILE_LOCK:
+            if kind == "backup":
+                _manifest, payload = portability.inspect_backup_bytes(raw, current_version=APP_VERSION)
+                from tools.update_from_old import prepare_payload
+                payload, _ = prepare_payload(payload, existing=portability._capture_user_payload(PROJECT_ROOT))
+                new_import_paths = [portability._user_data_destination(PROJECT_ROOT, p) for p in payload
+                                    if not portability._user_data_destination(PROJECT_ROOT, p).exists()]
+                restored = portability.apply_payload(PROJECT_ROOT, payload)
+                normalize_storage()
+                restart_required = True
+                result.update({"restoredFiles": len(restored), "sourceVersion": metadata.get("preview", {}).get("sourceVersion")})
+            elif kind == "folder":
+                payload = portability.payload_from_staged_folder(raw)
+                from tools.update_from_old import prepare_payload
+                payload, _ = prepare_payload(payload, existing=portability._capture_user_payload(PROJECT_ROOT))
+                new_import_paths = [portability._user_data_destination(PROJECT_ROOT, p) for p in payload
+                                    if not portability._user_data_destination(PROJECT_ROOT, p).exists()]
+                restored = portability.apply_payload(PROJECT_ROOT, payload)
+                normalize_storage()
+                restart_required = True
+                result.update({"restoredFiles": len(restored), "sourceVersion": metadata.get("preview", {}).get("sourceVersion")})
+            elif kind == "donations":
+                incoming = portability.parse_donations_bytes(raw)
+                state = normalize_state(load_json(STATE_FILE, {}))
+                existing = load_json(DONATIONS_FILE, [])
+                if not isinstance(existing, list):
+                    existing = []
+                merged, stats = portability.merge_donations(
+                    incoming,
+                    existing,
+                    lambda item: normalize_donation_record(item, state),
+                    include_in_goal=bool(options.get("includeInGoal", False)),
+                )
+                merged, _profiles = donor_store.sync_donations(merged)
+                recalc_goal_current(state, merged)
+                save_json(DONATIONS_FILE, merged)
+                save_json(STATE_FILE, state)
+                result.update(stats)
+            elif kind == "donationalerts":
+                rows = portability.parse_donationalerts_table(raw)
+                donations = load_donations()
+                actual = _donationalerts_alias_totals(donations)
+                aggregated = {}
+                names = {}
+                for row in rows:
+                    username = str(row.get("username") or "Аноним").strip() or "Аноним"
+                    key = donor_store.alias_key("donationalerts", username)
+                    aggregated[key] = round(aggregated.get(key, 0) + to_number(row.get("amount"), 0), 2)
+                    names.setdefault(key, username)
+                staged_preview = metadata.get("preview") if isinstance(metadata.get("preview"), dict) else {}
+                preview_items = staged_preview.get("items") if isinstance(staged_preview.get("items"), list) else []
+                default_keys = {
+                    str(item.get("importKey") or "")
+                    for item in preview_items
+                    if isinstance(item, dict) and item.get("selectedByDefault")
+                }
+                requested_keys = options.get("selectedKeys")
+                selected_keys = {
+                    str(item) for item in requested_keys
+                } if isinstance(requested_keys, list) else default_keys
+                selected_keys &= set(aggregated)
+                batch_id = f"da-import-{uuid.uuid4()}"
+                changed = 0
+                skipped = 0
+                snapshot_total = 0
+                for key, exported in aggregated.items():
+                    if key not in selected_keys:
+                        skipped += 1
+                        continue
+                    _profile, item, delta = donor_store.upsert_source_snapshot(
+                        "donationalerts",
+                        names[key],
+                        exported,
+                        actual.get(key, 0),
+                        batch_id=batch_id,
+                    )
+                    snapshot_total += delta
+                    if item is not None or abs(delta) < 0.005:
+                        changed += 1
+                result.update({
+                    "profilesProcessed": changed,
+                    "rowsSkipped": skipped,
+                    "snapshotTotal": round(snapshot_total, 2),
+                    "batchId": batch_id,
+                })
+            else:
+                raise portability.PortabilityError("Неизвестный тип импорта")
+    except Exception as import_error:
+        try:
+            _rollback_manifest, rollback_payload = portability.inspect_backup_bytes(backup_path.read_bytes())
+            portability.apply_payload(PROJECT_ROOT, rollback_payload)
+            for path in new_import_paths:
+                # Re-resolve on rollback as well: never follow a changed parent
+                # outside the project when removing an introduced file.
+                relative = path.relative_to(PROJECT_ROOT.resolve()).as_posix()
+                portability._user_data_destination(PROJECT_ROOT, relative).unlink(missing_ok=True)
+            normalize_storage()
+        except Exception as rollback_error:
+            raise portability.PortabilityError(
+                f"Импорт прерван, но автоматический откат тоже не выполнен: {rollback_error}. "
+                f"Исходный бэкап: {backup_path.name}"
+            ) from import_error
+        raise portability.PortabilityError(
+            f"Импорт прерван; исходные данные автоматически восстановлены из {backup_path.name}: {import_error}"
+        ) from import_error
+
+    portability.delete_stage(PROJECT_ROOT, token)
+    result.update({
+        "ok": True,
+        "message": "Импорт завершён",
+        "restartRequired": restart_required,
+        "automaticBackup": backup_path.name,
+        "backupCreatedAt": backup_manifest.get("createdAt"),
+    })
+    return result
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
@@ -969,24 +1238,28 @@ class Handler(BaseHTTPRequestHandler):
                 break
             total += size
             if total > max_bytes:
-                raise ValueError("Тело запроса превышает 4 МБ")
+                raise ValueError(f"Тело запроса превышает {max_bytes // (1024 * 1024)} МБ")
             chunks.append(self.rfile.read(size))
             ending = self.rfile.read(2)
             if ending not in (b"\r\n", b"\n"):
                 raise ValueError("Некорректное завершение chunked-блока")
         return b"".join(chunks)
 
-    def read_body_json(self):
+    def read_body_bytes(self, max_bytes=4 * 1024 * 1024):
         transfer_encoding = str(self.headers.get("Transfer-Encoding") or "").lower()
         if "chunked" in transfer_encoding:
-            raw_bytes = self._read_chunked_body()
+            raw_bytes = self._read_chunked_body(max_bytes=max_bytes)
         else:
             length = int(self.headers.get("Content-Length") or 0)
-            if length < 0 or length > 4 * 1024 * 1024:
+            if length < 0 or length > max_bytes:
                 raise ValueError("Некорректный размер тела запроса")
             raw_bytes = self.rfile.read(length) if length else b""
 
         self._last_raw_body = raw_bytes
+        return raw_bytes
+
+    def read_body_json(self, max_bytes=4 * 1024 * 1024):
+        raw_bytes = self.read_body_bytes(max_bytes=max_bytes)
         if not raw_bytes:
             return {}
         raw = raw_bytes.decode("utf-8", errors="replace")
@@ -996,6 +1269,17 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             parsed = parse_qs(raw)
             return {key: values[0] if values else "" for key, values in parsed.items()}
+
+    def require_local_portability_request(self):
+        host = str(self.headers.get("Host") or "").split(":", 1)[0].lower()
+        origin = str(self.headers.get("Origin") or "").lower()
+        if host not in {"127.0.0.1", "localhost", "::1", ""}:
+            self.send_json({"ok": False, "message": "Операции с данными доступны только локально"}, 403)
+            return False
+        if origin and not (origin.startswith("http://127.0.0.1") or origin.startswith("http://localhost")):
+            self.send_json({"ok": False, "message": "Недопустимый Origin для операции с данными"}, 403)
+            return False
+        return True
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -1008,6 +1292,13 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/":
             self.redirect("/widget.html")
+            return
+
+        if path == "/api/washington":
+            try:
+                self.send_json({"config": WASHINGTON.config(), "status": WASHINGTON.status(), "sources": public_registry()})
+            except ValueError as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
             return
 
         if path == "/api/health":
@@ -1037,6 +1328,25 @@ class Handler(BaseHTTPRequestHandler):
                 content_type="text/csv; charset=utf-8",
                 extra_headers={"Content-Disposition": "attachment; filename=donations_export.csv"}
             )
+            return
+
+        if path == "/api/portability/status":
+            self.send_json(portability_status_payload())
+            return
+
+        if path == "/api/portability/backup":
+            try:
+                backup_path, manifest = create_user_backup(reason="manual_download", group="manual")
+                self.send_bytes(
+                    backup_path.read_bytes(),
+                    content_type="application/zip",
+                    extra_headers={
+                        "Content-Disposition": f'attachment; filename="{backup_path.name}"',
+                        "X-VicDonationGoal-Backup-Schema": str(manifest.get("schemaVersion")),
+                    },
+                )
+            except Exception as error:
+                self.send_json({"ok": False, "message": f"Не удалось создать резервную копию: {type(error).__name__}: {error}"}, 500)
             return
 
         if path == "/api/donors/top":
@@ -1237,6 +1547,110 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
+
+        if path in ("/api/washington/config", "/api/washington/test", "/api/washington/check"):
+            if not self.require_local_portability_request():
+                return
+            try:
+                if path.endswith('/config'):
+                    result = {"ok": True, "config": WASHINGTON.save_config(self.read_body_json())}
+                elif path.endswith('/test'):
+                    ok = WASHINGTON.test(normalize_currency(load_state().get('currency', 'RUB')))
+                    result = {"ok": ok, "message": "Тест поставлен в очередь; сообщение будет отправлено в Twitch" if ok else "Очередь заполнена"}
+                else:
+                    result = {"ok": True, "status": WASHINGTON.check()}
+                self.send_json(result)
+            except (ValueError, TypeError) as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            except Exception as error:
+                self.send_json({"ok": False, "message": type(error).__name__}, 500)
+            return
+
+        if path == "/api/portability/stage":
+            if not self.require_local_portability_request():
+                return
+            try:
+                query = parse_qs(parsed.query)
+                kind = str(query.get("kind", [""])[0]).strip().lower()
+                filename = str(query.get("filename", ["import.bin"])[0])
+                raw = self.read_body_bytes(max_bytes=portability.MAX_UPLOAD_BYTES)
+                if not raw:
+                    raise portability.PortabilityError("Выбранный файл пуст")
+                state, donations = normalize_storage()
+                if kind == "backup":
+                    preview = portability.backup_preview(raw, APP_VERSION)
+                elif kind == "donations":
+                    incoming = portability.parse_donations_bytes(raw)
+                    preview = portability.donation_preview(
+                        incoming,
+                        donations,
+                        lambda item: normalize_donation_record(item, state),
+                    )
+                elif kind == "donationalerts":
+                    rows = portability.parse_donationalerts_table(raw)
+                    preview = donationalerts_import_preview(rows, donations)
+                else:
+                    raise portability.PortabilityError("Неизвестный тип импорта")
+                token = portability.create_stage(PROJECT_ROOT, kind, filename, raw, preview)
+                self.send_json({"ok": True, "token": token, "preview": preview})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/portability/stage-folder":
+            if not self.require_local_portability_request():
+                return
+            try:
+                request = self.read_body_json(max_bytes=96 * 1024 * 1024)
+                payload = portability.folder_payload_from_request(request.get("files"))
+                source_version = str(request.get("sourceVersion") or "unknown")
+                preview = portability.folder_preview(payload, APP_VERSION, source_version=source_version)
+                token = portability.create_folder_stage(PROJECT_ROOT, payload, preview)
+                self.send_json({"ok": True, "token": token, "preview": preview})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/portability/stage-local-backup":
+            if not self.require_local_portability_request():
+                return
+            try:
+                request = self.read_body_json()
+                backup_path = portability.resolve_local_backup(PROJECT_ROOT, request.get("id"))
+                raw = backup_path.read_bytes()
+                preview = portability.backup_preview(raw, APP_VERSION)
+                token = portability.create_stage(PROJECT_ROOT, "backup", backup_path.name, raw, preview)
+                self.send_json({"ok": True, "token": token, "preview": preview})
+            except Exception as error:
+                self.send_json({"ok": False, "message": str(error)}, 400)
+            return
+
+        if path == "/api/portability/apply":
+            if not self.require_local_portability_request():
+                return
+            manager = None
+            restart_integrations = False
+            try:
+                request = self.read_body_json()
+                token = str(request.get("token") or "")
+                metadata, _raw = portability.load_stage(PROJECT_ROOT, token)
+                restart_integrations = metadata.get("kind") in {"backup", "folder"}
+                if restart_integrations:
+                    manager = get_integration_manager()
+                    manager.stop_all()
+                result = apply_staged_import(token, options=request.get("options"))
+                if restart_integrations and manager is not None:
+                    manager.start_enabled()
+                self.send_json(result)
+            except Exception as error:
+                if restart_integrations and manager is not None:
+                    try:
+                        manager.start_enabled()
+                    except Exception:
+                        pass
+                self.send_json({"ok": False, "message": f"Импорт не выполнен: {type(error).__name__}: {error}"}, 400)
+            return
+
         data = self.read_body_json()
 
         if path.startswith("/api/integrations/tribute/webhook/"):
@@ -1251,6 +1665,9 @@ class Handler(BaseHTTPRequestHandler):
 
             try:
                 manifest_config = get_integration_manager()._load_config("tribute")
+                if manifest_config.get("widget_url"):
+                    self.send_json({"status":"error", "message":"Tribute подключён по OBS-ссылке; прежний webhook отключён"}, 410)
+                    return
                 expected_secret = str(manifest_config.get("webhook_secret") or "")
                 actual_secret = unquote(path.rsplit("/", 1)[-1])
                 raw_body = getattr(self, "_last_raw_body", b"")
@@ -1634,8 +2051,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/rates":
-            rates = save_rates(data)
             with FILE_LOCK:
+                rates = save_rates(data)
                 state = normalize_state(load_json(STATE_FILE, {}))
                 donations = load_json(DONATIONS_FILE, [])
                 if not isinstance(donations, list):
@@ -1719,7 +2136,7 @@ class Handler(BaseHTTPRequestHandler):
                 elif path == "/api/integrations/restart":
                     self.send_json(manager.restart(integration_id))
                 elif path == "/api/integrations/test":
-                    result = manager.test(integration_id)
+                    result = manager.test(integration_id, cancel=bool_from_any(data.get("cancel"), False))
                     self.send_json(result, 200 if result.get("ok") else 400)
                 elif path == "/api/integrations/clear-auth":
                     result = manager.clear_auth(integration_id)
@@ -1810,10 +2227,17 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def serve_static(self, path):
-        safe_path = path.lstrip("/")
-
-        file_path = PUBLIC / safe_path
-        if not file_path.exists() or not file_path.is_file():
+        safe_path = unquote(path).replace("\\", "/").lstrip("/")
+        file_path = None
+        if portability._safe_relative_path(safe_path):
+            try:
+                public_root = PUBLIC.resolve()
+                candidate = (public_root / safe_path).resolve()
+                if candidate.is_relative_to(public_root):
+                    file_path = candidate
+            except (OSError, ValueError, RuntimeError):
+                pass
+        if file_path is None or not file_path.exists() or not file_path.is_file():
             self.send_response(404)
             self.end_headers()
             self.wfile.write("Not found".encode("utf-8"))
@@ -1843,6 +2267,7 @@ class VicThreadingHTTPServer(ThreadingHTTPServer):
 def main():
     ensure_files()
     normalize_storage()
+    WASHINGTON.start()
     manager = get_integration_manager()
 
     print("")
@@ -1874,6 +2299,7 @@ def main():
     except KeyboardInterrupt:
         print("\n[SERVER] Остановка...")
     finally:
+        WASHINGTON.stop.set()
         manager.stop_all()
         server.server_close()
         print("[SERVER] Остановлено.")

@@ -81,3 +81,9 @@ diagnostics/
 integration_inspector_reports/
 BETA_READINESS_REPORT_*.json
 BETA_READINESS_REPORT_*.md
+
+# Generated release artifacts and private integration state
+release/
+integrations/*/*_state.json
+integrations/*/*_sent.json
+integrations/washington/config.json

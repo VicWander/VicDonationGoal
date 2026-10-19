@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title VicDonationGoal v1.4.4 - Stability Check
+title VicDonationGoal v1.4.4.1 - Stability Check
 
 py -3 --version >nul 2>&1
 if %errorlevel%==0 (

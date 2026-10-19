@@ -1,7 +1,7 @@
 {
   "enabled": false,
   "streamerbot_http_url": "http://127.0.0.1:7474/DoAction",
-  "action_name": "",
+  "action_name": "оповещение о донате",
   "action_id": "",
   "poll_interval_seconds": 0.5,
   "send_existing_on_first_start": false,

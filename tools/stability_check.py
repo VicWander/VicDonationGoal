@@ -81,8 +81,10 @@ print()
 for relative in [
     "core/server.py",
     "core/donor_store.py",
+    "core/portability.py",
     "core/integration_manager.py",
     "core/public/admin.html",
+    "core/public/portability-admin.js",
     "core/public/integrations-admin.js",
     "core/public/widget.html",
     "integrations/donatty/donatty_listener.py",
@@ -117,10 +119,12 @@ for relative in [
     "13_STOP_ALL.bat",
     "integrations/donatepay/donatepay_listener.py",
     "integrations/donatex/donatex_listener.py",
-    "integrations/tribute/tribute_tunnel.py",
+    "integrations/tribute/tribute_listener.py",
     "source_registry.py",
     "tools/create_diagnostic_report.py",
     "tools/beta_readiness_check.py",
+    "tools/test_portability.py",
+    "tools/test_donationalerts_reliability.py",
     "14_CREATE_DIAGNOSTIC_REPORT.bat",
     "15_BETA_READINESS_CHECK.bat",
 ]:
@@ -129,6 +133,7 @@ for relative in [
 for relative in [
     "core/server.py",
     "core/donor_store.py",
+    "core/portability.py",
     "core/integration_manager.py",
     "integrations/donationalerts/donationalerts_integration.py",
     "integrations/donatty/donatty_listener.py",
@@ -147,10 +152,11 @@ for relative in [
     "tools/install_cloudflared.py",
     "integrations/donatepay/donatepay_listener.py",
     "integrations/donatex/donatex_listener.py",
-    "integrations/tribute/tribute_tunnel.py",
+    "integrations/tribute/tribute_listener.py",
     "source_registry.py",
     "tools/create_diagnostic_report.py",
     "tools/beta_readiness_check.py",
+    "tools/test_portability.py",
 ]:
     check_python(relative)
 
@@ -169,6 +175,36 @@ try:
         error("TTS Hub runtime import: " + (result.stderr or result.stdout).strip()[-500:])
 except Exception as exc:
     error(f"TTS Hub runtime smoke test: {type(exc).__name__}: {exc}")
+
+try:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "tools/test_portability.py")],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    if result.returncode == 0:
+        ok("Data Portability: бэкап, схема, дедупликация и импорт DA работают")
+    else:
+        error("Data Portability tests: " + (result.stderr or result.stdout).strip()[-700:])
+except Exception as exc:
+    error(f"Data Portability tests: {type(exc).__name__}: {exc}")
+
+try:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "tools/test_donationalerts_reliability.py")],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=90,
+    )
+    if result.returncode == 0:
+        ok("DonationAlerts Reliability: baseline, catch-up и сетевые статусы работают")
+    else:
+        error("DonationAlerts Reliability tests: " + (result.stderr or result.stdout).strip()[-700:])
+except Exception as exc:
+    error(f"DonationAlerts Reliability tests: {type(exc).__name__}: {exc}")
 
 state = read_json("core/data/state.json", dict)
 donations = read_json("core/data/donations.json", list)
@@ -277,7 +313,7 @@ if donatex:
     else:
         ok("DonateX poll interval безопасный")
 
-if tribute:
+if tribute and not tribute.get("widget_url"):
     if tribute.get("auto_start_tunnel") and not tribute.get("auto_install_cloudflared", True):
         warn("Tribute auto tunnel включён, но auto-install cloudflared выключен")
     else:
@@ -286,7 +322,7 @@ if tribute:
 if (ROOT / "tools/cloudflared.exe").exists():
     warn("cloudflared.exe встроен в сборку; для Beta Readiness рекомендуется установка по запросу")
 else:
-    ok("cloudflared не встроен и будет установлен только для Tribute")
+    ok("cloudflared не встроен; Tribute OBS работает без туннеля")
 
 if sb:
     sources = sb.get("send_sources", [])

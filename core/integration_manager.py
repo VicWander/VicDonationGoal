@@ -312,8 +312,17 @@ class IntegrationManager:
             status = dict(status or {})
             status["processRunning"] = bool(process)
             status["pid"] = process.pid if process else None
+            if not process:
+                status["running"] = False
+                status["connected"] = False
+                status["status"] = "error" if status.get("lastError") else "stopped"
             if process and not status.get("running"):
                 status["running"] = True
+        if integration_id == "tribute":
+            status = dict(status or {})
+            control = _load_json(self.runtime_dir / "tribute_control.json", {})
+            status["testUntil"] = control.get("testUntil", 0)
+            status["testRequestId"] = control.get("requestId")
         return status or {}
 
     def _common_state(self, enabled, configured, running, connected, status):
@@ -329,6 +338,8 @@ class IntegrationManager:
             return "unconfigured"
         if connected and not stale:
             return "degraded" if (last_error or raw in degraded_states) else "connected"
+        if raw in degraded_states and running:
+            return "degraded"
         if raw in starting_states or (running and not last_error and not stale):
             return "starting"
         if last_error:
@@ -414,6 +425,9 @@ class IntegrationManager:
             if key in secret_fields and value in (None, "", "__SET__", "__KEEP__"):
                 continue
             config[key] = value
+        if integration_id == "tribute" and config.get("widget_url"):
+            from integrations.tribute.tribute_listener import stream_url
+            stream_url(config["widget_url"])
         self._save_config(integration_id, config)
         adapter = self._adapters.get(integration_id)
         if adapter is not None:
@@ -438,7 +452,11 @@ class IntegrationManager:
         adapter = self._adapters.get(integration_id)
         if adapter is not None:
             adapter.start()
-            return {"ok": True, "message": "Интеграция запущена", "detail": self.detail(integration_id)}
+            return {
+                "ok": True,
+                "message": "Модуль запущен; живое подключение устанавливается",
+                "detail": self.detail(integration_id),
+            }
         if manifest.get("kind") != "subprocess":
             return {"ok": False, "message": "Для интеграции не зарегистрирован runtime adapter"}
         with self._lock:
@@ -545,14 +563,31 @@ class IntegrationManager:
         except (URLError, TimeoutError, OSError) as error:
             return {"ok": False, "message": f"Публичный Tribute webhook недоступен: {type(error).__name__}: {error}", "status": self.integration_status("tribute")}
 
-    def test(self, integration_id):
+    def test(self, integration_id, cancel=False):
         manifest = self._manifest(integration_id)
         adapter = self._adapters.get(integration_id)
+        if integration_id == "tribute" and cancel:
+            _save_json(self.runtime_dir / "tribute_control.json", {})
+            return {"ok":True, "message":"Проверка завершена. Новые донаты учитываются как обычно."}
         if adapter is not None:
             return adapter.test_connection()
         config = self._load_config(integration_id)
         if not self._configured(manifest, config):
             return {"ok": False, "message": "Не заполнены обязательные настройки"}
+        if integration_id == "tribute":
+            from integrations.tribute.tribute_listener import stream_url
+            stream_url(config.get("widget_url"))
+            request_id = str(uuid.uuid4())
+            until = time.time() + 120
+            _save_json(self.runtime_dir / "tribute_control.json", {"requestId":request_id, "testUntil":until})
+            result = self.start(integration_id)
+            if not result.get("ok"):
+                _save_json(self.runtime_dir / "tribute_control.json", {})
+                return result
+            counted = bool(config.get("count_during_test", False))
+            return {"ok":True, "message":"Проверка на 2 минуты: нажмите «Отправить тестовый донат» в Tribute. " +
+                    ("Донаты будут учитываться в истории и цели." if counted else "Все события за эти 2 минуты показываются только для проверки и НЕ учитываются в истории и цели."),
+                    "level":"warning", "testUntil":until, "requestId":request_id}
         result = self.start(integration_id)
         if not result.get("ok"):
             return result
@@ -560,8 +595,6 @@ class IntegrationManager:
         while time.time() < deadline:
             status = self.integration_status(integration_id)
             if status.get("connected"):
-                if integration_id == "tribute":
-                    return self._test_tribute_webhook(config, status)
                 return {"ok": True, "message": "Подключение работает", "status": status}
             if status.get("lastError"):
                 return {"ok": False, "message": str(status.get("lastError")), "status": status}

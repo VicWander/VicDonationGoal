@@ -2,11 +2,16 @@ const integrationState = {
   bootstrap: { integrations: [], onboarding: {} },
   selectedId: "",
   detail: null,
-  refreshing: false
+  refreshing: false,
+  onboardingDraft: null
 };
 
 function integrationStatusLabel(item) {
   const state = item?.commonState || item?.state;
+  const raw = String(item?.status?.status || "").toLowerCase();
+  if (state === "degraded" && raw === "reconnecting") return "Переподключение";
+  if (state === "error" && raw === "outage") return "Долгий обрыв";
+  if (state === "error" && raw === "authorization_required") return "Нужна авторизация";
   const map = {
     connected: "Подключено", degraded: "Требует внимания", starting: "Подключение",
     unconfigured: "Не настроено", not_configured: "Не настроено", disabled: "Выключено",
@@ -38,11 +43,16 @@ function integrationMarkdown(text) {
 function integrationIsPanelActive() {
   return document.getElementById("integrationsPanel")?.classList.contains("active");
 }
-function integrationResult(message, ok = true) {
+function integrationResult(message, ok = true, level = "") {
   const box = document.getElementById("integrationActionResult");
   box.hidden = false;
-  box.className = `integration-result ${ok ? "ok" : "error"}`;
+  box.className = `integration-result ${!ok ? "error" : level === "warning" ? "warn" : "ok"}`;
   box.textContent = message || (ok ? "Готово" : "Ошибка");
+}
+function integrationFormatTime(value) {
+  if (!value) return "—";
+  const parsed = typeof value === "number" ? new Date(value * 1000) : new Date(String(value).replace(" ", "T"));
+  return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toLocaleString("ru-RU");
 }
 function integrationSelectedSummary() {
   return integrationState.bootstrap.integrations.find(item => item.id === integrationState.selectedId);
@@ -79,7 +89,7 @@ function renderIntegrationBootstrap() {
   document.getElementById("integrationTotalStat").textContent = list.length;
   document.getElementById("integrationEnabledStat").textContent = list.filter(item => item.enabled).length;
   document.getElementById("integrationConnectedStat").textContent = list.filter(item => item.connected).length;
-  document.getElementById("integrationErrorStat").textContent = list.filter(item => ["error","degraded"].includes(item.commonState) || item.status?.lastError || item.status?.last_error).length;
+  document.getElementById("integrationErrorStat").textContent = list.filter(item => ["error","degraded"].includes(item.commonState)).length;
   document.getElementById("integrationListCount").textContent = `${list.length} модулей`;
 
   document.getElementById("integrationCards").innerHTML = list.map(item => `
@@ -97,7 +107,12 @@ function renderIntegrationBootstrap() {
   const onboardingBox = document.getElementById("integrationOnboarding");
   onboardingBox.hidden = Boolean(onboarding.completed);
   if (!onboarding.completed) {
-    const selected = new Set(onboarding.selected || []);
+    // The status poll refreshes this panel every four seconds. Keep the user's
+    // unfinished choices locally so a background refresh cannot reset them.
+    if (!(integrationState.onboardingDraft instanceof Set)) {
+      integrationState.onboardingDraft = new Set(onboarding.selected || []);
+    }
+    const selected = integrationState.onboardingDraft;
     document.getElementById("integrationOnboardingChoices").innerHTML = list.map(item => `
       <label class="integration-choice">
         <input type="checkbox" value="${escapeHtml(item.id)}" ${selected.has(item.id) ? "checked" : ""} />
@@ -105,6 +120,8 @@ function renderIntegrationBootstrap() {
         <span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.description)}</small></span>
       </label>
     `).join("");
+  } else {
+    integrationState.onboardingDraft = null;
   }
 }
 
@@ -133,12 +150,59 @@ function renderIntegrationDetail(fillFields = false) {
   document.getElementById("integrationEnabledInput").checked = Boolean(summary.enabled);
   document.getElementById("integrationStartButton").disabled = !summary.enabled || summary.running;
   document.getElementById("integrationStopButton").disabled = !summary.running;
+  document.getElementById("integrationTestButton").textContent = summary.id === "tribute" ? "Проверить донат из Tribute" : "Проверить подключение";
   const authorizeButton = document.getElementById("integrationAuthorizeButton");
   authorizeButton.hidden = !manifest.capabilities?.oauth;
   authorizeButton.dataset.authorizeUrl = manifest.authStartPath || summary.status?.authorizeUrl || "";
   document.getElementById("integrationClearAuthButton").hidden = !manifest.capabilities?.clearAuth;
   document.getElementById("integrationTechnical").textContent = JSON.stringify(summary, null, 2);
   document.getElementById("integrationGuide").innerHTML = integrationMarkdown(detail.guide);
+  const connectionSummary = document.getElementById("integrationConnectionSummary");
+  if (summary.id === "donationalerts") {
+    const status = summary.status || {};
+    const api = status.lastApiSuccessAt
+      ? "API отвечает"
+      : status.authorized
+        ? "Авторизованы · API ещё не проверен"
+        : "Нужна авторизация";
+    const live = status.connected
+      ? "Подключён"
+      : status.running
+        ? "Переподключается"
+        : status.lastError
+          ? "Требуется действие"
+          : "Остановлен";
+    const catchUp = status.catchUp || {};
+    const catchUpText = catchUp.status === "complete"
+      ? `Готово · добавлено ${catchUp.added || 0}`
+      : catchUp.status === "baseline_created" || catchUp.status === "baseline_reset"
+        ? "Стартовая точка создана"
+        : catchUp.status === "limited_window"
+          ? `Проверено ограниченное окно · ${catchUp.added || 0}`
+          : "Ещё не выполнялся";
+    connectionSummary.hidden = false;
+    connectionSummary.innerHTML = `
+      <div><small>OAuth и API</small><strong>${escapeHtml(api)}</strong></div>
+      <div><small>Новые донаты</small><strong>${escapeHtml(live)}</strong></div>
+      <div><small>Последнее подключение</small><strong>${escapeHtml(integrationFormatTime(status.lastConnectedAt))}</strong></div>
+      <div><small>Догон после обрыва</small><strong>${escapeHtml(catchUpText)}</strong></div>`;
+  } else if (summary.id === "tribute") {
+    const status = summary.status || {};
+    const active = Number(status.testUntil || 0) > Date.now() / 1000;
+    const lastTest = status.lastTest;
+    connectionSummary.hidden = false;
+    connectionSummary.innerHTML = `
+      <div><small>Поток донатов</small><strong>${summary.connected && !status.stale ? "Подключён" : "Нет соединения"}</strong></div>
+      <div><small>Режим проверки</small><strong>${active ? `До ${escapeHtml(integrationFormatTime(Number(status.testUntil)))}` : "Выключен · донаты учитываются"}</strong>
+        ${active ? '<button type="button" id="tributeEndTestButton" class="secondary">Завершить проверку</button>' : ""}</div>
+      <div><small>Последняя проверка</small><strong>${lastTest ? escapeHtml(`${lastTest.username} · ${lastTest.amount} ${lastTest.currency}`) : "Ещё не получена"}</strong>
+        ${lastTest ? `<small>${lastTest.counted ? "Учёт включён" : "Не добавлено в историю и цель"} · ${escapeHtml(integrationFormatTime(lastTest.receivedAt))}</small>` : ""}</div>
+      <div><small>Ожидают передачи в Core</small><strong>${Number(status.pendingCount || 0)}</strong></div>`;
+    document.getElementById("tributeEndTestButton")?.addEventListener("click", () => integrationCommand("/api/integrations/test", {cancel:true}));
+  } else {
+    connectionSummary.hidden = true;
+    connectionSummary.innerHTML = "";
+  }
 
   if (fillFields || !document.getElementById("integrationConfigFields").children.length) {
     document.getElementById("integrationConfigFields").innerHTML = (manifest.fields || []).map(field => {
@@ -178,7 +242,7 @@ function collectIntegrationConfig() {
 async function integrationCommand(path, extra = {}) {
   try {
     const result = await postJson(path, { id: integrationState.selectedId, ...extra });
-    integrationResult(result.message || "Готово", Boolean(result.ok ?? true));
+    integrationResult(result.message || "Готово", Boolean(result.ok ?? true), result.level || "");
     await refreshIntegrations(true);
     return result;
   } catch (error) {
@@ -201,6 +265,13 @@ document.getElementById("integrationCards")?.addEventListener("click", event => 
   const card = event.target.closest("[data-integration-id]");
   if (card) loadIntegrationDetail(card.dataset.integrationId);
 });
+document.getElementById("integrationOnboardingChoices")?.addEventListener("change", event => {
+  const input = event.target.closest('input[type="checkbox"][value]');
+  if (!input) return;
+  if (!(integrationState.onboardingDraft instanceof Set)) integrationState.onboardingDraft = new Set();
+  if (input.checked) integrationState.onboardingDraft.add(input.value);
+  else integrationState.onboardingDraft.delete(input.value);
+});
 document.querySelector('[data-panel="integrationsPanel"]')?.addEventListener("click", () => refreshIntegrations(true));
 document.getElementById("integrationRefreshButton")?.addEventListener("click", () => refreshIntegrations(true));
 document.getElementById("integrationSaveButton")?.addEventListener("click", () => integrationCommand("/api/integrations/config", { config: collectIntegrationConfig() }));
@@ -221,9 +292,12 @@ document.getElementById("integrationClearAuthButton")?.addEventListener("click",
   if (confirm("Удалить локальные токены и остановить интеграцию?")) integrationCommand("/api/integrations/clear-auth");
 });
 document.getElementById("integrationFinishOnboarding")?.addEventListener("click", async () => {
-  const selected = [...document.querySelectorAll("#integrationOnboardingChoices input:checked")].map(input => input.value);
+  const selected = integrationState.onboardingDraft instanceof Set
+    ? [...integrationState.onboardingDraft]
+    : [...document.querySelectorAll("#integrationOnboardingChoices input:checked")].map(input => input.value);
   try {
     integrationState.bootstrap = await postJson("/api/integrations/onboarding", { completed: true, selected });
+    integrationState.onboardingDraft = null;
     renderIntegrationBootstrap();
     refreshIntegrations(true);
   } catch (error) { integrationResult(error.message, false); }

@@ -5,8 +5,8 @@
   "icon": "TR",
   "order": 80,
   "kind": "subprocess",
-  "entrypoint": "tribute_tunnel.py",
-  "description": "Experimental: официальный подписанный webhook Tribute через автоматический Cloudflare Quick Tunnel.",
+  "entrypoint": "tribute_listener.py",
+  "description": "Донаты Tribute напрямую по OBS-ссылке. Без браузера и Cloudflare.",
   "configFile": "tribute_config.json",
   "configExampleFile": "tribute_config.example.json",
   "guideFile": "GUIDE.md",
@@ -14,10 +14,10 @@
   "statusStaleSeconds": 120,
   "testWaitSeconds": 20,
   "requiredFields": [
-    "api_key",
-    "webhook_secret"
+    "widget_url"
   ],
   "secretFields": [
+    "widget_url",
     "api_key",
     "webhook_secret"
   ],
@@ -30,71 +30,28 @@
   },
   "fields": [
     {
-      "key": "api_key",
-      "label": "API-ключ Tribute",
+      "key": "widget_url",
+      "label": "Ссылка для OBS из Tribute",
       "type": "password",
-      "placeholder": "Api-Key из Tribute",
-      "help": "Используется для проверки HMAC-SHA256 подписи webhook."
+      "placeholder": "https://obs.tribute.tg/obs/alerts?...",
+      "help": "В Tribute откройте «Донаты и цели» → интеграцию с OBS → «Копировать ссылку для OBS». Вставьте ссылку целиком."
     },
     {
-      "key": "webhook_secret",
-      "label": "Секрет в адресе webhook",
-      "type": "password",
-      "placeholder": "Случайная длинная строка",
-      "help": "Не API-ключ. Придумайте длинную случайную строку для защиты URL."
+      "key": "count_during_test",
+      "label": "Учитывать донаты во время проверки",
+      "type": "checkbox",
+      "default": false,
+      "help": "Действует только в двухминутном режиме проверки. Вне проверки учитываются все донаты, включая Anonymous на 999 ₽. Tribute не помечает тесты: тест, отправленный вне режима проверки, тоже будет учтён."
     },
     {
-      "key": "cloudflared_path",
-      "label": "Путь к cloudflared.exe",
-      "type": "text",
-      "default": "tools/cloudflared.exe",
-      "help": "Сначала запустите исправленный 12_INSTALL_CLOUDFLARED.bat."
-    },
-    {
-      "key": "auto_install_cloudflared",
-      "label": "Автоматически скачать cloudflared, если его нет",
+      "key": "use_system_proxy",
+      "label": "Использовать системный прокси",
       "type": "checkbox",
       "default": true,
-      "help": "При первом запуске Tribute VicDonationGoal сам скачает официальный cloudflared.exe."
-    },
-    {
-      "key": "auto_start_tunnel",
-      "label": "Автоматически запускать Quick Tunnel",
-      "type": "checkbox",
-      "default": true
-    },
-    {
-      "key": "tunnel_protocol",
-      "label": "Протокол Cloudflare Tunnel",
-      "type": "select",
-      "default": "http2",
-      "options": [
-        {
-          "value": "http2",
-          "label": "HTTP/2 — рекомендуется при таймаутах QUIC"
-        },
-        {
-          "value": "auto",
-          "label": "Auto — Cloudflare выбирает протокол"
-        },
-        {
-          "value": "quic",
-          "label": "QUIC — UDP 7844"
-        }
-      ],
-      "help": "HTTP/2 использует TCP и обычно стабильнее, если UDP/QUIC блокируется провайдером или фаерволом."
-    },
-    {
-      "key": "public_base_url",
-      "label": "Готовый публичный HTTPS URL (если туннель внешний)",
-      "type": "text",
-      "placeholder": "https://example.com",
-      "help": "Оставьте пустым при использовании cloudflared."
+      "help": "Оставьте включённым для работы через системный прокси/VPN. После изменения сохраните настройки и перезапустите интеграцию."
     }
   ],
-  "publicStatusFields": [
-    "publicWebhookUrl"
-  ],
+  "publicStatusFields": [],
   "stability": "experimental",
   "dashboardVisible": true
 }

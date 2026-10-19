@@ -2,34 +2,61 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>VicDonationGoal v1.4.4 — Closed Beta</title>
+  <title>VicDonationGoal v1.4.6 — Reliability &amp; Safe Update</title>
   <link rel="stylesheet" href="admin.css" />
   <link rel="stylesheet" href="admin-theme.css" />
 </head>
 <body>
+  <div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">
+      <strong>VicDonationGoal</strong>
+      <span>v1.4.6</span>
+    </div>
+    <nav class="admin-tabs" aria-label="Основные разделы">
+      <button class="admin-tab active" type="button" data-panel="donationsPanel"><span class="nav-icon">$</span><span>Донаты</span></button>
+      <button class="admin-tab" type="button" data-panel="ttsPanel"><span class="nav-icon">◉</span><span>Озвучка (TTS)</span></button>
+      <button class="admin-tab" type="button" data-panel="integrationsPanel"><span class="nav-icon">◇</span><span>Интеграции</span></button>
+    </nav>
+    <div class="sidebar-section-label donation-sidebar-section-label">Разделы донатов</div>
+    <nav class="donation-section-nav" aria-label="Разделы донатов">
+      <button type="button" class="donation-section-tab active" data-donation-section="donationMonitoringView">Мониторинг</button>
+      <button type="button" class="donation-section-tab" data-donation-section="donationManagementView">Управление</button>
+      <button type="button" class="donation-section-tab" data-donation-section="donationHistoryTopView">История и Top</button>
+      <button type="button" class="donation-section-tab" data-donation-section="donationStatusView">Состояние</button>
+      <button type="button" class="donation-section-tab" data-donation-section="donationSettingsView">Настройки</button>
+    </nav>
+    <div class="sidebar-section-label tts-sidebar-section-label">Разделы озвучки</div>
+    <nav class="tts-section-nav" aria-label="Разделы озвучки">
+      <button type="button" class="tts-subtab active" data-tts-view="ttsQueueView">Очередь</button>
+      <button type="button" class="tts-subtab" data-tts-view="ttsProfilesView">Голосовые профили</button>
+      <button type="button" class="tts-subtab" data-tts-view="ttsRulesView">Правила</button>
+      <button type="button" class="tts-subtab" data-tts-view="ttsSettingsView">Настройки</button>
+      <button type="button" class="tts-subtab" data-tts-view="ttsHistoryView">История</button>
+      <button type="button" class="tts-subtab" data-tts-view="ttsLogsView">Логи</button>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="link-button secondary" data-docs-link="true" href="/docs/index.html" target="_blank">Документация</a>
+      <a class="link-button secondary" href="/widget.html" target="_blank">Виджет</a>
+      <div id="sidebarThemeSlot"></div>
+    </div>
+  </aside>
+
   <main class="page">
     <header class="header">
       <div>
-        <h1>VicDonationGoal v1.4.4 <span class="release-badge">Closed Beta</span></h1>
-        <p>Donation Goal, TopDonation, TTS Hub и модульные интеграции донат-сервисов</p>
+        <div class="header-kicker">Личная сборка · Reliability &amp; Safe Update</div>
+        <h1 id="pageSectionTitle">Мониторинг</h1>
+        <p>История, TopDonation, TTS Hub и подключения теперь переносятся между версиями</p>
       </div>
       <div class="header-actions">
-        <a class="link-button secondary" href="/docs/index.html" target="_blank">Документация</a>
         <a class="link-button secondary" href="/api/donations" target="_blank">JSON истории</a>
-        <a class="link-button" href="/widget.html" target="_blank">Открыть виджет</a>
       </div>
     </header>
 
-    <nav class="admin-tabs" aria-label="Разделы админки">
-      <button class="admin-tab active" type="button" data-panel="donationsPanel">Донаты</button>
-      <button class="admin-tab" type="button" data-panel="ttsPanel">TTS Hub</button>
-      <button class="admin-tab" type="button" data-panel="integrationsPanel">Интеграции</button>
-    </nav>
-
     <div id="donationsPanel" class="admin-panel active">
-
-    <section class="grid top-grid">
-      <section class="card big-card">
+    <section id="donationMonitoringView" class="donation-section-view active">
+      <section class="card big-card goal-monitor-card">
         <div class="card-title">
           <h2>Текущая цель</h2>
           <span class="muted" id="progressText">0%</span>
@@ -54,41 +81,54 @@
           <div class="stat"><span class="stat-label">Событий</span><span class="stat-value" id="countPreview">0</span></div>
         </div>
       </section>
+    </section>
 
-      <section class="card">
-        <div class="card-title"><h2>Настроить цель</h2></div>
-        <label>Название цели<input id="titleInput" value="Сбор на цель" /></label>
-        <div class="form-row">
-          <label>Стартовая сумма<input id="baseAmountInput" type="number" value="0" /></label>
-          <label>Цель<input id="goalInput" type="number" value="10000" /></label>
+    <section id="donationManagementView" class="donation-section-view">
+      <section class="grid management-grid">
+        <section class="card">
+          <div class="card-title"><h2>Настроить цель</h2></div>
+          <label>Название цели<input id="titleInput" value="Сбор на цель" /></label>
+          <div class="form-row">
+            <label>Стартовая сумма<input id="baseAmountInput" type="number" value="0" /></label>
+            <label>Цель<input id="goalInput" type="number" value="10000" /></label>
+          </div>
+          <label>Валюта цели<input id="currencyInput" value="RUB" /></label>
+          <button id="saveGoalButton">Сохранить цель</button>
+          <p class="hint">Стартовая сумма — деньги, которые уже есть, но не привязаны к отдельному донату.</p>
+        </section>
+
+        <section class="card">
+          <div class="card-title"><h2>Добавить донат вручную</h2></div>
+          <label>Имя<input id="usernameInput" value="Тестовый зритель" /></label>
+          <div class="form-row">
+            <label>Сумма<input id="amountInput" type="number" value="100" /></label>
+            <label>Валюта<input id="donationCurrencyInput" value="RUB" /></label>
+          </div>
+          <label>Сообщение<input id="messageInput" value="На тест полоски" /></label>
+          <label class="checkbox-line"><input id="includeInput" type="checkbox" checked />Добавлять в текущий сбор</label>
+          <label class="checkbox-line"><input id="notifyInput" type="checkbox" checked />Отправить обычное оповещение в Streamer.bot</label>
+          <label class="checkbox-line"><input id="eventInput" type="checkbox" checked />Запустить донат-ивенты</label>
+          <label class="checkbox-line"><input id="speakInput" type="checkbox" checked />Озвучить сообщение через TTS Hub</label>
+          <label class="checkbox-line"><input id="includeTopInput" type="checkbox" checked />Учитывать в TopDonation</label>
+          <button id="addDonationButton">Добавить донат</button>
+        </section>
+      </section>
+
+      <section class="card compact-management-card">
+        <div class="card-title"><div><h2>Управление текущим сбором</h2><p class="hint">Опасные действия отделены от истории.</p></div></div>
+        <div class="danger-zone inline">
+          <button id="undoButton" class="secondary">Удалить последний донат</button>
+          <button id="resetButton" class="danger">Сбросить текущий сбор</button>
         </div>
-        <label>Валюта цели<input id="currencyInput" value="RUB" /></label>
-        <button id="saveGoalButton">Сохранить цель</button>
-        <p class="hint">Стартовая сумма — деньги, которые уже есть, но не привязаны к отдельному донату.</p>
+        <p class="hint">Сброс сохранит историю и TopDonation, но уберёт старые донаты из текущей цели.</p>
       </section>
     </section>
 
-    <section class="grid">
-      <section class="card">
-        <div class="card-title"><h2>Добавить донат вручную</h2></div>
-        <label>Имя<input id="usernameInput" value="Тестовый зритель" /></label>
-        <div class="form-row">
-          <label>Сумма<input id="amountInput" type="number" value="100" /></label>
-          <label>Валюта<input id="donationCurrencyInput" value="RUB" /></label>
-        </div>
-        <label>Сообщение<input id="messageInput" value="На тест полоски" /></label>
-        <label class="checkbox-line"><input id="includeInput" type="checkbox" checked />Добавлять в текущий сбор</label>
-        <label class="checkbox-line"><input id="notifyInput" type="checkbox" checked />Отправить обычное оповещение в Streamer.bot</label>
-        <label class="checkbox-line"><input id="eventInput" type="checkbox" checked />Запустить донат-ивенты</label>
-        <label class="checkbox-line"><input id="speakInput" type="checkbox" checked />Озвучить сообщение через TTS Hub</label>
-        <label class="checkbox-line"><input id="includeTopInput" type="checkbox" checked />Учитывать в TopDonation</label>
-        <button id="addDonationButton">Добавить донат</button>
-      </section>
-
-      <section class="card">
+    <section id="donationHistoryTopView" class="donation-section-view">
+      <section class="card history-filter-card">
         <div class="card-title"><h2>Фильтры истории</h2></div>
-        <label>Поиск<input id="searchInput" placeholder="имя, сообщение, сумма..." /></label>
-        <div class="form-row">
+        <div class="history-filter-grid">
+          <label>Поиск<input id="searchInput" placeholder="имя, сообщение, сумма..." /></label>
           <label>Источник
             <select id="sourceFilter">
               <option value="all">Все</option>
@@ -105,15 +145,78 @@
             </select>
           </label>
         </div>
-        <div class="danger-zone inline">
-          <button id="undoButton" class="secondary">Удалить последний</button>
-          <button id="resetButton" class="danger">Сбросить сбор</button>
+      </section>
+
+      <section class="donations-subtabs" aria-label="Данные о донатах">
+        <button type="button" class="donation-subtab active" data-donation-view="historyDonationsView">История</button>
+        <button type="button" class="donation-subtab" data-donation-view="topDonorsView">TopDonation</button>
+      </section>
+
+      <section id="historyDonationsView" class="donation-view active">
+      <section class="card">
+        <div class="card-title history-title-row">
+          <div>
+            <h2>История донатов</h2>
+            <span class="muted" id="eventsCount">0 событий</span>
+          </div>
+          <div class="history-actions">
+            <a class="link-button secondary" href="/api/donations/export.csv" target="_blank">Экспорт CSV</a>
+          </div>
         </div>
-        <p class="hint">Сброс сбора сохранит историю, но уберёт старые донаты из текущей цели.</p>
+
+        <div class="bulk-flags" id="bulkFlagsPanel">
+          <span class="bulk-flags-title">Все записи:</span>
+          <label title="Включить или выключить учёт в текущем сборе у всех донатов"><input id="bulkGoalToggle" type="checkbox" />Сбор</label>
+          <label title="Включить или выключить обычные оповещения у всех донатов"><input id="bulkNotifyToggle" type="checkbox" />Опов.</label>
+          <label title="Включить или выключить донат-ивенты у всех донатов"><input id="bulkEventToggle" type="checkbox" />Ивент</label>
+          <label title="Включить или выключить TTS у всех донатов"><input id="bulkTtsToggle" type="checkbox" />TTS</label>
+          <label title="Включить или выключить учёт в TopDonation у всех донатов"><input id="bulkTopToggle" type="checkbox" />Топ</label>
+          <span class="hint inline-hint">Смешанное состояние обозначается чертой. Изменение применяется ко всей истории.</span>
+        </div>
+
+        <div id="eventsTableBody" class="donation-history-list">
+          <div class="empty-cell">Пока донатов нет</div>
+        </div>
+      </section>
+      </section>
+
+      <section id="topDonorsView" class="donation-view">
+      <section class="card">
+        <div class="card-title history-title-row">
+          <div>
+            <h2>TopDonation</h2>
+            <span class="muted" id="topDonorsCount">0 донатеров</span>
+          </div>
+          <div class="history-actions top-toolbar">
+            <input id="topDonorsSearch" class="compact-input" placeholder="ник, алиас, заметка или текст доната..." />
+            <label class="checkbox-line compact-check"><input id="showExcludedDonors" type="checkbox" />Показать исключённых</label>
+          </div>
+        </div>
+        <div class="top-summary-strip">
+          <div><span>Общая сумма рейтинга</span><strong id="topGrandTotal">0 RUB</strong></div>
+          <div><span>Закреплено</span><strong id="topPinnedCount">0</strong></div>
+          <div><span>В рейтинге</span><strong id="topRankingCount">0</strong></div>
+        </div>
+
+        <section id="pinnedDonorsSection" class="donor-group" hidden>
+          <div class="donor-group-title"><h3>Закреплённые</h3><span class="muted">Показываются отдельно над рейтингом</span></div>
+          <div id="pinnedDonorsList" class="donor-list"></div>
+        </section>
+
+        <section class="donor-group">
+          <div class="donor-group-title"><h3>Рейтинг</h3><span class="muted">Сумма за всё время, независимо от текущего сбора</span></div>
+          <div id="topDonorsList" class="donor-list"><div class="empty-cell">Загрузка...</div></div>
+        </section>
+
+        <section id="excludedDonorsSection" class="donor-group" hidden>
+          <div class="donor-group-title"><h3>Исключённые из топа</h3></div>
+          <div id="excludedDonorsList" class="donor-list"></div>
+        </section>
+      </section>
       </section>
     </section>
 
-    <section class="grid">
+    <section id="donationStatusView" class="donation-section-view">
       <section class="card status-dashboard-card">
         <div class="card-title status-dashboard-title">
           <div>
@@ -148,87 +251,83 @@
 
         <p class="hint">Лампочка показывает общее состояние. Подробные настройки, логи и перезапуск находятся в разделе «Интеграции».</p>
       </section>
+    </section>
 
-      <section class="card">
-        <div class="card-title"><h2>Курсы валют к RUB</h2></div>
-        <div class="form-row rates-row">
-          <label>USD → RUB<input id="rateUSDInput" type="number" step="0.01" value="90" /></label>
-          <label>EUR → RUB<input id="rateEURInput" type="number" step="0.01" value="100" /></label>
-        </div>
-        <div class="form-row rates-row">
-          <label>KZT → RUB<input id="rateKZTInput" type="number" step="0.0001" value="0.18" /></label>
-          <label>Доп. курсы JSON<input id="extraRatesInput" placeholder='{"UAH":2.2,"BYN":28}' /></label>
-        </div>
-        <button id="saveRatesButton">Сохранить курсы</button>
-        <p class="hint">Курс означает, сколько рублей стоит 1 единица валюты. RUB всегда равен 1.</p>
+    <section id="donationSettingsView" class="donation-section-view">
+      <section class="grid settings-grid">
+        <section class="card">
+          <div class="card-title"><h2>Курсы валют к RUB</h2></div>
+          <div class="form-row rates-row">
+            <label>USD → RUB<input id="rateUSDInput" type="number" step="0.01" value="90" /></label>
+            <label>EUR → RUB<input id="rateEURInput" type="number" step="0.01" value="100" /></label>
+          </div>
+          <div class="form-row rates-row">
+            <label>KZT → RUB<input id="rateKZTInput" type="number" step="0.0001" value="0.18" /></label>
+            <label>Доп. курсы JSON<input id="extraRatesInput" placeholder='{"UAH":2.2,"BYN":28}' /></label>
+          </div>
+          <button id="saveRatesButton">Сохранить курсы</button>
+          <p class="hint">Курс означает, сколько рублей стоит 1 единица валюты. RUB всегда равен 1.</p>
+        </section>
+
+        <section class="card portability-summary-card">
+          <div class="card-title"><div><h2>Переносимость данных</h2><p class="hint">Версионированные резервные копии с проверкой схемы и контрольных сумм.</p></div><span class="badge-soft" id="portabilitySchemaBadge">Схема —</span></div>
+          <div class="portability-stats">
+            <div><span>Пользовательских файлов</span><strong id="portabilityFileCount">—</strong></div>
+            <div><span>Объём данных</span><strong id="portabilityDataSize">—</strong></div>
+            <div><span>Последний бэкап</span><strong id="portabilityLastBackup">—</strong></div>
+          </div>
+          <a class="link-button" href="/api/portability/backup" id="downloadBackupButton">Создать и скачать полный бэкап</a>
+          <p class="portability-secret-warning">Полный бэкап содержит настройки, токены и секреты. Не отправляйте его другим людям. Для диагностики используйте отдельный очищенный отчёт.</p>
+        </section>
       </section>
-    </section>
 
-    <section class="donations-subtabs" aria-label="Данные о донатах">
-      <button type="button" class="donation-subtab active" data-donation-view="historyDonationsView">История</button>
-      <button type="button" class="donation-subtab" data-donation-view="topDonorsView">Топ</button>
-    </section>
-
-    <section id="historyDonationsView" class="donation-view active">
-      <section class="card">
-        <div class="card-title history-title-row">
-          <div>
-            <h2>История донатов</h2>
-            <span class="muted" id="eventsCount">0 событий</span>
-          </div>
-          <div class="history-actions">
-            <a class="link-button secondary" href="/api/donations/export.csv" target="_blank">Экспорт CSV</a>
-          </div>
+      <details class="card portability-help-card" open>
+        <summary>Как работают бэкапы, импорт и восстановление</summary>
+        <div class="portability-help-grid">
+          <div><strong>Полный бэкап</strong><p>Создаёт ZIP со всей пользовательской частью программы: историей, TopDonation, целью, курсами, подключениями, токенами, правилами Streamer.bot и TTS. Код программы, зависимости и диагностические логи в него не входят.</p></div>
+          <div><strong>Автоматическая защита</strong><p>Перед любым импортом или восстановлением программа сначала сохраняет текущее состояние в <code>backups/automatic</code>. Если применение завершится ошибкой, данные автоматически откатываются из этой копии.</p></div>
+          <div><strong>Проверка до применения</strong><p>Архив или файл сначала только читается: проверяются версия схемы, структура JSON, допустимые пути, размеры и контрольные суммы. До нажатия «Применить» текущие данные не меняются.</p></div>
+          <div><strong>Восстановление</strong><p>Кнопка «Проверить» у локальной копии открывает её предпросмотр. После подтверждения пользовательские файлы заменяются содержимым бэкапа; для подключений и TTS программа попросит перезапуск.</p></div>
         </div>
+        <p class="hint portability-help-note"><b>Важно:</b> полный бэкап предназначен только для тебя — внутри есть секреты авторизации. Для отправки мне или тестерам используй диагностический отчёт, он очищен от токенов.</p>
+      </details>
 
-        <div class="bulk-flags" id="bulkFlagsPanel">
-          <span class="bulk-flags-title">Все записи:</span>
-          <label title="Включить или выключить учёт в текущем сборе у всех донатов"><input id="bulkGoalToggle" type="checkbox" />Сбор</label>
-          <label title="Включить или выключить обычные оповещения у всех донатов"><input id="bulkNotifyToggle" type="checkbox" />Опов.</label>
-          <label title="Включить или выключить донат-ивенты у всех донатов"><input id="bulkEventToggle" type="checkbox" />Ивент</label>
-          <label title="Включить или выключить TTS у всех донатов"><input id="bulkTtsToggle" type="checkbox" />TTS</label>
-          <label title="Включить или выключить учёт в TopDonation у всех донатов"><input id="bulkTopToggle" type="checkbox" />Топ</label>
-          <span class="hint inline-hint">Смешанное состояние обозначается чертой. Изменение применяется ко всей истории.</span>
-        </div>
-
-        <div id="eventsTableBody" class="donation-history-list">
-          <div class="empty-cell">Пока донатов нет</div>
+      <section class="card portability-card">
+        <div class="card-title"><div><h2>Импорт и восстановление</h2><p class="hint">Сначала программа показывает изменения. Применение всегда начинается с автоматического бэкапа текущих данных.</p></div></div>
+        <div class="portability-actions-grid">
+          <label class="file-action">
+            <span><b>Восстановить полный бэкап</b><small>История, TopDonation, цели, интеграции, токены, Streamer.bot и TTS</small></span>
+            <input id="backupRestoreInput" type="file" accept=".zip,application/zip" />
+          </label>
+          <label class="file-action">
+            <span><b>Перенести старую папку</b><small>Выберите корень предыдущей версии VicDonationGoal</small></span>
+            <input id="oldVersionFolderInput" type="file" webkitdirectory directory multiple />
+          </label>
+          <label class="file-action">
+            <span><b>Импортировать donations.json</b><small>Добавляются только отсутствующие записи, дубли пропускаются</small></span>
+            <input id="donationsImportInput" type="file" accept=".json,application/json" />
+          </label>
+          <label class="file-action">
+            <span><b>Импортировать рейтинг DonationAlerts</b><small>Стандартный donations.xls изменяет только TopDonation</small></span>
+            <input id="donationAlertsImportInput" type="file" accept=".xls,.html,text/html,application/vnd.ms-excel" />
+          </label>
         </div>
       </section>
-    </section>
 
-    <section id="topDonorsView" class="donation-view">
+      <section id="portabilityPreview" class="card portability-preview" hidden>
+        <div class="card-title"><div><h2>Предпросмотр импорта</h2><p class="hint" id="portabilityPreviewSummary">Файл проверяется...</p></div><span class="badge-soft" id="portabilityPreviewKind">Импорт</span></div>
+        <div id="portabilityPreviewWarnings" class="portability-warnings"></div>
+        <div id="portabilityPreviewItems" class="portability-preview-items"></div>
+        <label id="portabilityIncludeGoalRow" class="checkbox-line" hidden><input id="portabilityIncludeGoal" type="checkbox" />Добавить новые записи donations.json в текущий сбор</label>
+        <div class="danger-zone inline">
+          <button type="button" id="portabilityApplyButton">Создать бэкап и применить</button>
+          <button type="button" id="portabilityCancelButton" class="secondary">Отмена</button>
+        </div>
+      </section>
+
       <section class="card">
-        <div class="card-title history-title-row">
-          <div>
-            <h2>TopDonation</h2>
-            <span class="muted" id="topDonorsCount">0 донатеров</span>
-          </div>
-          <div class="history-actions top-toolbar">
-            <input id="topDonorsSearch" class="compact-input" placeholder="ник, алиас, заметка или текст доната..." />
-            <label class="checkbox-line compact-check"><input id="showExcludedDonors" type="checkbox" />Показать исключённых</label>
-          </div>
-        </div>
-        <div class="top-summary-strip">
-          <div><span>Общая сумма рейтинга</span><strong id="topGrandTotal">0 RUB</strong></div>
-          <div><span>Закреплено</span><strong id="topPinnedCount">0</strong></div>
-          <div><span>В рейтинге</span><strong id="topRankingCount">0</strong></div>
-        </div>
-
-        <section id="pinnedDonorsSection" class="donor-group" hidden>
-          <div class="donor-group-title"><h3>Закреплённые</h3><span class="muted">Показываются отдельно над рейтингом</span></div>
-          <div id="pinnedDonorsList" class="donor-list"></div>
-        </section>
-
-        <section class="donor-group">
-          <div class="donor-group-title"><h3>Рейтинг</h3><span class="muted">Сумма за всё время, независимо от текущего сбора</span></div>
-          <div id="topDonorsList" class="donor-list"><div class="empty-cell">Загрузка...</div></div>
-        </section>
-
-        <section id="excludedDonorsSection" class="donor-group" hidden>
-          <div class="donor-group-title"><h3>Исключённые из топа</h3></div>
-          <div id="excludedDonorsList" class="donor-list"></div>
-        </section>
+        <div class="card-title"><div><h2>Локальные резервные копии</h2><p class="hint">Автоматические копии создаются перед каждым импортом и восстановлением.</p></div><button type="button" id="portabilityRefreshButton" class="secondary">Обновить</button></div>
+        <div id="portabilityBackupsList" class="portability-backups-list"><div class="empty-cell">Загрузка...</div></div>
       </section>
     </section>
 
@@ -240,7 +339,7 @@
           <div class="card-title">
             <div>
               <h2>TTS Hub</h2>
-              <p class="hint">Единая очередь озвучки донатов, наград, виртуальных персонажей, команд и внешних событий.</p>
+              <p class="hint">Единая очередь озвучки донатов, наград, Вашингтона, команд и внешних событий.</p>
             </div>
             <span class="tts-state-badge" id="ttsStateBadge">Загрузка...</span>
           </div>
@@ -278,15 +377,6 @@
           <button type="button" id="ttsSendTestButton">Поставить в очередь</button>
           <p class="hint">Тест обходит минимальную сумму. Для Edge должен быть открыт <code>/tts.html</code> в OBS.</p>
         </section>
-      </section>
-
-      <section class="tts-subtabs">
-        <button type="button" class="tts-subtab active" data-tts-view="ttsSettingsView">Настройки</button>
-        <button type="button" class="tts-subtab" data-tts-view="ttsProfilesView">Голосовые профили</button>
-        <button type="button" class="tts-subtab" data-tts-view="ttsRulesView">Правила</button>
-        <button type="button" class="tts-subtab" data-tts-view="ttsQueueView">Очередь</button>
-        <button type="button" class="tts-subtab" data-tts-view="ttsHistoryView">История</button>
-        <button type="button" class="tts-subtab" data-tts-view="ttsLogsView">Логи</button>
       </section>
 
       <section id="ttsSettingsView" class="tts-view active">
@@ -424,8 +514,8 @@
             <label class="checkbox-line"><input id="ttsRuleEnabledInput" type="checkbox" checked />Правило включено</label>
             <div class="rule-help">
               <b>Что сюда вводить</b>
-              <p><code>eventType</code>: donation, channel_reward, character, moderator_command, manual_test или своё значение.</p>
-              <p><code>source</code>: donationalerts, donatty, manual, streamerbot, twitch, youtube, character-service или своё.</p>
+              <p><code>eventType</code>: donation, channel_reward, washington, moderator_command, manual_test или своё значение.</p>
+              <p><code>source</code>: donationalerts, donatty, manual, streamerbot, twitch, youtube, washington-service или своё.</p>
               <p>User ID, роли и Reward ID работают только когда их передал Streamer.bot или другая внешняя система. Пустое поле означает «любое».</p>
             </div>
             <div class="danger-zone inline"><button type="button" id="ttsSaveRuleButton">Сохранить правило</button><button type="button" id="ttsDeleteRuleButton" class="danger">Удалить</button></div>
@@ -459,8 +549,8 @@
         <section class="card"><div class="card-title"><h2>Логи TTS Hub</h2><button type="button" id="ttsRefreshLogsButton" class="secondary">Обновить</button></div><pre id="ttsLogsOutput" class="log-console">Загрузка...</pre></section>
       </section>
 
-      <datalist id="ttsEventTypesList"><option value="donation"></option><option value="channel_reward"></option><option value="character"></option><option value="moderator_command"></option><option value="manual_test"></option><option value="custom"></option></datalist>
-      <datalist id="ttsSourcesList"><option value="donationalerts"></option><option value="donatty"></option><option value="manual"></option><option value="streamerbot"></option><option value="twitch"></option><option value="youtube"></option><option value="character-service"></option><option value="custom"></option></datalist>
+      <datalist id="ttsEventTypesList"><option value="donation"></option><option value="channel_reward"></option><option value="washington"></option><option value="moderator_command"></option><option value="manual_test"></option><option value="custom"></option></datalist>
+      <datalist id="ttsSourcesList"><option value="donationalerts"></option><option value="donatty"></option><option value="manual"></option><option value="streamerbot"></option><option value="twitch"></option><option value="youtube"></option><option value="washington-service"></option><option value="custom"></option></datalist>
       <datalist id="ttsRolesList"><option value="moderator"></option><option value="vip"></option><option value="subscriber"></option><option value="broadcaster"></option></datalist>
     </div>
 
@@ -491,7 +581,7 @@
             <div class="stat"><span class="stat-label">Всего</span><span class="stat-value" id="integrationTotalStat">0</span></div>
             <div class="stat"><span class="stat-label">Включено</span><span class="stat-value" id="integrationEnabledStat">0</span></div>
             <div class="stat"><span class="stat-label">Подключено</span><span class="stat-value" id="integrationConnectedStat">0</span></div>
-            <div class="stat"><span class="stat-label">Ошибки</span><span class="stat-value" id="integrationErrorStat">0</span></div>
+            <div class="stat"><span class="stat-label">Требуют внимания</span><span class="stat-value" id="integrationErrorStat">0</span></div>
           </div>
         </section>
         <section class="card">
@@ -532,6 +622,7 @@ Core → Goal / History / Top / TTS / Streamer.bot</pre>
               <button type="button" id="integrationClearAuthButton" class="danger" hidden>Сбросить авторизацию</button>
             </div>
             <div id="integrationActionResult" class="integration-result" hidden></div>
+            <div id="integrationConnectionSummary" class="integration-health-summary" hidden></div>
 
             <div class="integration-detail-tabs">
               <button type="button" class="integration-detail-tab active" data-integration-view="guide">Инструкция</button>
@@ -547,10 +638,15 @@ Core → Goal / History / Top / TTS / Streamer.bot</pre>
     </div>
 
   </main>
+  </div>
+
+  <button id="backToTopButton" class="back-to-top" type="button" title="Вернуться наверх" aria-label="Вернуться наверх"><span aria-hidden="true">↑</span><span class="back-to-top-label">Наверх</span></button>
 
   <script src="admin.js"></script>
+  <script src="portability-admin.js"></script>
   <script src="tts-admin.js"></script>
   <script src="integrations-admin.js"></script>
+  <script src="washington-admin.js"></script>
   <script src="admin-theme.js"></script>
 </body>
 </html>

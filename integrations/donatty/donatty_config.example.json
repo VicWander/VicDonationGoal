@@ -1,6 +1,7 @@
 {
   "enabled": false,
-  "widget_url": "ВСТАВЬ_ОБЫЧНУЮ_ССЫЛКУ_DONATTY_ДЛЯ_OBS_СЮДА",
+  "use_system_proxy": false,
+  "widget_url": "",
   "sse_url": "",
   "widget_api_url": "http://127.0.0.1:3333/api/donation",
   "headless_browser": true,

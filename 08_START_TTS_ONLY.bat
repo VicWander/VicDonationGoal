@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0integrations\tts"
-title VicDonationGoal v1.4.4 - TTS Hub
+title VicDonationGoal v1.4.4.1 - TTS Hub
 
 py -3 --version >nul 2>&1
 if %errorlevel%==0 (

@@ -11,6 +11,7 @@ import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+APP_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip() if (ROOT / "VERSION").exists() else "dev"
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "core"))
 sys.path.insert(0, str(ROOT / "integrations" / "tts"))
@@ -24,7 +25,7 @@ def warn(x): WARN.append(x); print('[WARN]',x)
 def err(x): ERR.append(x); print('[ERR ]',x)
 
 print('='*68)
-print(' VicDonationGoal v1.4.4 — Beta Readiness Check')
+print(f' VicDonationGoal v{APP_VERSION} — Beta Readiness Check')
 print('='*68)
 
 # 1. Existing stability check.
@@ -52,13 +53,13 @@ else: ok('Для всех автоматических источников ес
 
 # 3. Import/runtime smoke tests — catches NameError like _robust_load_json.
 modules=[
- 'core/server.py','core/integration_manager.py','core/donor_store.py','core/tts_hub_store.py',
+ 'core/server.py','core/integration_manager.py','core/donor_store.py','core/portability.py','core/tts_hub_store.py',
  'integrations/streamerbot/streamerbot_bridge.py','integrations/tts/tts_hub.py',
  'integrations/donatty/donatty_listener.py','integrations/streamelements/streamelements_listener.py',
  'integrations/donatepay/donatepay_listener.py','integrations/donatestream/donatestream_listener.py',
- 'integrations/donatex/donatex_listener.py','integrations/tribute/tribute_tunnel.py',
+ 'integrations/donatex/donatex_listener.py','integrations/tribute/tribute_listener.py',
  'integrations/donationalerts/donationalerts_integration.py','integrations/streamlabs/streamlabs_integration.py',
- 'tools/create_diagnostic_report.py','tools/stop_all.py','tools/install_cloudflared.py'
+ 'tools/create_diagnostic_report.py','tools/stop_all.py','tools/install_cloudflared.py','tools/apply_patch.py'
 ]
 for rel in modules:
     path=ROOT/rel
@@ -74,6 +75,48 @@ for rel in modules:
         if rr.returncode==0: ok('Runtime import: '+rel)
         else: err('Runtime import '+rel+': '+(rr.stderr or rr.stdout)[-700:])
     except Exception as e: err(f'Runtime import {rel}: {type(e).__name__}: {e}')
+
+try:
+    patch_test=subprocess.run([sys.executable,str(ROOT/'tools/test_patch_installer.py')],cwd=ROOT,capture_output=True,text=True,timeout=90)
+    if patch_test.returncode==0: ok('Patch installer сохраняет данные и откатывается при ошибке')
+    else: err('Patch installer test: '+(patch_test.stderr or patch_test.stdout)[-700:])
+except Exception as e: err(f'Patch installer test: {type(e).__name__}: {e}')
+
+try:
+    portability_test=subprocess.run([sys.executable,str(ROOT/'tools/test_portability.py')],cwd=ROOT,capture_output=True,text=True,timeout=90)
+    if portability_test.returncode==0: ok('Data Portability сохраняет данные, проверяет схему и не создаёт дубли')
+    else: err('Data Portability test: '+(portability_test.stderr or portability_test.stdout)[-700:])
+except Exception as e: err(f'Data Portability test: {type(e).__name__}: {e}')
+
+try:
+    da_reliability_test=subprocess.run([sys.executable,str(ROOT/'tools/test_donationalerts_reliability.py')],cwd=ROOT,capture_output=True,text=True,timeout=90)
+    if da_reliability_test.returncode==0: ok('DonationAlerts безопасно создаёт baseline, догоняет новые события и различает сетевые обрывы')
+    else: err('DonationAlerts reliability test: '+(da_reliability_test.stderr or da_reliability_test.stdout)[-700:])
+except Exception as e: err(f'DonationAlerts reliability test: {type(e).__name__}: {e}')
+
+try:
+    transport_test=subprocess.run([sys.executable,str(ROOT/'tools/test_transport_reliability.py')],cwd=ROOT,capture_output=True,text=True,timeout=90)
+    if transport_test.returncode==0: ok('DA и Donatty: пакетные сообщения, доставка SSE, состояния и выбор прокси')
+    else: err('Transport reliability test: '+(transport_test.stderr or transport_test.stdout)[-700:])
+except Exception as e: err(f'Transport reliability test: {type(e).__name__}: {e}')
+
+try:
+    file_test=subprocess.run([sys.executable,str(ROOT/'tools/test_file_safety.py')],cwd=ROOT,capture_output=True,text=True,timeout=90)
+    if file_test.returncode==0: ok('File Safety: доступ к файлам, проверка импорта, целостность бэкапа и откат')
+    else: err('File Safety test: '+(file_test.stderr or file_test.stdout)[-700:])
+except Exception as e: err(f'File Safety test: {type(e).__name__}: {e}')
+
+try:
+    tribute_test=subprocess.run([sys.executable,str(ROOT/'tools/test_tribute_sse.py')],cwd=ROOT,capture_output=True,text=True,timeout=90)
+    if tribute_test.returncode==0: ok('Tribute OBS: суммы, дубли, очередь доставки и режим проверки')
+    else: err('Tribute SSE test: '+(tribute_test.stderr or tribute_test.stdout)[-700:])
+except Exception as e: err(f'Tribute SSE test: {type(e).__name__}: {e}')
+
+try:
+    upgrade_test=subprocess.run([sys.executable,str(ROOT/'tools/test_release_upgrade.py')],cwd=ROOT,capture_output=True,text=True,timeout=120)
+    if upgrade_test.returncode==0: ok('Обновление: сохранение подключений, отсутствие старой озвучки и чистая сборка')
+    else: err('Upgrade test: '+(upgrade_test.stderr or upgrade_test.stdout)[-700:])
+except Exception as e: err(f'Upgrade test: {type(e).__name__}: {e}')
 
 # 4. All automatic sources pass Streamer.bot and TTS source gates.
 try:
@@ -128,7 +171,7 @@ except Exception as e: err(f'Dashboard status build: {type(e).__name__}: {e}')
 
 # 7. Optional heavy component must not be bundled.
 if (ROOT/'tools/cloudflared.exe').exists(): warn('cloudflared.exe включён в сборку и увеличивает размер примерно на 52 МБ')
-else: ok('cloudflared не встроен; Tribute установит его только по запросу')
+else: ok('cloudflared не встроен; Tribute OBS работает без туннеля')
 
 # 8. Diagnostic report generation.
 try:
@@ -152,25 +195,24 @@ except Exception as e: err(f'Diagnostic report: {type(e).__name__}: {e}')
 
 # 9. Required beta UI and docs markers.
 for rel,markers in {
- 'core/public/admin.html':['systemStatusGrid','serviceStatusGrid','createDiagnosticButton'],
- 'core/public/admin.js':['sourceRegistryCache','createDiagnosticReport','pluralRu'],
+ 'core/public/admin.html':['systemStatusGrid','serviceStatusGrid','createDiagnosticButton','donationMonitoringView','portabilityPreview','tts-section-nav','integrationConnectionSummary'],
+ 'core/public/admin.js':['sourceRegistryCache','createDiagnosticReport','pluralRu','backToTopButton','setDonationSection'],
+ 'core/public/portability-admin.js':['stageOldFolder','stageRawFile','applyImport','refreshStatus'],
+ 'core/portability.py':['BACKUP_SCHEMA_VERSION','create_backup_bytes','validate_user_payload','parse_donationalerts_table'],
+ 'core/public/integrations-admin.js':['onboardingDraft','integrationOnboardingChoices','lastApiSuccessAt','Переподключение'],
  'source_registry.py':['AUTOMATIC_SOURCE_IDS','SOURCE_REGISTRY'],
  '14_CREATE_DIAGNOSTIC_REPORT.bat':['create_diagnostic_report.py'],
- 'README.md':['Closed Beta','t.me/wander_streams','CHANGELOG.md'],
- 'index.html':['Closed Beta','TopDonation','VicWander'],
 }.items():
     text=(ROOT/rel).read_text(encoding='utf-8',errors='replace') if (ROOT/rel).exists() else ''
     missing=[m for m in markers if m not in text]
     if missing: err(f'{rel}: отсутствуют markers {missing}')
     else: ok(f'Beta marker check: {rel}')
 
-summary={'version':(ROOT/'VERSION').read_text(encoding='utf-8').strip(),'ok':len(OK),'warnings':len(WARN),'errors':len(ERR),'OK':OK,'WARN':WARN,'ERR':ERR}
-report_dir=ROOT/'diagnostics'
-report_dir.mkdir(parents=True,exist_ok=True)
-(report_dir/'BETA_READINESS_REPORT_v1.4.4.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-md=['# VicDonationGoal v1.4.4 — Beta Readiness Report','',f'- OK: **{len(OK)}**',f'- WARN: **{len(WARN)}**',f'- ERR: **{len(ERR)}**','']
+summary={'version':APP_VERSION,'ok':len(OK),'warnings':len(WARN),'errors':len(ERR),'OK':OK,'WARN':WARN,'ERR':ERR}
+(ROOT/f'BETA_READINESS_REPORT_v{APP_VERSION}.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+md=[f'# VicDonationGoal v{APP_VERSION} — Beta Readiness Report','',f'- OK: **{len(OK)}**',f'- WARN: **{len(WARN)}**',f'- ERR: **{len(ERR)}**','']
 if WARN: md += ['## Предупреждения','']+[f'- {x}' for x in WARN]+['']
 if ERR: md += ['## Ошибки','']+[f'- {x}' for x in ERR]+['']
-(report_dir/'BETA_READINESS_REPORT_v1.4.4.md').write_text('\n'.join(md),encoding='utf-8')
+(ROOT/f'BETA_READINESS_REPORT_v{APP_VERSION}.md').write_text('\n'.join(md),encoding='utf-8')
 print('\n'+'-'*68); print(f'OK: {len(OK)} | WARN: {len(WARN)} | ERR: {len(ERR)}')
 raise SystemExit(1 if ERR else 0)

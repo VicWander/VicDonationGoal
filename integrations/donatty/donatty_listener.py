@@ -5,7 +5,7 @@ import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, quote, urlencode
 
 try:
     import requests
@@ -43,6 +43,7 @@ DEFAULT_CONFIG = {
     "widget_api_url": "http://127.0.0.1:3333/api/donation",
 
     "headless_browser": True,
+    "use_system_proxy": False,
     "sse_capture_timeout_seconds": 35,
 
     "prefer_auto_sse": True,
@@ -88,6 +89,9 @@ def save_json(path, data):
 
 
 def write_status(status="starting", running=True, connected=False, last_error=None, last_event=None):
+    previous = load_json(STATUS_FILE, {})
+    if not isinstance(previous, dict):
+        previous = {}
     payload = {
         "service": "donatty",
         "version": APP_VERSION,
@@ -96,7 +100,7 @@ def write_status(status="starting", running=True, connected=False, last_error=No
         "connected": connected,
         "updatedAt": time.time(),
         "lastError": last_error,
-        "lastEvent": last_event
+        "lastEvent": last_event if last_event is not None else previous.get("lastEvent")
     }
     try:
         save_json(STATUS_FILE, payload)
@@ -137,6 +141,66 @@ def get_origin(url):
     return f"{parsed.scheme}://{parsed.netloc}"
 
 
+def capture_sse_url_from_widget(config):
+    """Use the same token exchange as Donatty's standard donations widget.
+
+    The public widget Script.js obtains response.accessToken from /auth/tokens/,
+    then opens /widgets/<ref>/sse. Its API shard is 1 + last_ref_byte % 29.
+    Other link formats keep the browser discovery path.
+    """
+    widget_url = str(config.get("widget_url") or "").strip()
+    parsed = urlparse(widget_url)
+    if parsed.scheme != "https" or parsed.hostname != "widgets.donatty.com":
+        return None
+    if parsed.path.rstrip("/") != "/donations":
+        return None
+    query = parse_qs(parsed.query)
+    ref = (query.get("ref") or [""])[0]
+    widget_token = (query.get("token") or [""])[0]
+    try:
+        uuid.UUID(ref)
+        shard = 1 + int(ref[-2:], 16) % 29
+    except (ValueError, AttributeError):
+        return None
+    if not widget_token:
+        return None
+    if requests is None:
+        raise RuntimeError("requests не установлен. Запусти 00_INSTALL_ALL.bat")
+
+    api_url = f"https://api-{shard:03d}.donatty.com"
+    write_status("authorizing", running=True, connected=False)
+    print("[DONATTY] Получаю свежий SSE URL через API виджета, без браузера...")
+    try:
+        with requests.Session() as session:
+            session.trust_env = bool(config.get("use_system_proxy", False))
+            response = session.get(
+                f"{api_url}/auth/tokens/{quote(widget_token, safe='')}",
+                headers={"Accept": "application/json"},
+                timeout=(10, 20),
+            )
+            status_code = response.status_code
+            payload = response.json() if status_code == 200 else None
+    except Exception as error:
+        raise RuntimeError(f"Donatty: получение токена не выполнено ({type(error).__name__})") from None
+    if status_code != 200:
+        # Do not include the request URL: its path contains the secret.
+        raise RuntimeError(f"Donatty: получение токена вернуло HTTP {status_code}")
+    data = payload.get("response") if isinstance(payload, dict) else None
+    token = data.get("accessToken") if isinstance(data, dict) else None
+    if not isinstance(token, str) or not token.strip():
+        raise RuntimeError("Donatty: API виджета не вернул accessToken")
+
+    offset = datetime.now().astimezone().utcoffset()
+    zone_offset = int(-offset.total_seconds() / 60) if offset is not None else 0
+    sse_url = f"{api_url}/widgets/{quote(ref, safe='')}/sse?" + urlencode({
+        "jwt": token,
+        "zoneOffset": zone_offset,
+    })
+    write_status("sse_captured", running=True, connected=False)
+    print("[DONATTY] Свежий SSE URL получен напрямую через API виджета.")
+    return sse_url
+
+
 def capture_sse_url_with_browser(config):
     if sync_playwright is None:
         raise RuntimeError("Playwright не установлен. Запусти 00_INSTALL_ALL.bat")
@@ -155,7 +219,10 @@ def capture_sse_url_with_browser(config):
     print("[DONATTY] Открываю Donatty-виджет в скрытом браузере, чтобы получить свежий SSE URL...")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
+        browser = p.chromium.launch(
+            headless=headless,
+            args=[] if config.get("use_system_proxy", False) else ["--no-proxy-server"],
+        )
         context = browser.new_context(
             viewport={"width": 800, "height": 600},
             ignore_https_errors=True
@@ -211,22 +278,24 @@ def resolve_sse_url(config):
     old_sse_url = str(config.get("sse_url") or "").strip()
     old_sse_available = is_sse_url(old_sse_url)
 
-    if prefer_auto:
-        try:
-            return capture_sse_url_with_browser(config)
-        except Exception as e:
-            print(f"[DONATTY] Автополучение SSE URL не удалось: {type(e).__name__}: {e}")
-
-            if use_old_if_failed and old_sse_available:
-                print("[DONATTY] Использую старый sse_url из donatty_config.json как fallback.")
-                return old_sse_url
-
-            raise
-
-    if old_sse_available:
+    if not prefer_auto and old_sse_available:
         return old_sse_url
 
-    return capture_sse_url_with_browser(config)
+    try:
+        try:
+            native_url = capture_sse_url_from_widget(config)
+            if native_url:
+                return native_url
+        except Exception as error:
+            print(f"[DONATTY] Прямое получение SSE URL не удалось: {error}")
+            print("[DONATTY] Проверяю резервный способ через браузер.")
+        return capture_sse_url_with_browser(config)
+    except Exception as error:
+        print(f"[DONATTY] Автополучение SSE URL не удалось: {type(error).__name__}: {error}")
+        if use_old_if_failed and old_sse_available:
+            print("[DONATTY] Использую старый sse_url из donatty_config.json как fallback.")
+            return old_sse_url
+        raise
 
 
 def extract_donatty_donation(payload_text):
@@ -323,7 +392,10 @@ def send_donation_to_widget(donation, config):
 
     for attempt in range(1, attempts + 1):
         try:
-            response = requests.post(url, json=donation, timeout=8)
+            # Local Core must never be sent through a browser/VPN HTTP proxy.
+            with requests.Session() as session:
+                session.trust_env = False
+                response = session.post(url, json=donation, timeout=8)
 
             if 200 <= response.status_code < 300:
                 last_event = f"{donation['username']} — {donation['amount']} {donation['currency']}"
@@ -386,52 +458,69 @@ def listen_sse(sse_url, config):
 
     write_status("connecting_sse", running=True, connected=False)
     print("[DONATTY] Подключаюсь к SSE...")
-    print("[DONATTY] Если тут сразу ошибка 401/403 — токен протух, попробую получить новый.")
+    print("[DONATTY] Ожидаю подтверждение потока и первые данные.")
 
-    with requests.get(
-        sse_url,
-        stream=True,
-        headers=headers,
-        timeout=(15, 90)
-    ) as response:
-        if response.status_code in (401, 403):
-            raise PermissionError(f"Donatty SSE вернул {response.status_code}; нужен новый jwt")
+    with requests.Session() as session:
+        session.trust_env = bool(config.get("use_system_proxy", False))
+        with session.get(
+            sse_url,
+            stream=True,
+            headers=headers,
+            timeout=(15, 90)
+        ) as response:
+            _read_sse_response(response, config)
 
-        response.raise_for_status()
 
-        write_status("connected", running=True, connected=True)
-        print("[DONATTY] Подключено. Слушаю донаты Donatty.")
+def _read_sse_response(response, config):
+    if response.status_code in (401, 403):
+        raise PermissionError(f"Donatty SSE вернул {response.status_code}; доступ отклонён")
 
-        data_lines = []
-        last_heartbeat = 0
+    response.raise_for_status()
 
-        for raw_line in response.iter_lines(decode_unicode=True):
-            if time.time() - last_heartbeat > 10:
-                write_status("connected", running=True, connected=True)
-                last_heartbeat = time.time()
+    content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+    if content_type != "text/event-stream":
+        raise ConnectionError("Donatty ответил без потока text/event-stream")
+    response.encoding = "utf-8"
+    write_status("connecting_sse", running=True, connected=False)
+    print("[DONATTY] HTTP-подключение открыто. Ожидаю данные SSE...")
 
-            if raw_line is None:
-                continue
+    data_lines = []
+    last_heartbeat = 0
+    received_data = False
 
-            line = raw_line.strip()
+    # Default iter_lines buffers 512 bytes and can hold a short donation until
+    # the next event (or lose it when the read timeout expires).
+    for raw_line in response.iter_lines(chunk_size=1, decode_unicode=True):
+        if raw_line is None:
+            continue
+        if not received_data and raw_line:
+            received_data = True
+            print("[DONATTY] Поток SSE передаёт данные. Слушаю события Donatty.")
+        if received_data and time.time() - last_heartbeat > 10:
+            write_status("connected", running=True, connected=True)
+            last_heartbeat = time.time()
 
-            if line == "":
-                process_sse_event(data_lines, config)
-                data_lines = []
-                continue
+        line = raw_line.strip()
 
-            if line.startswith(":"):
-                continue
+        if line == "":
+            process_sse_event(data_lines, config)
+            data_lines = []
+            continue
 
-            if line.startswith("data:"):
-                data_lines.append(line[5:].strip())
-                continue
+        if line.startswith(":"):
+            continue
 
-            # На случай, если Donatty отдаст JSON без стандартного префикса data:
-            if line.startswith("{") and line.endswith("}"):
-                process_sse_event([line], config)
-                data_lines = []
-                continue
+        if line.startswith("data:"):
+            data_lines.append(line[5:].strip())
+            continue
+
+        # На случай, если Donatty отдаст JSON без стандартного префикса data:
+        if line.startswith("{") and line.endswith("}"):
+            process_sse_event([line], config)
+            data_lines = []
+            continue
+
+    raise ConnectionError("Donatty закрыл поток SSE; требуется переподключение")
 
 
 def main():
@@ -441,8 +530,8 @@ def main():
     print("================================================")
     print(f" Donatty Auto Listener v{APP_VERSION} для VicDonationGoal")
     print("================================================")
-    print(" Этот listener сам открывает Donatty-виджет,")
-    print(" ловит свежий sse?jwt=... из Network и слушает донаты.")
+    print(" Получает поток Donatty через API OBS-виджета.")
+    print(" Для старых ссылок использует резервный способ через браузер.")
     print(" Остановить: Ctrl+C или закрыть окно")
     print("")
 

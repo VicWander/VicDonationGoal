@@ -495,8 +495,13 @@ body[data-theme="light"] .source-pill.donationalerts {
 }
 
 body[data-theme="light"] .source-pill.donatty {
-  background: #dff8ff !important;
-  color: #08799b !important;
+  background: linear-gradient(110deg,#faebe3 0%,#f0e9f6 48%,#e5f2fd 100%) !important;
+  color: #75518e !important;
+}
+
+body[data-theme="light"] .source-pill.tribute {
+  background: #dff3fd !important;
+  color: #087eae !important;
 }
 
 /* Чекбоксы */
@@ -817,3 +822,88 @@ body[data-theme="light"] .status-group-heading h3 { color:#0f172a; }
 body[data-theme="light"] .status-disabled-summary { background:#eef4f8; color:#64748b; }
 body[data-theme="light"] .status-disabled-summary span { color:#0f172a; }
 body[data-theme="light"] .status-open-button { background:#e6eef6 !important; color:#0f172a !important; border-color:rgba(15,23,42,.12) !important; }
+
+/* v1.4.5 — horizontal admin shell and data portability */
+.admin-sidebar {
+  background: color-mix(in srgb, var(--card) 97%, transparent) !important;
+  border-color: var(--border) !important;
+}
+.sidebar-brand strong,
+.portability-stats strong,
+.file-action b,
+.portability-preview-row strong,
+.portability-backup-row strong {
+  color: var(--text-strong) !important;
+}
+.sidebar-brand span,
+.header-kicker { color: var(--accent) !important; }
+.admin-sidebar .admin-tabs {
+  background: transparent !important;
+  border: 0 !important;
+}
+.admin-sidebar .admin-tab,
+.admin-sidebar .admin-tab:not(.active),
+.donation-section-tab,
+.donation-section-tab:not(.active) {
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+.admin-sidebar .admin-tab:hover,
+.donation-section-tab:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+}
+.admin-sidebar .admin-tab.active {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent), var(--accent-2)) !important;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 22%, transparent) !important;
+}
+.donation-section-tab.active {
+  color: var(--accent) !important;
+  -webkit-text-fill-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 9%, transparent) !important;
+}
+.portability-stats > div,
+.file-action,
+.portability-preview-row,
+.portability-backup-row,
+.portability-help-grid > div {
+  color: var(--text) !important;
+  background: var(--card-2) !important;
+  border-color: var(--border) !important;
+}
+.file-action small,
+.portability-preview-row span,
+.portability-backup-row small,
+.portability-help-grid p { color: var(--muted) !important; }
+.portability-import-name,
+.portability-help-card > summary,
+.portability-help-grid strong { color: var(--text-strong) !important; }
+.portability-preview-header { background: var(--surface-3) !important; }
+.file-action:hover {
+  background: color-mix(in srgb, var(--accent) 7%, var(--card-2)) !important;
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border)) !important;
+}
+.portability-warning {
+  color: color-mix(in srgb, var(--warning) 75%, var(--text)) !important;
+  background: color-mix(in srgb, var(--warning) 9%, transparent) !important;
+}
+.portability-secret-warning {
+  color: color-mix(in srgb, var(--danger) 70%, var(--text)) !important;
+  background: color-mix(in srgb, var(--danger) 8%, transparent) !important;
+}
+#sidebarThemeSlot .theme-toggle {
+  width: 100%;
+  justify-content: center;
+  box-shadow: none !important;
+}
+body[data-theme="light"] .admin-sidebar .admin-tab:not(.active),
+body[data-theme="light"] .donation-section-tab:not(.active) {
+  color: #334155 !important;
+  -webkit-text-fill-color: #334155 !important;
+  background: transparent !important;
+}

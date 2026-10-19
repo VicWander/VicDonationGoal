@@ -20,6 +20,7 @@ KNOWN_MARKERS = (
     "streamelements_listener.py",
     "streamlabs_integration.py",
     "tribute_tunnel.py",
+    "tribute_listener.py",
     "cloudflared.exe",
 )
 

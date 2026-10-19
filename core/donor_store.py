@@ -140,6 +140,14 @@ def load_adjustments():
             amount_for_top = float(item.get("amountForTop") if item.get("amountForTop") is not None else amount)
         except Exception:
             amount_for_top = amount
+        try:
+            snapshot_amount = float(item.get("snapshotAmount") or 0)
+        except Exception:
+            snapshot_amount = 0
+        try:
+            base_donation_amount = float(item.get("baseDonationAmount") or 0)
+        except Exception:
+            base_donation_amount = 0
         result.append({
             "id": str(item.get("id") or f"adjustment-{uuid.uuid4()}"),
             "donorId": str(item.get("donorId") or ""),
@@ -149,6 +157,13 @@ def load_adjustments():
             "topCurrency": str(item.get("topCurrency") or TOP_CURRENCY).upper(),
             "note": str(item.get("note") or item.get("reason") or ""),
             "createdAt": str(item.get("createdAt") or now_iso()),
+            "kind": str(item.get("kind") or "manual"),
+            "source": str(item.get("source") or ""),
+            "snapshotKey": str(item.get("snapshotKey") or ""),
+            "snapshotAmount": round(snapshot_amount, 2),
+            "baseDonationAmount": round(base_donation_amount, 2),
+            "batchId": str(item.get("batchId") or ""),
+            "updatedAt": str(item.get("updatedAt") or item.get("createdAt") or now_iso()),
         })
     return result
 
@@ -402,6 +417,92 @@ def add_adjustment(profile_id, amount, currency, amount_for_top, note="", create
         adjustments.append(item)
         save_adjustments(adjustments)
         return item
+
+
+def ensure_profile_for_alias(source, username):
+    """Возвращает профиль для source+username и создаёт его без фальшивого доната."""
+    with LOCK:
+        source = normalize_source(source)
+        username = str(username or "Аноним").strip() or "Аноним"
+        profiles = load_profiles()
+        by_id, by_alias = _profile_maps(profiles)
+        key = alias_key(source, username)
+        profile = by_id.get(by_alias.get(key, ""))
+        if profile:
+            return profile
+
+        deterministic = uuid.uuid5(uuid.NAMESPACE_URL, f"vicdonationgoal:{key}").hex[:20]
+        profile_id = f"donor-{deterministic}"
+        while profile_id in by_id:
+            profile_id = f"donor-{uuid.uuid4()}"
+        profile = _normalize_profile({
+            "id": profile_id,
+            "displayName": username,
+            "aliases": [{"source": source, "username": username}],
+        })
+        profiles.append(profile)
+        save_profiles(profiles)
+        return profile
+
+
+def upsert_source_snapshot(source, username, snapshot_amount, base_donation_amount, batch_id=""):
+    """Устанавливает вклад агрегированного рейтинга источника без создания доната в истории."""
+    with LOCK:
+        source = normalize_source(source)
+        username = str(username or "Аноним").strip() or "Аноним"
+        snapshot_amount = round(float(snapshot_amount), 2)
+        base_donation_amount = round(float(base_donation_amount), 2)
+        # Снимок дополняет отсутствующую историю и никогда не должен вычитать
+        # уже записанные события из TopDonation из-за округления/границ выгрузки.
+        delta = round(max(snapshot_amount - base_donation_amount, 0), 2)
+        profile = ensure_profile_for_alias(source, username)
+        snapshot_key = alias_key(source, username)
+        adjustments = load_adjustments()
+        existing = next((
+            item for item in adjustments
+            if item.get("kind") == "source_snapshot" and item.get("snapshotKey") == snapshot_key
+        ), None)
+        previous_delta = round(float((existing or {}).get("amountForTop") or 0), 2)
+        top_change = round(delta - previous_delta, 2)
+
+        if abs(delta) < 0.005:
+            if existing:
+                adjustments = [item for item in adjustments if item.get("id") != existing.get("id")]
+                save_adjustments(adjustments)
+            return profile, None, top_change
+
+        stamp = now_iso()
+        note = (
+            f"Снимок рейтинга {source}: {username}. "
+            f"В файле {snapshot_amount:.2f} RUB, отдельными событиями {base_donation_amount:.2f} RUB."
+        )
+        values = {
+            "donorId": profile["id"],
+            "amount": delta,
+            "currency": TOP_CURRENCY,
+            "amountForTop": delta,
+            "topCurrency": TOP_CURRENCY,
+            "note": note,
+            "kind": "source_snapshot",
+            "source": source,
+            "snapshotKey": snapshot_key,
+            "snapshotAmount": snapshot_amount,
+            "baseDonationAmount": base_donation_amount,
+            "batchId": str(batch_id or ""),
+            "updatedAt": stamp,
+        }
+        if existing:
+            existing.update(values)
+            item = existing
+        else:
+            item = {
+                "id": f"snapshot-{uuid.uuid4()}",
+                "createdAt": stamp,
+                **values,
+            }
+            adjustments.append(item)
+        save_adjustments(adjustments)
+        return profile, item, top_change
 
 
 def delete_adjustment(adjustment_id):
