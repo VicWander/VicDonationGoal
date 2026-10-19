@@ -96,11 +96,11 @@ Tribute пока остаётся Experimental. Он не передаёт пр�
 
 ## Автор и поддержка проекта
 
-VicDonationGoal создаёт [VicWander](https://www.twitch.tv/vicwander2).
+VicDonationGoal создаёт [VicWander](https://www.twitch.tv/vicwander_).
 
 - Связаться со мной напрямую в Telegram: [@Zulf3](https://t.me/Zulf3)
-- Twitch: [twitch.tv/vicwander2](https://www.twitch.tv/vicwander2)
-- Поддержать разработку: [DA.link](https://dalink.to/vicwander) или [DonationAlerts](https://www.donationalerts.com/r/vicwander)
+- Twitch: [twitch.tv/vicwander_](https://www.twitch.tv/vicwander_)
+- Поддержать разработку: [DA.link](https://dalink.to/vicwander_) или [DonationAlerts](https://www.donationalerts.com/r/vicwander_)
 - Исходный код и релизы: [GitHub](https://github.com/VicWander/VicDonationGoal)
 
 ## Лицензия
