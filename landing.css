@@ -65,3 +65,8 @@ body[data-theme=light] .source-badge,body[data-theme=light] .donate-demo:is(.sou
 @media(prefers-reduced-motion:reduce){.site-header[data-intro=true] .brand{transform:none}}
 .hero-openness{margin-top:20px;font-size:13px;line-height:1.8;color:var(--muted);max-width:54ch}
 @media(max-width:600px){.hero-openness{font-size:12px}}
+
+.hero-beta{margin-top:14px;font-size:14px;line-height:1.5;color:var(--muted)}
+.hero-benefit{margin-top:20px;font-size:15px;line-height:1.65;color:var(--muted);max-width:54ch}
+.testers-section p+p{margin-top:16px}
+@media(max-width:600px){.hero-beta{font-size:13px}.hero-benefit{font-size:14px}}
