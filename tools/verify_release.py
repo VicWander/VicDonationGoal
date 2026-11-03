@@ -46,12 +46,14 @@ def smoke(tree):
 def verify(candidate_dir,old144=None,old1451=None):
     candidate_dir=Path(candidate_dir)
     report={'artifacts':[],'upgrades':[]}
-    for name in ['VicDonationGoal_my_v1.4.6','VicDonationGoal_v1.4.6']:
+    names=[name for name in ['VicDonationGoal_my_v1.5','VicDonationGoal_v1.5'] if (candidate_dir/(name+'.zip')).is_file()]
+    if not names: raise FileNotFoundError('Release ZIP not found')
+    for name in names:
         with tempfile.TemporaryDirectory(prefix='vic_release_verify_') as tmp:
             with zipfile.ZipFile(candidate_dir/(name+'.zip')) as z:z.extractall(tmp)
             tree=Path(tmp)/name
             run=subprocess.run([sys.executable,'-B',str(tree/'tools/beta_readiness_check.py')],cwd=tree,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=300)
-            readiness=json.loads((tree/'BETA_READINESS_REPORT_v1.4.6.json').read_text(encoding='utf-8'))
+            readiness=json.loads((tree/'BETA_READINESS_REPORT_v1.5.json').read_text(encoding='utf-8'))
             if run.returncode:raise RuntimeError('Beta Readiness: '+json.dumps(readiness['ERR'],ensure_ascii=False))
             result={'name':name,'ok':readiness['ok'],'warnings':readiness['warnings'],'errors':readiness['errors'],'smoke':smoke(tree)}
             report['artifacts'].append(result)
@@ -61,8 +63,8 @@ def verify(candidate_dir,old144=None,old1451=None):
         source=Path(source)
         before={p.relative_to(source).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in portability.collect_user_files(source)}
         with tempfile.TemporaryDirectory(prefix='vic_actual_upgrade_') as tmp:
-            with zipfile.ZipFile(candidate_dir/'VicDonationGoal_v1.4.6.zip') as z:z.extractall(tmp)
-            tree=Path(tmp)/'VicDonationGoal_v1.4.6'
+            with zipfile.ZipFile(candidate_dir/'VicDonationGoal_v1.5.zip') as z:z.extractall(tmp)
+            tree=Path(tmp)/'VicDonationGoal_v1.5'
             first=migrate(source,tree);migrate(source,tree)
             for rel,digest in before.items():
                 if rel.endswith(('tts_sent.json','streamerbot_sent.json','streamerbot_event_rules_sent.json','tts_queue.json','tts_control.json')):continue

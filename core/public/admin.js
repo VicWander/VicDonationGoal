@@ -111,7 +111,7 @@ function niceNumber(value) {
 function money(value, currency = "RUB") { return `${niceNumber(value)} ${currency}`; }
 function normalizeCurrency(value) { return String(value || "RUB").trim().toUpperCase(); }
 function normalizeText(value) { return String(value || "").trim().toLocaleLowerCase("ru-RU"); }
-function percentOf(current, goal) { return Math.min(((Number(current) || 0) / (Number(goal) || 1)) * 100, 100); }
+function percentOf(current, goal) { return Math.max(0, ((Number(current) || 0) / (Number(goal) || 1)) * 100); }
 function escapeHtml(text) {
   return String(text ?? "")
     .replaceAll("&", "&amp;")
@@ -164,6 +164,7 @@ function shortText(value, limit = 110) {
 }
 
 function renderState(state, donations) {
+  window.dispatchEvent(new CustomEvent('vdg:data', {detail:{state,donations}}));
   const current = Number(state.current) || 0;
   const goal = Number(state.goal) || 1;
   const currency = state.currency || "RUB";
@@ -175,9 +176,9 @@ function renderState(state, donations) {
   const notIncluded = Math.max(totalAll - includedOnly, 0);
 
   goalTitlePreview.textContent = state.title || "Сбор на цель";
-  goalNumbersPreview.textContent = `${money(current, currency)} / ${money(goal, currency)}`;
+  goalNumbersPreview.innerHTML = `<strong>${escapeHtml(money(current, currency))}</strong><span>из ${escapeHtml(money(goal, currency))}</span>`;
   progressText.textContent = `${Math.floor(percent)}%`;
-  progressFill.style.width = `${percent}%`;
+  progressFill.style.width = `${Math.min(percent,100)}%`;
   currentPreview.textContent = money(current, currency);
   totalAllPreview.textContent = money(totalAll, currency);
   notIncludedPreview.textContent = money(notIncluded, currency);
@@ -228,7 +229,7 @@ function renderTable() {
     return;
   }
 
-  eventsTableBody.innerHTML = list.map((d) => {
+  window.VDGMotion.replace(eventsTableBody, list.map((d) => {
     const rawKey = String(d.uniqueKey || "");
     const key = escapeHtml(rawKey);
     const message = String(d.message || "");
@@ -262,7 +263,7 @@ function renderTable() {
       </div>
       <div class="donation-expanded-message" ${expanded ? "" : "hidden"}>${escapeHtml(message || "Сообщение отсутствует")}</div>
     </article>`;
-  }).join("");
+  }).join(""));
   updateBulkFlagControls();
 }
 
@@ -439,11 +440,11 @@ function renderTop() {
   topRankingCount.textContent = ranking.length;
 
   pinnedDonorsSection.hidden = !pinned.length;
-  pinnedDonorsList.innerHTML = pinned.map(item => donorCardHtml(item, true, false)).join("");
-  topDonorsList.innerHTML = ranking.length ? ranking.map(item => donorCardHtml(item, false, false)).join("") : `<div class="empty-cell">В рейтинге пока никого нет</div>`;
+  window.VDGMotion.replace(pinnedDonorsList, pinned.map(item => donorCardHtml(item, true, false)).join(""));
+  window.VDGMotion.replace(topDonorsList, ranking.length ? ranking.map(item => donorCardHtml(item, false, false)).join("") : `<div class="empty-cell">В рейтинге пока никого нет</div>`);
   const showExcluded = Boolean(showExcludedDonors?.checked);
   excludedDonorsSection.hidden = !showExcluded || !excluded.length;
-  excludedDonorsList.innerHTML = excluded.map(item => donorCardHtml(item, false, true)).join("");
+  window.VDGMotion.replace(excludedDonorsList, excluded.map(item => donorCardHtml(item, false, true)).join(""));
 }
 async function loadDonorDetail(id, force = false) {
   if (!force && donorDetailCache.has(id)) return donorDetailCache.get(id);
@@ -565,6 +566,7 @@ function integrationStatusText(item) {
   return status.status || statusStateLabel(state);
 }
 function renderStatuses(status) {
+  window.dispatchEvent(new CustomEvent('vdg:status', {detail:status}));
   for (const source of status.sourceRegistry || []) sourceRegistryCache[source.id] = source;
   const systemModules = status.systemModules || [];
   const integrations = status.integrations?.integrations || [];
@@ -660,6 +662,7 @@ async function refreshAll() {
 async function updateDonation(uniqueKey, patch) {
   const result = await postJson("/api/donation/update", { uniqueKey, ...patch });
   if (result.ok) { donorDetailCache.clear(); await refreshAll(); if (document.getElementById("topDonorsView")?.classList.contains("active")) await refreshTop(); }
+  return result;
 }
 async function deleteDonation(uniqueKey) {
   const result = await postJson("/api/donation/delete", { uniqueKey });

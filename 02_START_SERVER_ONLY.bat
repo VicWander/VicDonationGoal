@@ -1,6 +1,8 @@
 @echo off
 cd /d "%~dp0core"
-title VicDonationGoal v1.4.4.1 - Core + Integration Manager
+set "VDG_TITLE_VERSION=dev"
+if exist "%~dp0VERSION" set /p VDG_TITLE_VERSION=<"%~dp0VERSION"
+title VicDonationGoal v%VDG_TITLE_VERSION% - Core + Integration Manager
 
 py -3 --version >nul 2>&1
 if %errorlevel%==0 (

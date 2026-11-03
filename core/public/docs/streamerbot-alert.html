@@ -1,0 +1,116 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Оповещение о донате — VicDonationGoal</title></head><body><main><h1>Оповещение о донате в Streamer.bot</h1>
+<h2 id="sb-start">Что получится</h2>
+<p>При донате в OBS появятся имя, сумма и сообщение на цветной подложке. Через 10 секунд оповещение скроется. Несколько донатов показываются по очереди. Базовый вариант не требует картинок, звуковых файлов и подписок: всё оформление собирается стандартными источниками OBS.</p>
+<p>Гайд рассчитан на Windows, OBS Studio и Streamer.bot на одном компьютере. Заранее запусти оба приложения и VicDonationGoal. Первую настройку удобнее делать до трансляции: тест действительно покажет оповещение в OBS.</p>
+<h2 id="sb-obs">Подключить OBS к Streamer.bot</h2>
+<ol><li>В OBS открой <strong>Сервис → Настройки сервера WebSocket</strong> (Tools → WebSocket Server Settings). Включи сервер. В современных OBS он встроен; стандартный порт — <code>4455</code>.</li><li>Открой сведения о подключении в этом окне. В Streamer.bot перейди в <strong>Stream Apps → OBS</strong>, добавь подключение к <code>127.0.0.1</code> и перенеси порт и пароль из OBS. В некоторых версиях раздел называется OBS Studio.</li><li>Включи автоматическое подключение, подключись и дождись состояния Connected. Запись и трансляцию для проверки запускать не нужно.</li></ol>
+<p>Код ниже использует первое подключение OBS: <code>ObsConnection = 0</code>. Если подключений несколько, выбери соответствующий индекс. HTTP Server на порту 7474 подключает VicDonationGoal к Streamer.bot; WebSocket на 4455 подключает Streamer.bot к OBS. Это разные соединения.</p>
+<h2 id="sb-scene">Собрать оформление в OBS</h2>
+<ol><li>Создай отдельную сцену с точным именем <strong>VDG Донат</strong>. Она будет прозрачным слоем поверх рабочей сцены; переключаться на неё во время стрима не потребуется.</li><li>Добавь в неё <strong>Источник цвета</strong>, назови <strong>VDG Подложка</strong>. Например, выбери тёмно-серый цвет, размер 840 × 220 и небольшую прозрачность. Размести подложку там, где хочешь видеть оповещение.</li><li>Добавь <strong>Текст (GDI+)</strong> с именем <strong>VDG Донатер</strong>. Впиши временно «Зритель — 133 ₽», выбери белый цвет, жирный шрифт и размер около 36. Включи собственные размеры текста, например 780 × 54, чтобы длинное имя оставалось в пределах подложки. Размести над подложкой с отступами.</li><li>Добавь второй <strong>Текст (GDI+)</strong>: <strong>VDG Сообщение</strong>. Впиши тестовую фразу, выбери размер около 26. В свойствах включи собственные размеры/границы текста и перенос слов: например, ширину 780 и высоту 130. Расположи под именем.</li><li>В списке источников оба текста должны быть выше подложки. Можно добавить картинку, рамку и другие детали по своему вкусу. Не закрывай текст непрозрачным источником.</li><li>Вернись в свою рабочую сцену с игрой/камерой. Добавь источник <strong>Сцена → VDG Донат</strong> и перемести его выше игры. Сохрани его имя <strong>VDG Донат</strong>. Подгоняй расположение источников в сцене оповещения под свой холст; приведённые размеры — пример для 1920 × 1080.</li><li>Нажми на глаз рядом с вложенной сценой <strong>VDG Донат</strong> в рабочей сцене, чтобы скрыть оповещение до первого доната.</li></ol>
+<p>В коде поменяй <code>MainScene = "Основная"</code> на точное имя своей рабочей сцены. Остальные имена уже совпадают с шагами выше. Если используешь несколько рабочих сцен, добавь слой в нужную и настрой отдельный вариант действия под её имя; этот простой пример не переключает активную сцену сам.</p>
+<h2 id="sb-action">Создать Action и очередь</h2>
+<ol><li>В Streamer.bot открой <strong>Actions &amp; Queues → Queues</strong>, создай очередь <strong>Донаты</strong> и включи <strong>Blocking</strong>. Это заставляет следующий донат ждать окончания предыдущего. Не ставь длительное оповещение в общую очередь со всеми командами стрима.</li><li>В Actions создай действие <strong>Оповещение о донате</strong>, назначь ему очередь «Донаты» и оставь действие включённым. Если есть параметр Concurrent, выключи параллельное выполнение.</li><li>В Sub-Actions добавь <strong>Core → C# → Execute C# Code</strong>. Вставь весь пример из следующей главы вместо начального кода.</li><li>Измени имя рабочей сцены в <code>MainScene</code>, нажми <strong>Compile</strong> и убедись, что ошибок компиляции нет. Сохрани код и действие. Отдельный триггер DonationAlerts добавлять не нужно: Action будет запускать VicDonationGoal.</li></ol>
+<p>Вид и расположение источников меняются в OBS. Код заполняет текст, показывает и скрывает сцену. Он не скачивает изображения, не создаёт сцены автоматически и не озвучивает сообщение через TTS.</p>
+<h2 id="sb-code">Готовый код</h2>
+<p>Для начала достаточно заменить <code>MainScene</code>. Длительность задаёт <code>DurationMs</code>: <code>10000</code> — 10 секунд. <code>SoundFile</code> оставь пустым, пока не настраиваешь звук.</p>
+<div class="guidebook-code-actions"><button type="button" class="secondary" data-alert-copy>Скопировать код</button><span data-alert-copy-status role="status"></span></div>
+<pre class="guidebook-code"><code data-alert-code>using System;
+using System.Globalization;
+using System.IO;
+
+public class CPHInline
+{
+    // Замени только MainScene на имя своей рабочей сцены OBS.
+    private const string MainScene = &quot;Основная&quot;;
+    private const string AlertScene = &quot;VDG Донат&quot;;
+    private const string HeaderSource = &quot;VDG Донатер&quot;;
+    private const string MessageSource = &quot;VDG Сообщение&quot;;
+    private const int ObsConnection = 0; // Первое подключение OBS в Streamer.bot.
+    private const int DurationMs = 10000;
+
+    // Необязательно: оставь пустым, и оповещение будет работать без звука.
+    // Если добавишь путь, создай в сцене VDG Донат медиаисточник с этим именем.
+    private const string SoundFile = @&quot;&quot;;
+    private const string SoundSource = &quot;VDG Звук&quot;;
+
+    public bool Execute()
+    {
+        bool sound = !string.IsNullOrWhiteSpace(SoundFile) &amp;&amp; File.Exists(SoundFile);
+        if (!string.IsNullOrWhiteSpace(SoundFile) &amp;&amp; !sound)
+            CPH.LogWarn(&quot;VDG: звуковой файл не найден. Показываю оповещение без звука.&quot;);
+
+        try
+        {
+            CPH.ObsSetSourceVisibility(MainScene, AlertScene, false, ObsConnection);
+            string user = Clean(GetArg(&quot;user&quot;, &quot;Аноним&quot;), 60);
+            string amount = Clean(GetArg(&quot;amount&quot;, &quot;0&quot;), 30);
+            string currency = Clean(GetArg(&quot;currency&quot;, &quot;₽&quot;), 10);
+            string message = Clean(GetArg(&quot;message&quot;, &quot;Спасибо за поддержку!&quot;), 220);
+
+            CPH.ObsSetGdiText(AlertScene, HeaderSource, user + &quot; — &quot; + amount + currency, ObsConnection);
+            CPH.ObsSetGdiText(AlertScene, MessageSource, message, ObsConnection);
+
+            if (sound)
+            {
+                CPH.ObsSetMediaSourceFile(AlertScene, SoundSource, SoundFile, ObsConnection);
+                CPH.ObsSetSourceVisibility(AlertScene, SoundSource, true, ObsConnection);
+            }
+
+            CPH.ObsSetSourceVisibility(MainScene, AlertScene, true, ObsConnection);
+            if (sound) CPH.ObsMediaRestart(AlertScene, SoundSource, ObsConnection);
+            CPH.Wait(DurationMs);
+            return true;
+        }
+        catch (Exception error)
+        {
+            CPH.LogError(&quot;VDG: оповещение не выполнено. Проверь подключение OBS и имена сцен/источников. &quot; + error.Message);
+            return false;
+        }
+        finally
+        {
+            try
+            {
+                CPH.ObsSetSourceVisibility(MainScene, AlertScene, false, ObsConnection);
+                // Даём закончиться стандартному переходу скрытия до следующего доната.
+                CPH.Wait(350);
+                if (sound)
+                {
+                    CPH.ObsMediaStop(AlertScene, SoundSource, ObsConnection);
+                    CPH.ObsSetSourceVisibility(AlertScene, SoundSource, false, ObsConnection);
+                }
+            }
+            catch (Exception error)
+            {
+                CPH.LogWarn(&quot;VDG: не удалось скрыть оповещение или остановить звук. &quot; + error.Message);
+            }
+        }
+    }
+
+    private string GetArg(string name, string fallback)
+    {
+        object value;
+        if (!CPH.TryGetArg(name, out value) || value == null) return fallback;
+        string text = Convert.ToString(value, CultureInfo.InvariantCulture);
+        return string.IsNullOrWhiteSpace(text) ? fallback : text.Trim();
+    }
+
+    private string Clean(string text, int limit)
+    {
+        text = text.Replace(&quot;\r&quot;, &quot; &quot;).Replace(&quot;\n&quot;, &quot; &quot;).Trim();
+        while (text.Contains(&quot;  &quot;)) text = text.Replace(&quot;  &quot;, &quot; &quot;);
+        return text.Length &gt; limit ? text.Substring(0, limit - 1) + &quot;…&quot; : text;
+    }
+}
+</code></pre>
+<h2 id="sb-connect">Связать с VicDonationGoal и проверить</h2>
+<ol><li>В Streamer.bot открой <strong>Servers/Clients → HTTP Server</strong>. Запусти сервер на <code>127.0.0.1:7474</code> и включи Auto Start.</li><li>В VicDonationGoal открой <a href="/admin.html#integrations/streamerbot">Интеграции → Streamer.bot</a>. Оставь адрес <code>http://127.0.0.1:7474/DoAction</code>, если порт не менял.</li><li>Нажми <strong>Загрузить действия</strong>, выбери «Оповещение о донате» и сохрани настройки. Привязка по ID продолжит работать после переименования Action.</li><li><strong>Проверить подключение</strong> только проверяет HTTP API и наличие действия. Затем нажми <strong>Тестовое оповещение</strong>: в OBS появятся TestUser, сумма 133 RUB и тестовое сообщение. История донатов и сумма сбора не изменятся. При ручном запуске Action без аргументов показываются «Аноним» и нулевая сумма — это нормально.</li><li>Включи интеграцию Streamer.bot. Для обычного доната должен быть разрешён флажок отправки оповещения. Ручной донат тоже можно отправить в Action соответствующей галочкой.</li></ol>
+<p>При нескольких быстрых донатах очередь Blocking должна показать их по одному. Подтверждение HTTP означает, что Streamer.bot принял действие; правильность картинки, имён источников и звука проверяй в OBS.</p>
+<h2 id="sb-sound">Необязательно: добавить звук</h2>
+<ol><li>Выбери собственный аудиофайл, который можно использовать на твоей трансляции. Встроенного звука в этом примере нет.</li><li>В сцене <strong>VDG Донат</strong> создай <strong>Медиаисточник</strong> с именем <strong>VDG Звук</strong>. Включи локальный файл, выбери аудио, выключи зацикливание. До проверки скрой этот источник.</li><li>В коде заполни путь между кавычками в <code>SoundFile = @""</code>. Символ <code>@</code> оставь: он позволяет вставить обычный Windows-путь без удвоения обратных слешей. Снова скомпилируй и сохрани.</li><li>В микшере OBS проверь громкость медиаисточника. Чтобы слышать его самому, настрой устройство мониторинга и режим мониторинга в расширенных свойствах аудио. Режим «Только мониторинг» не отправляет звук зрителям; для звука и себе, и в трансляцию нужен «Мониторинг и вывод». Не захватывай тот же звук второй раз через устройство рабочего стола.</li><li>Отправь тест. Звук запускается вместе с оповещением и останавливается при скрытии. Если файл не найден, визуальное оповещение продолжит работать без него. Чтобы снова убрать звук, очисти <code>SoundFile</code> и удали или скрой медиаисточник.</li></ol>
+<h2 id="sb-style">Сделать оформление своим</h2>
+<p>Меняй подложку, шрифты, размеры, положение и изображения в OBS, сохраняя имена двух текстов и сцены. Для плавного появления у источника вложенной сцены «VDG Донат» можно настроить переходы появления и скрытия «Затухание» примерно на 300 мс. Код оставляет 350 мс на завершение скрытия. Для более длинного перехода увеличь эту паузу.</p>
+<p>В готовом примере сообщение ограничено 220 символами, имя — 60. Измени ограничения в вызовах <code>Clean</code>, если твоя композиция вмещает больше. Озвучка Speaker.bot остаётся в TTS Hub: не добавляй её второй раз в Action, если сообщения уже читаются программой.</p>
+<h2 id="sb-troubleshooting">Если не получилось</h2>
+<ul><li><strong>Действий в списке нет:</strong> проверь HTTP Server Streamer.bot и порт 7474. Сохрани Action и загрузи список заново.</li><li><strong>Action принят, а картинки нет:</strong> проверь состояние подключения OBS, <code>MainScene</code>, наличие вложенной сцены VDG Донат именно в ней и видимость источников. Рабочая сцена должна быть той, которую ты смотришь. Глаз у текстов и подложки внутри сцены оповещения должен быть включён.</li><li><strong>Текст не меняется:</strong> нужны источники Text (GDI+) с точными именами, а не текст в браузере или картинке. Выключи чтение из файла в свойствах текстов.</li><li><strong>Оповещения перекрываются:</strong> проверь Blocking у отдельной очереди, назначение этой очереди Action и отсутствие параллельного выполнения.</li><li><strong>Текст обрезается:</strong> увеличь область собственного размера текста или уменьши шрифт в OBS. Код специально ограничивает длину очень больших сообщений.</li><li><strong>Нет звука:</strong> сначала настрой визуальный вариант, затем проверь путь, существование файла, имя медиаисточника, микшер и мониторинг OBS. Пустой SoundFile означает намеренно выключенный звук.</li><li><strong>Ошибка Compile:</strong> скопируй пример целиком, проверь кавычки после редактирования и что C#-действие создано в Streamer.bot. Для диагностики открой журнал самого Streamer.bot.</li></ul>
+<p>Официальные справочники: <a href="https://docs.streamer.bot/faq/action-blocking" target="_blank" rel="noopener">очередь Blocking</a>, <a href="https://docs.streamer.bot/api/csharp/methods/obs-studio/sources/obs-set-gdi-text" target="_blank" rel="noopener">ObsSetGdiText</a>, <a href="https://docs.streamer.bot/api/http/guide/configuration" target="_blank" rel="noopener">HTTP Server</a>, <a href="https://docs.streamer.bot/guide/broadcasters/obs-studio" target="_blank" rel="noopener">подключение OBS</a>.</p>
+</main></body></html>

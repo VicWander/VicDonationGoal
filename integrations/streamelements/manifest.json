@@ -90,6 +90,6 @@
       "default": 60
     }
   ],
-  "stability": "stable",
+  "stability": "beta",
   "dashboardVisible": true
 }

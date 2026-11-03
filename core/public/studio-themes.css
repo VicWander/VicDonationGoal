@@ -1,0 +1,159 @@
+/* Studio colour layer. Load after admin-theme.css and studio-shell.css.
+   State badges, service colours and OBS output deliberately keep their own rules. */
+body[data-theme-family] {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  --studio-bg: var(--bg);
+  --studio-surface: var(--card);
+  --studio-surface-2: var(--card-2);
+  --studio-border: var(--border);
+  --studio-text: var(--text);
+  --studio-muted: var(--muted);
+  --studio-accent: var(--accent);
+}
+body[data-theme-family] :is(.studio-shell,.studio-main,.studio-view) { color: var(--text); }
+body[data-theme-family] :is(.studio-sidebar,.studio-subnav) { background: var(--bg-soft); border-color: var(--border); color: var(--text); }
+body[data-theme-family] :is(.studio-dashboard-block,.card,.panel,.settings-card) { background: var(--card) !important; color: var(--text); border-color: var(--border) !important; box-shadow: var(--shadow) !important; }
+body[data-theme-family] :is(label,.hint,.instructions,.date-cell,.message-cell,.empty-cell,.stat-label,.amount-converted,.header p,.service-sub,.event-message,.status-item p,.status-item small) { color: var(--muted) !important; }
+body[data-theme-family] :is(.goal-preview-top,td,.stat-value,.status-item b) { color: var(--text) !important; }
+body[data-theme-family] :is(input,select,textarea) { background: var(--input-bg) !important; color: var(--input-text) !important; border-color: var(--border-strong) !important; }
+body[data-theme-family] :is(input,textarea)::placeholder { color: var(--muted-2) !important; opacity: 1; }
+body[data-theme-family] :is(input,select,textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none !important; }
+body[data-theme-family] input[type="checkbox"] { accent-color: var(--accent); }
+/* Keep the catch-all action rule below the specificity of explicit utility
+   classes. :is() here would make a plain <button> inherit .primary's class
+   weight and beat the later row/menu rules. */
+body[data-theme-family] :where(button,.link-button,.btn,.primary):not(.danger) {
+  background: var(--primary-bg) !important; color: var(--primary-text) !important;
+  box-shadow: var(--action-shadow, none) !important;
+}
+body[data-theme-family] :where(button,.link-button,.btn,.primary):not(.danger):hover { background: var(--primary-hover) !important; filter: none; }
+body[data-theme-family] :is(button,.link-button,.btn).secondary:not(.danger),
+body[data-theme-family] :is(button,.link-button,.btn).secondary:not(.danger):hover {
+  background: var(--card-3) !important; color: var(--text) !important; border: 1px solid var(--border-strong) !important; box-shadow: none !important;
+}
+body[data-theme-family] :is(button,a):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+body[data-theme-family] :is(button,.link-button):disabled { opacity: .5; cursor: not-allowed; }
+/* Navigation and utility buttons must not inherit the primary action fill. */
+body[data-theme-family] :is(.admin-sidebar,.studio-sidebar) :is(.admin-tab,.studio-nav-link,.global-link),
+body[data-theme-family] :is(.donation-section-tab,.tts-subtab,.studio-subnav button,.quick-link,.text-button,.feed-row,.status-row,.list-button,.message-button,.menu-toggle,.dashboard-drag,.dashboard-remove,.dashboard-resize) {
+  color: var(--muted) !important; -webkit-text-fill-color: currentColor !important;
+  background: transparent !important; border-color: transparent !important; box-shadow: none !important;
+}
+body[data-theme-family] :is(.admin-sidebar,.studio-sidebar) :is(.admin-tab,.studio-nav-link,.global-link):hover,
+body[data-theme-family] :is(.donation-section-tab,.tts-subtab,.studio-subnav button,.quick-link,.text-button,.feed-row,.status-row,.list-button,.message-button,.menu-toggle,.dashboard-drag,.dashboard-remove,.dashboard-resize):hover {
+  color: var(--text) !important; background: var(--card-3) !important;
+}
+body[data-theme-family] :is(.admin-sidebar,.studio-sidebar) :is(.admin-tab,.studio-nav-link,.global-link).active,
+body[data-theme-family] :is(.donation-section-tab.active,.tts-subtab.active,.studio-subnav button.active,.quick-link.active,.list-button.chosen) {
+  background: var(--card-3) !important; color: var(--text-strong) !important; -webkit-text-fill-color: currentColor !important;
+}
+body[data-theme-family] :is(.feed-top strong,.feed-amount) { color: var(--text-strong) !important; -webkit-text-fill-color: currentColor !important; }
+body[data-theme-family] :is(.feed-message,.feed-time,.feed-amount small) { color: var(--muted) !important; -webkit-text-fill-color: currentColor !important; }
+body[data-theme-family] :is(.progress-bar,.progress) { background: var(--progress-bg) !important; }
+body[data-theme-family] :is(.progress-fill,.goal-fill,.bar-fill,.progress > div) { background: var(--accent) !important; }
+body[data-theme-family] :is(.donations-table,.history-table) { background: var(--table-row) !important; }
+body[data-theme-family] th { background: var(--table-head) !important; color: var(--muted) !important; border-color: var(--border) !important; }
+body[data-theme-family] td { border-color: var(--border) !important; }
+body[data-theme-family] tr:hover td { background: var(--table-hover) !important; }
+body[data-theme-family] :is(.status-item,.stat,.tts-subtabs,.filters,.form-block,.action-menu,.more-menu) { background: var(--card-2) !important; border-color: var(--border) !important; }
+/* The goal is part of its dashboard card, with no inset coloured rectangle. */
+body[data-theme-family] .goal-preview { background: transparent !important; border: 0 !important; }
+body[data-theme-family] .studio-goal .stat { background: transparent !important; }
+body[data-theme-family] :is(.provider-plans > div,.select-list-item,.log-console,.detail-item,.rule-help,.route-result,.donor-card,.donation-entry,.donor-timeline-item,.donor-note,.donation-expanded-message,.top-summary-strip > div,.donor-detail-summary > div,.bulk-flags,.flag-grid label) {
+  background: var(--card-2) !important; color: var(--text) !important; border-color: var(--border) !important;
+}
+body[data-theme-family] :is(.donation-user,.donation-amount,.donor-main strong,.donor-total strong,.donor-last strong,.top-summary-strip strong,.donor-detail-summary strong,.cell-value,.strong-value,.message-preview) { color: var(--text-strong) !important; }
+body[data-theme-family] :is(.donor-main small,.donor-total small,.donor-last span,.donor-detail-summary span,.donation-date,.donation-message-preview,.timeline-date,.timeline-source,.timeline-message,.cell-label,.provider-plans span,.select-list-item span,.detail-item div) { color: var(--muted) !important; }
+body[data-theme-family] :is(.integration-card,.integration-detail-tab,.donation-subtab,.more-button,.message-chevron,.select-list-item):not(.danger),
+body[data-theme-family] :is(.integration-card,.integration-detail-tab,.donation-subtab,.more-button,.message-chevron,.select-list-item):not(.danger):hover {
+  background: var(--card-2) !important; color: var(--text) !important; -webkit-text-fill-color: currentColor !important; border-color: var(--border) !important;
+}
+body[data-theme-family] :is(.integration-card.active,.integration-detail-tab.active,.donation-subtab.active,.select-list-item.active) { background: var(--card-3) !important; border-color: var(--border-strong) !important; }
+body[data-theme-family] .donor-rank { background: var(--card-3); color: var(--text-strong); }
+/* Older admin CSS tied these service/state colours to --accent. Keep their
+   original identity when the user chooses a different appearance accent. */
+body[data-theme-family] :is(.event-source.donatty,.badge.donatty,.source-badge.donatty) {
+  background: linear-gradient(110deg,rgba(239,169,128,.14),rgba(195,172,211,.14),rgba(100,182,244,.14)) !important; color: #d4bfe5 !important;
+}
+body[data-theme-family][data-theme="light"] :is(.event-source.donatty,.badge.donatty,.source-badge.donatty) {
+  background: linear-gradient(110deg,#faebe3,#f0e9f6,#e5f2fd) !important; color: #715083 !important;
+}
+body[data-theme-family] .integration-badge.running { color: #3bc7da; }
+body[data-theme-family] .action-menu button:not(.danger) { background: transparent !important; color: var(--text) !important; }
+body[data-theme-family] .action-menu button:not(.danger):hover { background: var(--card-3) !important; }
+body[data-theme-family] ::selection { background: var(--primary-bg); color: var(--primary-text); }
+body[data-theme-family] * { scrollbar-color: var(--border-strong) var(--bg-soft); }
+/* Responsive histories are grid cards. Paint the row once, never its cells. */
+body[data-theme-family] .responsive-history-table,
+body[data-theme-family] .responsive-history-table tbody { background: transparent !important; }
+body[data-theme-family] .table-wrap:has(.responsive-history-table),
+body[data-theme-family] .responsive-history-table tr:not(.summary-row):not(.details-row) { background: transparent !important; }
+body[data-theme-family] .responsive-history-table tr.summary-row {
+  background: var(--card-2) !important; border-color: var(--border) !important;
+  box-shadow: var(--shadow-soft) !important;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+body[data-theme-family] .responsive-history-table tr.summary-row:hover {
+  background: var(--table-hover) !important; border-color: var(--border-strong) !important;
+}
+body[data-theme-family] .responsive-history-table tr.details-row {
+  background: var(--card-2) !important; border-color: var(--border) !important;
+}
+body[data-theme-family] .responsive-history-table tr:is(.summary-row,.details-row) > td,
+body[data-theme-family] .responsive-history-table tr:is(.summary-row,.details-row):hover > td {
+  background: transparent !important;
+}
+body[data-theme-family] :is(.select-list,.responsive-history-table) .empty-cell {
+  display: block; padding: 18px; border: 1px solid var(--border) !important;
+  border-radius: 14px; background: var(--card-2) !important;
+}
+body[data-theme-family] :is(.select-list-item,.detail-item) b { color: var(--text-strong) !important; }
+body[data-theme-family] .select-list-item { box-shadow: none !important; transition: background-color .18s ease, border-color .18s ease; }
+body[data-theme-family] .select-list-item:hover { background: var(--card-3) !important; border-color: var(--border-strong) !important; }
+/* Danger remains a semantic colour without inheriting the old button glow. */
+body[data-theme-family] :is(button,.link-button,.btn).danger {
+  background: color-mix(in srgb, var(--danger) 12%, var(--card-2)) !important;
+  color: var(--danger) !important; border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border)) !important;
+  box-shadow: none !important; transition: background-color .18s ease, border-color .18s ease;
+}
+body[data-theme-family] :is(button,.link-button,.btn).danger:hover {
+  background: color-mix(in srgb, var(--danger) 20%, var(--card-2)) !important; filter: none;
+}
+body[data-theme-family] .status-row {
+  border-radius: 12px; text-decoration: none !important;
+  transition: background-color .18s ease, color .18s ease;
+}
+body[data-theme-family] :is(.link-button,.status-row):hover { text-decoration: none !important; }
+/* Original VicWander colour, gradients and depth, isolated from Monocrome. */
+body[data-theme-family="vicwander"] {
+  --action-shadow: 0 10px 24px color-mix(in srgb,var(--accent) 24%,transparent);
+  background:
+    radial-gradient(circle at top right,color-mix(in srgb,var(--accent-2) 18%,transparent),transparent 34%),
+    radial-gradient(circle at top left,color-mix(in srgb,var(--accent-dark) 12%,transparent),transparent 30%),
+    var(--bg) !important;
+}
+body[data-theme-family="vicwander"] :is(.studio-dashboard-block,.card,.panel,.settings-card) {
+  background: color-mix(in srgb,var(--card) 96%,transparent) !important;
+}
+body[data-theme-family="vicwander"] :where(button,.link-button,.btn,.primary):not(.danger):hover { filter: brightness(1.05) saturate(1.05); }
+body[data-theme-family="vicwander"] :is(.progress-fill,.goal-fill,.bar-fill,.progress > div) {
+  background: linear-gradient(90deg,var(--accent-dark),var(--accent),var(--accent-2)) !important;
+}
+body[data-theme-family="vicwander"] ::selection { background: var(--accent-dark); color: #ffffff; }
+.studio-theme-form { margin: 16px 0 0; }
+.studio-theme-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px 16px; }
+.studio-theme-controls label { min-width: 0; }
+.studio-theme-controls select { width: 100%; margin-top: 8px; }
+.studio-theme-controls select:disabled { opacity: .55; cursor: not-allowed; }
+.studio-theme-form .hint { max-width: 68ch; margin: 4px 0 18px; line-height: 1.6; }
+.studio-theme-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.studio-theme-status { min-height: 1.6em; margin: 14px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.studio-theme-status[data-error="true"] { color: var(--danger); }
+.studio-theme-dialog { max-width: min(600px,calc(100vw - 32px)); width: 600px; max-height: calc(100dvh - 40px); padding: 26px; border: 1px solid var(--border-strong); border-radius: 18px; background: var(--card); color: var(--text); box-shadow: 0 24px 80px #0007; }
+.studio-theme-dialog::backdrop { background: #0009; }
+.studio-theme-dialog h2 { margin: 0 0 20px; }
+.studio-theme-close { margin-top: 22px; }
+#sidebarThemeSlot .studio-theme-open { width: 100%; justify-content: flex-start; }
+@media(max-width:560px) { .studio-theme-controls { grid-template-columns: 1fr; } .studio-theme-dialog { padding: 20px; } }
+@media(prefers-reduced-motion:reduce) { body[data-theme-family],body[data-theme-family] * { scroll-behavior: auto; transition: none !important; } }

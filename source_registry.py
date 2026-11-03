@@ -10,9 +10,9 @@ source from this registry.
 SOURCE_REGISTRY = {
     "donationalerts": {"name": "DonationAlerts", "shortName": "DA", "order": 10, "stability": "stable", "automatic": True},
     "donatty": {"name": "Donatty", "shortName": "Donatty", "order": 20, "stability": "stable", "automatic": True},
-    "streamelements": {"name": "StreamElements", "shortName": "SE", "order": 30, "stability": "stable", "automatic": True},
+    "streamelements": {"name": "StreamElements", "shortName": "SE", "order": 30, "stability": "beta", "automatic": True},
     "streamlabs": {"name": "Streamlabs", "shortName": "Streamlabs", "order": 40, "stability": "beta", "automatic": True},
-    "donatepay": {"name": "DonatePay", "shortName": "DonatePay", "order": 50, "stability": "beta", "automatic": True},
+    "donatepay": {"name": "DonatePay", "shortName": "DonatePay", "order": 50, "stability": "stable", "automatic": True},
     "donatestream": {"name": "Donate.Stream", "shortName": "D.Stream", "order": 60, "stability": "stable", "automatic": True},
     "donatex": {"name": "DonateX", "shortName": "DonateX", "order": 70, "stability": "stable", "automatic": True},
     "tribute": {"name": "Tribute", "shortName": "Tribute", "order": 80, "stability": "experimental", "automatic": True},

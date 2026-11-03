@@ -93,16 +93,27 @@ def prepare_payload(payload,existing=None):
     result['integrations/tts/tts_control.json']=encode({'commands':[]})
     return result,len(donations)
 
+def version_key(value:str,folder:str):
+    """Compare numeric releases and the dev/alpha/beta/rc builds we distribute.
+
+    Pad the historic two-to-four-part numbers so 1.5 and 1.5.0 compare equally.
+    A development build precedes the stable release with the same number.
+    """
+    match=re.fullmatch(r'(\d+(?:\.\d+){1,3})(?:-(dev|alpha|beta|rc)(?:[.-]?(\d+))?)?',value)
+    if not match:
+        raise ValueError(f'Неизвестный формат номера версии в {folder} папке')
+    number=tuple(int(part) for part in match.group(1).split('.'))
+    number=number+(0,)*(4-len(number))
+    stage={'dev':0,'alpha':1,'beta':2,'rc':3,None:4}[match.group(2)]
+    return number,stage,int(match.group(3) or 0)
+
 def migrate(source:Path,target:Path):
     source=Path(source).resolve(); target=Path(target).resolve()
     if source==target or source.is_relative_to(target):
         raise ValueError('Выберите отдельную папку старой версии; перенос в неё саму запрещён')
     source_version=(source/'VERSION').read_text(encoding='utf-8-sig').strip()
     target_version=(target/'VERSION').read_text(encoding='utf-8-sig').strip()
-    def parts(v):
-        if not re.fullmatch(r'\d+(?:\.\d+){1,3}',v): raise ValueError('Неизвестный формат версии')
-        return tuple(int(x) for x in v.split('.'))
-    if parts(source_version)>parts(target_version):
+    if version_key(source_version,'старой')>version_key(target_version,'новой'):
         raise ValueError('Старая папка содержит более новую версию; понижение отменено')
     ensure_stopped(source,target)
     raw,_=portability.create_backup_bytes(source,reason='migration_source')

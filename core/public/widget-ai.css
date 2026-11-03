@@ -1,0 +1,33 @@
+.ai-workspace{min-width:0;color:var(--text)}
+.ai-intro{max-width:78ch;color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 28px}
+.ai-columns{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(340px,1.25fr);gap:32px;align-items:start}
+.ai-workspace h2{font-size:20px;margin:0 0 22px}
+.ai-workspace label{display:flex;flex-direction:column;gap:8px;font-size:12px;color:var(--muted);margin-bottom:18px;min-width:0}
+.ai-workspace :is(input,select,textarea){width:100%;min-width:0;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border-strong);border-radius:8px;background:var(--input-bg);color:var(--text);font-family:inherit;font-size:13px;line-height:1.5}
+.ai-workspace textarea{resize:vertical;font:12px/1.6 Consolas,monospace;tab-size:2;min-height:85px}
+.ai-workspace textarea[readonly]{opacity:.65}
+.ai-workspace :is(input,textarea,select,button,summary):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.ai-workspace p{line-height:1.6}
+.ai-workspace .hint{font-size:12px;color:var(--muted);max-width:78ch}
+.ai-sizes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ai-workspace details{margin:18px 0}
+.ai-workspace summary{font-size:12px;cursor:pointer;margin-bottom:12px}
+.ai-workspace [data-ai-status]{white-space:pre-wrap;font-size:13px;padding:12px 0;min-height:28px;color:var(--text);overflow-wrap:anywhere}
+.ai-workspace [data-ai-status][data-error="true"]{color:var(--danger)}
+.ai-workspace .inline-actions{display:flex;flex-wrap:wrap;gap:10px}
+.ai-workspace button{font-size:12px;padding:9px 14px}
+.ai-result{margin-top:32px;padding-top:26px;border-top:1px solid var(--border)}
+.ai-result .section-heading{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.ai-result .section-heading h2{margin:0}
+.ai-result .section-heading span{font-size:12px;color:var(--muted)}
+.ai-test{display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-bottom:18px}
+.ai-test label{margin:0;flex:1 1 170px;max-width:420px}
+.ai-test label:has(select){flex:0 1 100px}
+.ai-preview{position:relative;overflow:hidden;min-height:180px;max-width:100%;background:conic-gradient(var(--we-check-light) 25%,var(--we-check-dark) 0 50%,var(--we-check-light) 0 75%,var(--we-check-dark) 0) 0 0/24px 24px;border:1px solid var(--border);border-radius:10px}
+.ai-preview>p{padding:24px;color:var(--muted)}
+.ai-parameters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:20px}
+.ai-parameters input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.ai-parameters input[type=color]{height:42px;padding:3px}
+.ai-save{margin-top:20px}
+@media(max-width:950px){.ai-columns{grid-template-columns:1fr;gap:28px}.ai-code{padding-top:24px;border-top:1px solid var(--border)}}
+@media(prefers-reduced-motion:no-preference){.ai-workspace button{transition:background-color .18s ease,color .18s ease,opacity .18s ease}}

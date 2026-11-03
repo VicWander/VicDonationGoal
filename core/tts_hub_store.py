@@ -189,18 +189,6 @@ DEFAULT_PROFILES: list[dict[str, Any]] = [
         "badWordFilter": False
     },
     {
-        "id": "washington",
-        "name": "Washington",
-        "enabled": True,
-        "provider": "speakerbot",
-        "voiceAlias": "Washington",
-        "edgeVoice": "ru-RU-DmitryNeural",
-        "rate": "+0%",
-        "volume": "+0%",
-        "pitch": "-10Hz",
-        "badWordFilter": False
-    },
-    {
         "id": "moderator",
         "name": "Moderator",
         "enabled": True,
@@ -273,23 +261,6 @@ DEFAULT_RULES: list[dict[str, Any]] = [
             "userIds": [],
             "usernames": [],
             "roles": ["vip"],
-            "rewardIds": [],
-            "minAmount": None,
-            "maxAmount": None
-        }
-    },
-    {
-        "id": "washington-rule",
-        "name": "Вашингтон",
-        "enabled": True,
-        "priority": 100,
-        "profileId": "washington",
-        "conditions": {
-            "eventTypes": ["washington"],
-            "sources": [],
-            "userIds": [],
-            "usernames": [],
-            "roles": [],
             "rewardIds": [],
             "minAmount": None,
             "maxAmount": None

@@ -44,6 +44,45 @@ class UpgradeTests(unittest.TestCase):
         upgrade.migrate(self.old,self.new); upgrade.migrate(self.old,self.new)
         self.assertEqual(len(json.loads((self.new/'core/data/donations.json').read_text())),1)
 
+    def test_full_146_migration_into_actual_development_version(self):
+        target_version=(ROOT/'VERSION').read_text(encoding='utf-8-sig').strip()
+        (self.old/'VERSION').write_text('1.4.6\n')
+        (self.new/'VERSION').write_text(target_version+'\n')
+        source_files={p.relative_to(self.old).as_posix():p.read_bytes() for p in self.old.rglob('*') if p.is_file()}
+        result=upgrade.migrate(self.old,self.new)
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['sourceVersion'],'1.4.6')
+        self.assertEqual(result['targetVersion'],target_version)
+        self.assertEqual((self.new/'VERSION').read_text().strip(),target_version)
+        for rel in ['core/data/donations.json','core/data/state.json','core/data/donor_profiles.json',
+                    'integrations/donationalerts/donationalerts_tokens.json','integrations/streamerbot/streamerbot_config.json']:
+            self.assertEqual((self.new/rel).read_bytes(),source_files[rel])
+        self.assertIn('manual:1',json.loads((self.new/'integrations/tts/tts_sent.json').read_text())['seen'])
+        self.assertIn('manual:1',json.loads((self.new/'integrations/streamerbot/streamerbot_sent.json').read_text())['sent'])
+        self.assertEqual(json.loads((self.new/'integrations/tts/tts_queue.json').read_text()),[])
+        self.assertTrue(list((self.new/'backups/migration').glob('*.zip')))
+        self.assertEqual(source_files,{p.relative_to(self.old).as_posix():p.read_bytes() for p in self.old.rglob('*') if p.is_file()})
+
+    def test_development_and_prerelease_versions_can_be_upgraded(self):
+        for source,target in [('1.4.6','1.5-dev'),('1.5-dev','1.5-beta.1'),('1.5-rc.2','1.5.0'),('1.5.0','1.5')]:
+            with self.subTest(source=source,target=target):
+                (self.old/'VERSION').write_text(source)
+                (self.new/'VERSION').write_text(target)
+                self.assertTrue(upgrade.migrate(self.old,self.new)['ok'])
+
+    def test_stable_version_cannot_downgrade_into_same_development_version(self):
+        (self.old/'VERSION').write_text('1.5')
+        (self.new/'VERSION').write_text('1.5-dev')
+        with self.assertRaisesRegex(ValueError,'понижение'):
+            upgrade.migrate(self.old,self.new)
+
+    def test_unknown_version_suffix_rejected_before_writes(self):
+        before=(self.new/'core/data/donations.json').read_bytes()
+        (self.new/'VERSION').write_text('1.5-garbage')
+        with self.assertRaisesRegex(ValueError,'формат'):
+            upgrade.migrate(self.old,self.new)
+        self.assertEqual((self.new/'core/data/donations.json').read_bytes(),before)
+
     def test_failed_write_rolls_back_and_keeps_original_source(self):
         before=(self.new/'core/data/state.json').read_bytes()
         old=(self.old/'core/data/donations.json').read_bytes()
@@ -148,7 +187,7 @@ class BuildTests(unittest.TestCase):
             cfg=json.loads((target/'integrations/donationalerts/donationalerts_config.json').read_text())
             self.assertFalse(cfg['enabled'])
             self.assertFalse((target/'integrations/donationalerts/donationalerts_tokens.json').exists())
-            self.assertEqual((target/'VERSION').read_text().strip(),'1.4.6')
+            self.assertEqual((target/'VERSION').read_text().strip(),build.VERSION)
             content=b''.join(p.read_bytes() for p in target.rglob('*') if p.is_file())
             self.assertNotIn(b'private-canary-never-publish',content)
             self.assertNotIn(b'secret-canary-log',content)

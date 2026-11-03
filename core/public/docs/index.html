@@ -1,306 +1,119 @@
 <!DOCTYPE html>
-<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>VicDonationGoal v1.4.4 — Руководство</title><link rel="stylesheet" href="docs-theme.css"></head>
-<body><div class="layout"><aside class="sidebar"><div class="brand">VicDonationGoal<br>v1.4.4</div><div class="subtitle">Полное руководство</div><nav class="nav"><a class="level-1" href="#vicdonationgoal-v141-полное-руководство">VicDonationGoal v1.4.4 — полное руководство</a><a class="level-2" href="#1-что-умеет-проект">1. Что умеет проект</a><a class="level-2" href="#2-архитектура">2. Архитектура</a><a class="level-3" href="#21-core-server">2.1. Core Server</a><a class="level-3" href="#22-integration-manager">2.2. Integration Manager</a><a class="level-3" href="#23-donationalerts-adapter">2.3. DonationAlerts Adapter</a><a class="level-3" href="#24-donatty-adapter">2.4. Donatty Adapter</a><a class="level-3" href="#25-streamelements-adapter">2.5. StreamElements Adapter</a><a class="level-3" href="#26-streamlabs-adapter">2.6. Streamlabs Adapter</a><a class="level-3" href="#27-единый-формат-события">2.7. Единый формат события</a><a class="level-2" href="#3-первый-запуск">3. Первый запуск</a><a class="level-3" href="#31-требования">3.1. Требования</a><a class="level-3" href="#32-установка-зависимостей">3.2. Установка зависимостей</a><a class="level-3" href="#33-мастер-интеграций">3.3. Мастер интеграций</a><a class="level-3" href="#34-проверка">3.4. Проверка</a><a class="level-2" href="#4-ежедневный-запуск">4. Ежедневный запуск</a><a class="level-2" href="#5-админка-раздел-донаты">5. Админка: раздел «Донаты»</a><a class="level-3" href="#51-текущая-цель">5.1. Текущая цель</a><a class="level-3" href="#52-ручной-донат">5.2. Ручной донат</a><a class="level-3" href="#53-история-донатов">5.3. История донатов</a><a class="level-3" href="#54-редактирование-и-удаление">5.4. Редактирование и удаление</a><a class="level-2" href="#6-данные-и-валюты">6. Данные и валюты</a><a class="level-3" href="#61-statejson">6.1. state.json</a><a class="level-3" href="#62-donationsjson">6.2. donations.json</a><a class="level-3" href="#63-курсы-валют">6.3. Курсы валют</a><a class="level-2" href="#7-donationalerts">7. DonationAlerts</a><a class="level-3" href="#71-настройка">7.1. Настройка</a><a class="level-3" href="#72-управление">7.2. Управление</a><a class="level-2" href="#8-donatty">8. Donatty</a><a class="level-2" href="#9-streamerbot-bridge-и-donation-event-rules">9. Streamer.bot Bridge и Donation Event Rules</a><a class="level-3" href="#91-обычное-оповещение">9.1. Обычное оповещение</a><a class="level-3" href="#92-донат-ивенты">9.2. Донат-ивенты</a><a class="level-1" href="#10-tts-hub">10. TTS Hub</a><a class="level-2" href="#101-общая-последовательность">10.1. Общая последовательность</a><a class="level-2" href="#102-общие-настройки">10.2. Общие настройки</a><a class="level-2" href="#11-провайдер-speakerbot">11. Провайдер Speaker.bot</a><a class="level-3" href="#111-настройка-speakerbot">11.1. Настройка Speaker.bot</a><a class="level-3" href="#112-очередь-speakerbot">11.2. Очередь Speaker.bot</a><a class="level-3" href="#113-типичные-ошибки">11.3. Типичные ошибки</a><a class="level-2" href="#12-провайдер-microsoft-edge">12. Провайдер Microsoft Edge</a><a class="level-2" href="#13-провайдер-yandex-speechkit">13. Провайдер Yandex SpeechKit</a><a class="level-2" href="#14-провайдер-xtts-local">14. Провайдер XTTS Local</a><a class="level-2" href="#15-провайдер-custom-http">15. Провайдер Custom HTTP</a><a class="level-2" href="#16-голосовые-профили">16. Голосовые профили</a><a class="level-3" href="#161-поля-профиля">16.1. Поля профиля</a><a class="level-3" href="#162-провайдер-автоматически">16.2. Провайдер «Автоматически»</a><a class="level-3" href="#163-персональный-голос">16.3. Персональный голос</a><a class="level-2" href="#17-правила-маршрутизации">17. Правила маршрутизации</a><a class="level-3" href="#171-типы-событий">17.1. Типы событий</a><a class="level-3" href="#172-источники">17.2. Источники</a><a class="level-3" href="#173-user-id">17.3. User ID</a><a class="level-3" href="#174-ники">17.4. Ники</a><a class="level-3" href="#175-роли">17.5. Роли</a><a class="level-3" href="#176-reward-id">17.6. Reward ID</a><a class="level-3" href="#177-сумма">17.7. Сумма</a><a class="level-3" href="#178-как-объединяются-условия">17.8. Как объединяются условия</a><a class="level-3" href="#179-тестер-маршрутизации">17.9. Тестер маршрутизации</a><a class="level-2" href="#18-очередь-история-и-логи">18. Очередь, история и логи</a><a class="level-3" href="#181-очередь">18.1. Очередь</a><a class="level-3" href="#182-история">18.2. История</a><a class="level-3" href="#183-логи">18.3. Логи</a><a class="level-2" href="#19-внешний-tts-api">19. Внешний TTS API</a><a class="level-2" href="#20-команда-ттс-в-streamerbot">20. Команда !ттс в Streamer.bot</a><a class="level-2" href="#21-награды-за-баллы-канала">21. Награды за баллы канала</a><a class="level-2" href="#22-washington-service">22. Washington Service</a><a class="level-2" href="#23-основные-api-endpoints">23. Основные API endpoints</a><a class="level-2" href="#24-bat-файлы">24. BAT-файлы</a><a class="level-2" href="#25-структура-проекта">25. Структура проекта</a><a class="level-2" href="#26-типичные-проблемы-tts">26. Типичные проблемы TTS</a><a class="level-3" href="#профиль-продолжает-использовать-не-тот-движок">Профиль продолжает использовать не тот движок</a><a class="level-3" href="#speakerbot-выключен">Speaker.bot выключен</a><a class="level-3" href="#edge-создал-файл-но-звука-нет">Edge создал файл, но звука нет</a><a class="level-3" href="#после-очистки-сообщение-пустое">После очистки сообщение пустое</a><a class="level-3" href="#сообщение-озвучилось-дважды">Сообщение озвучилось дважды</a><a class="level-3" href="#старые-сообщения-проигрались-после-сброса-sent">Старые сообщения проигрались после сброса sent</a><a class="level-3" href="#yandex-401403">Yandex 401/403</a><a class="level-3" href="#xtts-timeout">XTTS timeout</a><a class="level-2" href="#27-бэкапы-и-безопасность">27. Бэкапы и безопасность</a><a class="level-2" href="#28-topdonation">28. TopDonation</a><a class="level-3" href="#281-как-считается-рейтинг">28.1. Как считается рейтинг</a><a class="level-3" href="#282-почему-одинаковые-ники-из-разных-сервисов-разделены">28.2. Почему одинаковые ники из разных сервисов разделены</a><a class="level-3" href="#283-профиль-донатера">28.3. Профиль донатера</a><a class="level-3" href="#284-закрепленные-донатеры">28.4. Закреплённые донатеры</a><a class="level-3" href="#285-корректировка-суммы">28.5. Корректировка суммы</a><a class="level-3" href="#286-объединение-профилей">28.6. Объединение профилей</a><a class="level-3" href="#287-исключение-и-удаление">28.7. Исключение и удаление</a><a class="level-3" href="#288-поиск">28.8. Поиск</a><a class="level-3" href="#289-экспорт-одного-донатера">28.9. Экспорт одного донатера</a><a class="level-3" href="#2810-массовые-флаги-истории">28.10. Массовые флаги истории</a><a class="level-3" href="#2811-topdonation-api">28.11. TopDonation API</a><a class="level-2" href="#29-integrations-hub">29. Integrations Hub</a><a class="level-3" href="#291-состояния">29.1. Состояния</a><a class="level-3" href="#292-секретные-поля">29.2. Секретные поля</a><a class="level-3" href="#293-первый-запуск">29.3. Первый запуск</a><a class="level-3" href="#294-добавление-будущего-сервиса">29.4. Добавление будущего сервиса</a><a class="level-2" href="#30-streamelements">30. StreamElements</a><a class="level-3" href="#301-как-работает">30.1. Как работает</a><a class="level-3" href="#302-подключение">30.2. Подключение</a><a class="level-3" href="#303-статусы-и-фильтрация">30.3. Статусы и фильтрация</a><a class="level-3" href="#304-безопасность">30.4. Безопасность</a><a class="level-2" href="#31-streamlabs-beta">31. Streamlabs — Beta</a><a class="level-3" href="#311-создание-приложения">31.1. Создание приложения</a><a class="level-3" href="#312-подключение">31.2. Подключение</a><a class="level-3" href="#313-техническая-схема">31.3. Техническая схема</a><a class="level-3" href="#314-whitelist">31.4. Whitelist</a><a class="level-3" href="#315-безопасность">31.5. Безопасность</a><a class="level-2" href="#32-roadmap">32. Roadmap</a></nav></aside><main class="content"><div class="hero"><span class="badge">manual</span><h1>VicDonationGoal v1.4.4</h1><p class="muted">Donation Goal, TopDonation, TTS Hub и Beta Readiness.</p></div><h1 id="vicdonationgoal-v141-полное-руководство">VicDonationGoal v1.4.4 — полное руководство</h1>
-<p>VicDonationGoal — локальная система для управления донат-голом, историей донатов, событиями Streamer.bot и озвучкой сообщений через TTS Hub.</p>
-<p>Версия <strong>1.4.1</strong> расширяет Integrations Hub официальными сервисами StreamElements и Streamlabs. DonationAlerts, Donatty, TopDonation, TTS Hub и Streamer.bot Bridge сохранены.</p>
-<hr />
-<h2 id="1-что-умеет-проект">1. Что умеет проект</h2>
-<p>Основные возможности:</p>
-<ul>
-<li>подключать DonationAlerts, Donatty, StreamElements и Streamlabs через единый Integrations Hub;</li>
-<li>включать, выключать, проверять и переподключать каждый донат-сервис отдельно;</li>
-<li>добавлять переводы вручную;</li>
-<li>учитывать или не учитывать каждый донат в текущей цели;</li>
-<li>хранить полную историю событий;</li>
-<li>строить TopDonation за всё время и объединять профили одного человека;</li>
-<li>показывать кастомный донат-гол в OBS Browser Source;</li>
-<li>отправлять обычные оповещения в Streamer.bot;</li>
-<li>запускать дополнительные Streamer.bot actions по сумме доната;</li>
-<li>озвучивать сообщения через Speaker.bot, Microsoft Edge, Yandex SpeechKit, XTTS Local или Custom HTTP;</li>
-<li>выбирать разные голоса для донатов, модераторов, VIP, наград, Вашингтона и конкретных зрителей;</li>
-<li>принимать внешние TTS-события от Streamer.bot, Washington Service и других программ;</li>
-<li>экспортировать историю донатов в CSV;</li>
-<li>хранить данные локально без обязательного внешнего сервера.</li>
-</ul>
-<p>Краткая схема:</p>
-<pre><code class="language-text">DonationAlerts Adapter ─┐
-Donatty Adapter ─────────┤
-StreamElements Adapter ──┼──&gt; Integration Manager ──&gt; VicDonationGoal Core
-Streamlabs Adapter ──────┘                              │
-                                                       ├──&gt; JSON storage
-                                                       ├──&gt; Admin / Goal Widget
-                                                       ├──&gt; TopDonation
-                                                       ├──&gt; Streamer.bot Bridge
-                                                       └──&gt; TTS Hub
-</code></pre>
-<hr />
-<h2 id="2-архитектура">2. Архитектура</h2>
-<h3 id="21-core-server">2.1. Core Server</h3>
-<p>Главный файл:</p>
-<pre><code class="language-text">core/server.py
-</code></pre>
-<p>Core запускает локальный HTTP-сервер на <code>http://127.0.0.1:3333</code>, хранит донаты, пересчитывает цель и предоставляет API. Начиная с v1.4.0 Core <strong>не содержит реализацию конкретного донат-сервиса</strong>.</p>
-<h3 id="22-integration-manager">2.2. Integration Manager</h3>
-<pre><code class="language-text">core/integration_manager.py
-</code></pre>
-<p>Integration Manager:</p>
-<ul>
-<li>сканирует <code>integrations/*/manifest.json</code>;</li>
-<li>понимает, какие поля настройки нужны сервису;</li>
-<li>запускает только включённые интеграции;</li>
-<li>останавливает и переподключает модули;</li>
-<li>отдаёт в админку статусы, инструкции и логи;</li>
-<li>не передаёт секреты обратно в браузер.</li>
-</ul>
-<h3 id="23-donationalerts-adapter">2.3. DonationAlerts Adapter</h3>
-<pre><code class="language-text">integrations/donationalerts/donationalerts_integration.py
-</code></pre>
-<p>Адаптер полностью отвечает за OAuth, refresh token, Centrifugo WebSocket и преобразование события DonationAlerts в единый формат доната.</p>
-<h3 id="24-donatty-adapter">2.4. Donatty Adapter</h3>
-<pre><code class="language-text">integrations/donatty/donatty_listener.py
-</code></pre>
-<p>Donatty остаётся отдельным процессом, потому что использует Playwright и длительное SSE-соединение. Процесс запускается и останавливается Integration Manager автоматически.</p>
-<h3 id="25-streamelements-adapter">2.5. StreamElements Adapter</h3>
-<pre><code class="language-text">integrations/streamelements/streamelements_listener.py
-</code></pre>
-<p>Отдельный процесс подключается к официальному Astro WebSocket, подписывается на <code>channel.tips</code> и отправляет успешно завершённые tips в Core.</p>
-<h3 id="26-streamlabs-adapter">2.6. Streamlabs Adapter</h3>
-<pre><code class="language-text">integrations/streamlabs/streamlabs_integration.py
-</code></pre>
-<p>In-process адаптер управляет OAuth, получает Socket Token и принимает Streamlabs Donation events через Socket.IO.</p>
-<h3 id="27-единый-формат-события">2.7. Единый формат события</h3>
-<p>Любая интеграция в конце передаёт Core объект:</p>
-<pre><code class="language-json">{
-  &quot;source&quot;: &quot;service_name&quot;,
-  &quot;externalId&quot;: &quot;event-id&quot;,
-  &quot;username&quot;: &quot;ViewerName&quot;,
-  &quot;amount&quot;: 100,
-  &quot;currency&quot;: &quot;RUB&quot;,
-  &quot;message&quot;: &quot;Сообщение&quot;,
-  &quot;createdAt&quot;: &quot;2026-07-30T20:00:00Z&quot;
-}
-</code></pre>
-<p>После этого источник больше не важен: Core одинаково обновляет историю, TopDonation, виджет, TTS и Streamer.bot.</p>
-<hr />
-<h2 id="3-первый-запуск">3. Первый запуск</h2>
-<h3 id="31-требования">3.1. Требования</h3>
-<ul>
-<li>Windows 10/11;</li>
-<li>Python 3.11 или новее;</li>
-<li>OBS Studio — для виджетов;</li>
-<li>Streamer.bot — если нужны оповещения и донат-ивенты;</li>
-<li>Speaker.bot — только если выбран соответствующий TTS-провайдер.</li>
-</ul>
-<h3 id="32-установка-зависимостей">3.2. Установка зависимостей</h3>
-<p>Запусти:</p>
-<pre><code class="language-text">00_INSTALL_ALL.bat
-</code></pre>
-<p>Устанавливаются <code>requests</code>, <code>websocket-client</code>, <code>playwright</code>, <code>edge-tts</code> и Chromium Playwright.</p>
-<h3 id="33-мастер-интеграций">3.3. Мастер интеграций</h3>
-<p>После первого запуска открой:</p>
-<pre><code class="language-text">http://127.0.0.1:3333/admin.html
-</code></pre>
-<p>Перейди в раздел <strong>Интеграции</strong>. На чистой установке появится мастер:</p>
-<ol>
-<li>выбрать DonationAlerts, Donatty или оба сервиса;</li>
-<li>заполнить настройки выбранных сервисов;</li>
-<li>сохранить конфигурацию;</li>
-<li>авторизовать DonationAlerts, если он выбран;</li>
-<li>нажать <strong>Проверить</strong>.</li>
-</ol>
-<p>Выключенные модули не запускаются и не показывают ошибки.</p>
-<h3 id="34-проверка">3.4. Проверка</h3>
-<pre><code class="language-text">09_STABILITY_CHECK.bat
-</code></pre>
-<p>Проверка валидирует Python, JSON, manifests интеграций, конфиги, TTS, TopDonation и основные файлы.</p>
-<hr />
-<h2 id="4-ежедневный-запуск">4. Ежедневный запуск</h2>
-<pre><code class="language-text">01_START_ALL.bat
-</code></pre>
-<p>Открываются Core Server, Streamer.bot Bridge и TTS Hub. Core самостоятельно запускает только включённые донат-интеграции.</p>
-<pre><code class="language-text">Админка:   http://127.0.0.1:3333/admin.html
-Виджет:    http://127.0.0.1:3333/widget.html
-TTS Player:http://127.0.0.1:3333/tts.html
-</code></pre>
-<p><code>03_START_DONATTY_ONLY.bat</code> оставлен только для ручной отладки. В обычной работе Donatty управляется из Integration Hub.</p>
-<hr />
-<h2 id="5-админка-раздел-донаты">5. Админка: раздел «Донаты»</h2>
-<h3 id="51-текущая-цель">5.1. Текущая цель</h3>
-<p>Можно изменить:</p>
-<ul>
-<li>название;</li>
-<li>стартовую сумму;</li>
-<li>целевую сумму;</li>
-<li>валюту цели.</li>
-</ul>
-<p><code>baseAmount</code> — деньги, которые уже были собраны, но не представлены отдельными донатами.</p>
-<h3 id="52-ручной-донат">5.2. Ручной донат</h3>
-<p>Поля:</p>
-<pre><code class="language-text">Имя
-Сумма
-Валюта
-Сообщение
-</code></pre>
-<p>Независимые флаги:</p>
-<pre><code class="language-text">Добавлять в текущий сбор
-Отправить обычное оповещение в Streamer.bot
-Запустить донат-ивенты
-Озвучить сообщение через TTS Hub
-</code></pre>
-<p>Для ручного доната галочка <strong>«Озвучить»</strong> является окончательным решением. Если она включена, ручной донат обходит общий минимальный порог TTS. Это удобно для переводов на карту, разных валют и тестов.</p>
-<h3 id="53-история-донатов">5.3. История донатов</h3>
-<p>Основная строка показывает краткие данные. Нажми <strong>«Развернуть»</strong>, чтобы увидеть:</p>
-<ul>
-<li>полное сообщение;</li>
-<li>даты;</li>
-<li>сумму после конвертации;</li>
-<li>external ID;</li>
-<li>unique key;</li>
-<li>заметку.</li>
-</ul>
-<p>Так таблица не растягивается горизонтально.</p>
-<h3 id="54-редактирование-и-удаление">5.4. Редактирование и удаление</h3>
-<ul>
-<li><code>Изм.</code> — изменить имя, сумму, валюту и сообщение;</li>
-<li><code>Удал.</code> — удалить донат;</li>
-<li><code>Повт.</code> — повторить обычное оповещение Streamer.bot;</li>
-<li>чекбоксы в истории меняют отдельные флаги события.</li>
-</ul>
-<hr />
-<h2 id="6-данные-и-валюты">6. Данные и валюты</h2>
-<h3 id="61-statejson">6.1. state.json</h3>
-<pre><code class="language-text">core/data/state.json
-</code></pre>
-<p>Хранит состояние цели.</p>
-<h3 id="62-donationsjson">6.2. donations.json</h3>
-<pre><code class="language-text">core/data/donations.json
-</code></pre>
-<p>Основные поля доната:</p>
-<pre><code class="language-json">{
-  &quot;uniqueKey&quot;: &quot;donatty:external-id&quot;,
-  &quot;source&quot;: &quot;donatty&quot;,
-  &quot;username&quot;: &quot;Viewer&quot;,
-  &quot;amount&quot;: 100,
-  &quot;currency&quot;: &quot;RUB&quot;,
-  &quot;amountForGoal&quot;: 100,
-  &quot;includeInGoal&quot;: true,
-  &quot;notifyStreamerBot&quot;: true,
-  &quot;triggerDonationEvents&quot;: true,
-  &quot;speakTTS&quot;: true,
-  &quot;message&quot;: &quot;Текст сообщения&quot;
-}
-</code></pre>
-<h3 id="63-курсы-валют">6.3. Курсы валют</h3>
-<pre><code class="language-text">core/data/rates.json
-</code></pre>
-<p>Курс означает, сколько рублей стоит одна единица валюты. Например:</p>
-<pre><code class="language-json">{
-  &quot;baseCurrency&quot;: &quot;RUB&quot;,
-  &quot;ratesToRUB&quot;: {
-    &quot;RUB&quot;: 1,
-    &quot;USD&quot;: 90,
-    &quot;EUR&quot;: 100,
-    &quot;KZT&quot;: 0.18
-  }
-}
-</code></pre>
-<hr />
-<h2 id="7-donationalerts">7. DonationAlerts</h2>
-<p>В v1.4.0 DonationAlerts настраивается в <strong>Админка → Интеграции → DonationAlerts</strong>.</p>
-<h3 id="71-настройка">7.1. Настройка</h3>
-<ol>
-<li>Создай API Application в DonationAlerts.</li>
-<li>Redirect URL должен точно совпадать:</li>
-</ol>
-<pre><code class="language-text">http://127.0.0.1:3333/auth/donationalerts/callback
-</code></pre>
-<ol start="3">
-<li>Введи Client ID и Client Secret в Integration Hub.</li>
-<li>Нажми <strong>Сохранить настройки</strong>.</li>
-<li>Нажми <strong>Авторизовать</strong>.</li>
-<li>После возврата нажми <strong>Проверить</strong>.</li>
-</ol>
-<p>Рабочий конфиг и токены:</p>
-<pre><code class="language-text">integrations/donationalerts/donationalerts_config.json
-integrations/donationalerts/donationalerts_tokens.json
-</code></pre>
-<p>Client Secret и токены не показываются обратно в браузере и не должны попадать в GitHub.</p>
-<h3 id="72-управление">7.2. Управление</h3>
-<p>В карточке доступны:</p>
-<pre><code class="language-text">Включить / выключить
-Запустить / остановить
-Переподключить
-Проверить
-Авторизовать
-Сбросить авторизацию
-Инструкция / Логи / Техническое состояние
-</code></pre>
-<p>Совместимые адреса <code>/api/da/status</code>, <code>/api/da/start</code> и <code>/api/da/stop</code> сохранены.</p>
-<hr />
-<h2 id="8-donatty">8. Donatty</h2>
-<p>Donatty настраивается в <strong>Админка → Интеграции → Donatty</strong>.</p>
-<ol>
-<li>Скопируй обычную OBS-ссылку виджета Donatty.</li>
-<li>Вставь её в поле <code>Ссылка OBS-виджета Donatty</code>.</li>
-<li>Оставь автоматическое получение SSE и скрытый браузер включёнными.</li>
-<li>Сохрани и нажми <strong>Проверить</strong>.</li>
-</ol>
-<p>Integration Manager запускает <code>donatty_listener.py</code> как отдельный процесс. Listener через Playwright получает временный <code>sse?jwt=...</code>, слушает поток и при истечении JWT переподключается.</p>
-<p>Логи Donatty доступны прямо в Integration Hub. Для визуальной отладки можно временно выключить <code>Скрытый браузер</code>.</p>
-<p>Не публикуй <code>widget_url</code>, <code>sse_url</code> и JWT.</p>
-<hr />
-<h2 id="9-streamerbot-bridge-и-donation-event-rules">9. Streamer.bot Bridge и Donation Event Rules</h2>
-<p>Bridge:</p>
-<pre><code class="language-text">integrations/streamerbot/streamerbot_bridge.py
-</code></pre>
-<p>Конфиг:</p>
-<pre><code class="language-text">integrations/streamerbot/streamerbot_config.json
-</code></pre>
-<h3 id="91-обычное-оповещение">9.1. Обычное оповещение</h3>
-<p>Bridge запускает основной Streamer.bot action и передаёт:</p>
-<pre><code class="language-text">%user%
-%amount%
-%currency%
-%message%
-%source%
-%donationId%
-</code></pre>
-<h3 id="92-донат-ивенты">9.2. Донат-ивенты</h3>
-<p>Правила:</p>
-<pre><code class="language-text">integrations/streamerbot/donation_event_rules.json
-</code></pre>
-<p>Пример:</p>
-<pre><code class="language-json">{
-  &quot;id&quot;: &quot;pet-hand-20&quot;,
-  &quot;enabled&quot;: true,
-  &quot;sources&quot;: [&quot;donationalerts&quot;, &quot;donatty&quot;, &quot;manual&quot;],
-  &quot;match&quot;: &quot;equals&quot;,
-  &quot;amount&quot;: 20,
-  &quot;currency&quot;: &quot;RUB&quot;,
-  &quot;action_id&quot;: &quot;STREAMERBOT-ACTION-ID&quot;
-}
-</code></pre>
-<p>Каждый донат может независимо:</p>
-<ul>
-<li>запустить обычное оповещение;</li>
-<li>запустить донат-ивент;</li>
-<li>попасть в сбор;</li>
-<li>быть озвучен.</li>
-</ul>
-<hr />
-<h1 id="10-tts-hub">10. TTS Hub</h1>
-<p>TTS Hub — единая система озвучки. Она принимает события, очищает текст, выбирает голосовой профиль, применяет правила и передаёт текст выбранному провайдеру.</p>
-<p>Файлы:</p>
-<pre><code class="language-text">integrations/tts/tts_hub.py
-integrations/tts/tts_config.json
-integrations/tts/tts_profiles.json
-integrations/tts/tts_rules.json
-integrations/tts/tts_queue.json
-integrations/tts/tts_history.json
-integrations/tts/tts_log.json
-integrations/tts/providers/
-</code></pre>
-<h2 id="101-общая-последовательность">10.1. Общая последовательность</h2>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="description" content="Техническая справка VicDonationGoal 1.5: параметры виджета, подключения, TTS, данные и API."><title>Справка 1.5 — VicDonationGoal</title><link rel="stylesheet" href="docs-theme.css"></head>
+<body data-theme-no-migrate><a class="skip-link" href="#manual">К содержимому</a>
+<div class="layout"><aside class="sidebar"><a class="brand" href="https://vicwander.github.io/VicDonationGoal/">VicDonationGoal<span>Техническая справка · 1.5</span></a>
+<label class="search-label" for="docSearch">Поиск в справочнике</label><input id="docSearch" name="q" type="search" placeholder="Параметр, сервис, ошибка…" autocomplete="off"><div id="docSearchResults" hidden></div>
+<nav class="nav" aria-label="Содержание справочника"><a class="level-1" href="#техническая-справка-vicdonationgoal-15">Техническая справка VicDonationGoal 1.5</a>
+<a class="level-2" href="#installation">Установка, запуск и обновление</a>
+<a class="level-2" href="#donations">Донаты, цель и TopDonation</a>
+<a class="level-2" href="#widget">Виджет и редактор</a>
+<a class="level-2" href="#integrations">Донат-сервисы и подключения</a>
+<a class="level-2" href="#streamerbot">Streamer.bot</a>
+<a class="level-2" href="#tts">Озвучка и голосовые правила</a>
+<a class="level-2" href="#interface">Главная, темы и настройки интерфейса</a>
+<a class="level-2" href="#data">Хранение, резервные копии и перенос</a>
+<a class="level-2" href="#diagnostics">Состояния, ошибки и диагностика</a>
+<a class="level-2" href="#api">Архитектура и API</a></nav><div id="sidebarThemeSlot"></div><a class="back-link" href="https://github.com/VicWander/VicDonationGoal">GitHub проекта</a><a class="back-link local-admin" hidden href="/admin.html">Открыть админку</a></aside>
+<main class="content" id="manual"><div class="doc-meta"><span>Версия 1.5</span><span>Справочник параметров и поведения</span></div><h1 id="техническая-справка-vicdonationgoal-15">Техническая справка VicDonationGoal 1.5<a class="heading-anchor" href="#техническая-справка-vicdonationgoal-15" aria-label="Ссылка на раздел Техническая справка VicDonationGoal 1.5">#</a></h1>
+<p>Справочник описывает поведение и параметры публичной версии 1.5. Практические уроки по редактору, ИИ и оповещениям находятся в Гайдбуке админки. История изменений — в CHANGELOG_v1.5.md.</p>
+<h2 id="installation">Установка, запуск и обновление<a class="heading-anchor" href="#installation" aria-label="Ссылка на раздел Установка, запуск и обновление">#</a></h2>
+<h3 id="требования">Требования<a class="heading-anchor" href="#требования" aria-label="Ссылка на раздел Требования">#</a></h3>
+<p>Windows 10/11, Python 3.11+ с pip. OBS Studio нужен для отображения виджета и воспроизведения браузерного TTS. Streamer.bot и Speaker.bot устанавливаются и запускаются отдельно, если используются. Для загрузки зависимостей, авторизации и приёма событий нужен интернет. Серверная часть работает локально; обязательного облачного аккаунта VicDonationGoal нет.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Назначение</th><th>Команда или адрес</th><th>Поведение</th></tr></thead><tbody><tr><td>Установка</td><td><code>00_INSTALL_ALL.bat</code></td><td>Устанавливает Python-зависимости, браузер Playwright и создаёт недостающие настройки</td></tr><tr><td>Обычный запуск</td><td><code>01_START_ALL.bat</code></td><td>Останавливает старые процессы этой установки, запускает Core, включённые интеграции и TTS Hub</td></tr><tr><td>Только Core</td><td><code>02_START_SERVER_ONLY.bat</code></td><td>Менеджер интеграций работает внутри Core</td></tr><tr><td>Админка</td><td><code>http://127.0.0.1:3333/admin.html</code></td><td>Локальное управление программой</td></tr><tr><td>Донат-гол</td><td><code>http://127.0.0.1:3333/widget.html</code></td><td>Источник «Браузер» в OBS</td></tr><tr><td>Аудио TTS</td><td><code>http://127.0.0.1:3333/tts.html</code></td><td>Браузерный проигрыватель для провайдеров, создающих аудиофайл</td></tr><tr><td>Остановка</td><td><code>13_STOP_ALL.bat</code></td><td>Завершает процессы данной установки</td></tr><tr><td>Предпросмотр админки</td><td><code>17_PREVIEW_ADMIN.bat</code></td><td>Отдельный режим на порту 3347; внешние подключения, оповещения и звук отключены</td></tr></tbody></table></div>
+<p>Предпросмотр не является песочницей данных: изменения форм, импорт и редактор затрагивают данные той папки, из которой он запущен. Для экспериментов нужна отдельная копия. Зелёный Core означает связь админки с локальным сервером, а не доставку событий всех сервисов.</p>
+<h3 id="обновление">Обновление<a class="heading-anchor" href="#обновление" aria-label="Ссылка на раздел Обновление">#</a></h3>
+<p>Новая версия распаковывается отдельно. После остановки обеих установок <code>16_UPDATE_FROM_OLD_VERSION.bat</code> запускается из новой папки и получает путь к старой. Исходная папка сохраняется. Переносятся поддерживаемые данные и подключения, но не старый программный код. Версия целевой программы сохраняется.</p>
+<p>Импортированные старые донаты помечаются обработанными для TTS и Streamer.bot; незавершённая очередь озвучки не запускается заново. Повторный перенос не предназначен для смешивания двух одновременно работающих историй. Не запускайте две версии с одними внешними подключениями одновременно.</p>
+<h2 id="donations">Донаты, цель и TopDonation<a class="heading-anchor" href="#donations" aria-label="Ссылка на раздел Донаты, цель и TopDonation">#</a></h2>
+<h3 id="расчёт-текущей-цели">Расчёт текущей цели<a class="heading-anchor" href="#расчёт-текущей-цели" aria-label="Ссылка на раздел Расчёт текущей цели">#</a></h3>
+<p>В 1.5 одна текущая цель. Её сумма складывается из <code>baseAmount</code> и записей с включённым <code>includeInGoal</code>. Суммы других валют приводятся к валюте цели; в записи сохраняется <code>amountForGoal</code>. Изменение текущего курса само по себе не заменяет сохранённые суммы прошлых переводов.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Параметр</th><th>Значение</th></tr></thead><tbody><tr><td>Название</td><td>Текст цели для админки и виджета</td></tr><tr><td>Стартовая сумма / <code>baseAmount</code></td><td>Деньги без отдельной записи о донате; не создаёт донатера и сообщение</td></tr><tr><td>Цель / <code>goal</code></td><td>Сумма, с которой сравнивается прогресс</td></tr><tr><td>Собрано / <code>current</code></td><td>Стартовая сумма плюс учитываемые записи</td></tr><tr><td>Процент</td><td>Отношение собранного к цели; может быть больше 100%</td></tr><tr><td>Осталось</td><td>Неотрицательная разница между целью и собранным</td></tr></tbody></table></div>
+<p>Индикатор заполнения ограничивается 100%, текст процента может показывать превышение. Сброс текущего сбора сохраняет историю и TopDonation, но убирает старые записи из текущей цели.</p>
+<h3 id="флаги-отдельного-доната">Флаги отдельного доната<a class="heading-anchor" href="#флаги-отдельного-доната" aria-label="Ссылка на раздел Флаги отдельного доната">#</a></h3>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Назначение</th><th>Что не меняет</th></tr></thead><tbody><tr><td><code>includeInGoal</code> — в сборе</td><td>Включает сумму в текущую цель</td><td>Не удаляет историю и не управляет TopDonation</td></tr><tr><td><code>includeInTop</code> — в TopDonation</td><td>Включает запись в рейтинг</td><td>Не меняет сумму текущей цели</td></tr><tr><td><code>notifyStreamerBot</code> — оповещение</td><td>Разрешает основной Action Streamer.bot</td><td>Не включает TTS и дополнительные ивенты</td></tr><tr><td><code>triggerDonationEvents</code> — ивенты</td><td>Разрешает дополнительные правила Streamer.bot</td><td>Не заменяет обычное оповещение</td></tr><tr><td><code>speakTTS</code> — озвучка</td><td>Разрешает обработку сообщения TTS Hub</td><td>Не гарантирует речь: остаются фильтры, профиль и доступность провайдера</td></tr></tbody></table></div>
+<p>У автоматических донатов значения по умолчанию определяются обработчиком события. Ручная форма позволяет выставить их независимо. Основное оповещение Streamer.bot и TTS Hub — отдельные пути: добавление озвучки ещё и в Action может дать двойное чтение.</p>
+<h3 id="история-и-идентификаторы">История и идентификаторы<a class="heading-anchor" href="#история-и-идентификаторы" aria-label="Ссылка на раздел История и идентификаторы">#</a></h3>
+<p><code>source</code> указывает источник, <code>externalId</code> — идентификатор события в сервисе, <code>uniqueKey</code> используется для защиты от дублей. <code>createdAt</code> — время события, <code>receivedAt</code> — время получения программой. Одинаковое имя не является достаточным признаком одного платежа или одного человека.</p>
+<p>Редактирование флагов пересчитывает соответствующие представления. Удаление записи убирает её из истории и влияет на расчёты. CSV-экспорт — таблица для просмотра; полный бэкап предназначен для восстановления программы.</p>
+<h3 id="topdonation">TopDonation<a class="heading-anchor" href="#topdonation" aria-label="Ссылка на раздел TopDonation">#</a></h3>
+<p>Профиль донатера связывается с алиасами и источниками. Одинаковые ники из разных сервисов изначально могут быть разными профилями. Объединение связывает записи с общим <code>donorId</code>; сумма не должна добавляться второй раз. Заметка, отображаемое имя и закрепление — свойства профиля.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Действие</th><th>Последствие</th></tr></thead><tbody><tr><td>Закрепить</td><td>Показывает профиль отдельно над основным рейтингом</td></tr><tr><td>Корректировка суммы</td><td>Меняет только TopDonation, может быть отрицательной; не создаёт обычное событие доната</td></tr><tr><td>Исключить из топа</td><td>Сохраняет историю и сбор, скрывает участие в рейтинге</td></tr><tr><td>Объединить профили</td><td>Собирает алиасы и связанные донаты в одном профиле</td></tr><tr><td>Удалить все донаты профиля</td><td>Удаляет связанные записи и корректировки, затем пересчитывает данные; требует подтверждения</td></tr></tbody></table></div>
+<p>Импорт таблицы DonationAlerts создаёт снимок для TopDonation. Уже известные отдельные события вычитаются из суммарных значений, чтобы не задвоить рейтинг. Повторный импорт обновляет снимок. Такой импорт не воспроизводит старые оповещения и не равен получению отдельных live-событий.</p>
+<h2 id="widget">Виджет и редактор<a class="heading-anchor" href="#widget" aria-label="Ссылка на раздел Виджет и редактор">#</a></h2>
+<h3 id="состояния-оформления">Состояния оформления<a class="heading-anchor" href="#состояния-оформления" aria-label="Ссылка на раздел Состояния оформления">#</a></h3>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Состояние</th><th>Назначение</th></tr></thead><tbody><tr><td>Черновик / <code>draft</code></td><td>Рабочий документ; сохраняется автоматически</td></tr><tr><td>Активное оформление / <code>active</code></td><td>Документ, показываемый в OBS после применения</td></tr><tr><td>Предыдущее / <code>previousActive</code></td><td>Предыдущее применённое оформление для восстановления</td></tr><tr><td>Сохранённые варианты / <code>saved</code></td><td>Библиотека пользовательских документов</td></tr></tbody></table></div>
+<p>Редактирование черновика не меняет OBS до применения. Готовые оформления копируются в обычные слои и доступны для изменения. Экспорт оформления в ZIP включает используемые локальные ресурсы; полный бэкап дополнительно включает личные данные всей программы.</p>
+<h3 id="типы-и-геометрия-слоёв">Типы и геометрия слоёв<a class="heading-anchor" href="#типы-и-геометрия-слоёв" aria-label="Ссылка на раздел Типы и геометрия слоёв">#</a></h3>
+<p>Типы: <code>text</code>, <code>progress</code>, <code>shape</code>, <code>image</code>, <code>group</code>, <code>custom</code>. Слои имеют стабильные ID; <code>parentId</code> связывает слой с группой. Порядок слоёв определяет перекрытие. Видимость и блокировка редактирования — независимые свойства.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Единицы / пределы</th><th>Значение</th></tr></thead><tbody><tr><td>Холст <code>width</code>, <code>height</code></td><td>Целые 16–8192 px</td><td>Логические размеры документа, отдельно от масштаба предпросмотра</td></tr><tr><td>Слой <code>x</code>, <code>y</code></td><td>−16384…16384 px</td><td>Координаты слоя</td></tr><tr><td>Слой <code>width</code>, <code>height</code></td><td>1–8192 px</td><td>Размер слоя</td></tr><tr><td><code>rotation</code></td><td>−360…360°</td><td>Поворот</td></tr><tr><td><code>opacity</code></td><td>0…1</td><td>Непрозрачность</td></tr><tr><td><code>visible</code></td><td>true / false</td><td>Постоянная видимость</td></tr><tr><td><code>locked</code></td><td>true / false</td><td>Защита от случайного изменения в редакторе</td></tr></tbody></table></div>
+<p>Документ содержит до 100 слоёв, вложенность групп — до 8 уровней. Циклические связи и повторяющиеся ID не принимаются. Масштаб «Вписать» подбирает показ холста, 1:1 соответствует логическим пикселям; это не изменение размеров самого документа.</p>
+<h3 id="текст-и-подстановка-данных">Текст и подстановка данных<a class="heading-anchor" href="#текст-и-подстановка-данных" aria-label="Ссылка на раздел Текст и подстановка данных">#</a></h3>
+<p>Токены записываются в двойных фигурных скобках: <code>{{title}}</code>, <code>{{current}}</code>, <code>{{goal}}</code>, <code>{{remaining}}</code>, <code>{{percent}}</code>, <code>{{currency}}</code>, <code>{{lastName}}</code>, <code>{{lastAmount}}</code>, <code>{{lastMessage}}</code>. Они подставляют данные цели и последнего доната. Обычный текст вокруг токенов остаётся без изменений.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Настройка</th><th>Допустимые значения</th></tr></thead><tbody><tr><td>Длина текста слоя</td><td>До 4000 символов</td></tr><tr><td>Шрифт <code>fontSize</code></td><td>1–2048 px</td></tr><tr><td>Насыщенность <code>fontWeight</code></td><td>100–1000</td></tr><tr><td>Межстрочный интервал <code>lineHeight</code></td><td>Множитель 0,1–10</td></tr><tr><td>Межбуквенный интервал <code>letterSpacing</code></td><td>−100…100 px</td></tr><tr><td>Выравнивание</td><td>left / center / right</td></tr><tr><td>Регистр</td><td>none / uppercase / lowercase / capitalize</td></tr><tr><td>Длинный текст <code>textFit</code></td><td>wrap — перенос; shrink — уменьшение; ellipsis — сокращение; scroll — прокрутка</td></tr><tr><td>Десятичные знаки <code>format.decimals</code></td><td>Целое 0–4</td></tr><tr><td>Валюта <code>format.currency</code></td><td>code / symbol / none</td></tr><tr><td>Округление <code>format.rounding</code></td><td>round / floor</td></tr><tr><td>Компактная запись <code>format.compact</code></td><td>true / false</td></tr></tbody></table></div>
+<p>Минимальный размер шрифта ограничивает уменьшение в режиме shrink. Для переносов учитывается ширина и высота слоя. Форматирование сумм относится к их отображению, а не к исходной сумме платежа.</p>
+<h3 id="цвет-форма-тень">Цвет, форма, тень<a class="heading-anchor" href="#цвет-форма-тень" aria-label="Ссылка на раздел Цвет, форма, тень">#</a></h3>
+<p>Палитра документа содержит <code>primary</code>, <code>secondary</code>, <code>text</code>, <code>surface</code>, <code>track</code>. Значения <code>@primary</code> и другие ссылки используют соответствующий цвет палитры: изменение палитры обновляет связанные элементы. Можно задать буквальный цвет вместо ссылки. Поддерживаются HEX, названия цветов и числовые rgb/rgba/hsl/hsla; произвольные CSS-выражения в обычном поле цвета не принимаются.</p>
+<p><code>fill</code> — заполнение, <code>fill2</code> — второй цвет градиента, <code>gradientAngle</code> — угол. <code>stroke</code> и <code>strokeWidth</code> задают контур. <code>radius</code> — скругление. Тень задаётся цветом, размытием и смещениями X/Y. У текста есть отдельные цвет и толщина обводки. Тема админки не меняет палитру OBS-виджета.</p>
+<h3 id="прогресс-и-маски">Прогресс и маски<a class="heading-anchor" href="#прогресс-и-маски" aria-label="Ссылка на раздел Прогресс и маски">#</a></h3>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Значения / смысл</th></tr></thead><tbody><tr><td><code>shape</code></td><td>bar, ring, arc, segments, mask</td></tr><tr><td><code>direction</code></td><td>right, left, up, down, center</td></tr><tr><td><code>track</code></td><td>Цвет незаполненной части</td></tr><tr><td><code>segments</code></td><td>Целое 1–1000, число сегментов</td></tr><tr><td><code>gap</code></td><td>Промежуток, 0–8192 px</td></tr><tr><td><code>startAngle</code>, <code>sweep</code></td><td>Начальный угол −360…360°, развёртка 0…360°</td></tr><tr><td><code>thickness</code></td><td>Толщина, 0–8192 px</td></tr><tr><td><code>maskAsset</code></td><td>ID локального ресурса маски</td></tr><tr><td><code>imageAsset</code></td><td>ID изображения заполнения</td></tr><tr><td><code>overflow</code></td><td>clamp: заполнение ограничено диапазоном 0–100%</td></tr></tbody></table></div>
+<p>Маска ограничивает область заполнения прозрачностью изображения. Для произвольного силуэта нужен ресурс с прозрачным фоном, например PNG или SVG. Непрозрачный прямоугольник даёт прямоугольную маску. Прогресс не меняет форму исходной картинки автоматически.</p>
+<h3 id="условия-привязка-и-анимации">Условия, привязка и анимации<a class="heading-anchor" href="#условия-привязка-и-анимации" aria-label="Ссылка на раздел Условия, привязка и анимации">#</a></h3>
+<p>Условие сравнивает выбранный показатель с заданным значением. Оно может управлять видимостью или цветом слоя. Постоянное скрытие слоя, скрытие родительской группы и условие могут действовать одновременно; выполнение условия не отменяет другие причины невидимости.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Допустимые значения / единицы</th></tr></thead><tbody><tr><td>Условие <code>metric</code></td><td>percent / current / remaining</td></tr><tr><td>Сравнение <code>op</code></td><td>gte — не меньше; lte — не больше</td></tr><tr><td>Действие <code>action</code></td><td>show / hide / color</td></tr><tr><td>Порог <code>value</code></td><td>Число −10^15…10^15, в единицах выбранного показателя</td></tr><tr><td>Группа <code>layout</code></td><td>free / horizontal / vertical</td></tr><tr><td>Группа <code>gap</code>, <code>padding</code></td><td>0–8192 px</td></tr><tr><td>Группа <code>align</code></td><td>start / center / end</td></tr><tr><td>Якорь по горизонтали / вертикали</td><td>left / center / right; top / center / bottom</td></tr><tr><td>Анимация <code>duration</code></td><td>0–60000 мс</td></tr><tr><td><code>easing</code></td><td>linear / ease / ease-in / ease-out / ease-in-out</td></tr><tr><td>Событие <code>event</code></td><td>none / donation / goal / milestone</td></tr><tr><td>Эффект <code>effect</code></td><td>none / fade / pulse / slide / glow</td></tr><tr><td>Порог анимации <code>threshold</code></td><td>0–1000000 процентов для события milestone</td></tr><tr><td>Интенсивность <code>intensity</code></td><td>Коэффициент силы эффекта, 0–100</td></tr></tbody></table></div>
+<p>Привязка определяет связь с краями/центром холста. Выравнивание, направляющие и сетка помогают размещению, но не создают новый элемент в OBS. Группа объединяет трансформации дочерних слоёв. Отмена/возврат относятся к изменениям документа в редакторе.</p>
+<p>Плавность изменения задаётся в миллисекундах; характер движения определяет интерполяцию. Реакция на донат или достижение цели — отдельная событийная анимация. Тестовые события и тестовый прогресс меняют только предпросмотр. Пауза приостанавливает управляемые анимации, в том числе таймеры и анимации программных блоков в предпросмотре.</p>
+<h3 id="локальные-ресурсы">Локальные ресурсы<a class="heading-anchor" href="#локальные-ресурсы" aria-label="Ссылка на раздел Локальные ресурсы">#</a></h3>
+<p>Поддерживаются PNG, JPG/JPEG, WebP, GIF, SVG и шрифты WOFF/WOFF2/TTF/OTF. Один ресурс — до 16 MiB, импорт оформления — до 64 MiB. Ресурс идентифицируется хешем содержимого. Имя в библиотеке не является путём к произвольному файлу компьютера.</p>
+<p>Используемые ресурсы защищены от удаления. Корзина позволяет восстановить удалённый ресурс. При переносе используйте ZIP оформления либо полный бэкап: копирование только документа без его файлов может дать отсутствующие картинки или шрифты. Шрифт по имени должен существовать в окружении отображения; загруженный файл шрифта переносится вместе с оформлением.</p>
+<h3 id="собственный-код-и-ответ-ии">Собственный код и ответ ИИ<a class="heading-anchor" href="#собственный-код-и-ответ-ии" aria-label="Ссылка на раздел Собственный код и ответ ИИ">#</a></h3>
+<p>Режим CSS меняет оформление заданной стандартной структуры и не принимает произвольные HTML/JavaScript. Режим собственного виджета поддерживает HTML/CSS/JavaScript и объявленные параметры. Ответ можно вставить целиком или разнести по полям. Совместимый структурированный ответ использует формат <code>vdg-ai/1</code>; обычные слои передаются как <code>document</code>.</p>
+<p>Для программного слоя допускается до 200000 символов в каждом из HTML/CSS/JS и до 100 объявленных полей. Типы полей: text, number, color, boolean. Необъявленные ключи не принимаются. HTML целиком не превращается автоматически в отдельно редактируемые надписи и фигуры; для этого ответ должен содержать обычные слои документа.</p>
+<p>Код работает в изолированном iframe с переданными данными цели. Доступ к странице администратора, ключам сервисов и серверному API не предоставляется. Внешние библиотеки, сетевые запросы и абсолютные пути к файлам не входят в поддерживаемый контракт. Внешняя нейросеть используется пользователем отдельно: программа готовит запрос и проверяет вставленный результат, но не отправляет запрос по встроенному API.</p>
+<h2 id="integrations">Донат-сервисы и подключения<a class="heading-anchor" href="#integrations" aria-label="Ссылка на раздел Донат-сервисы и подключения">#</a></h2>
+<p>Менеджер запускает включённые модули, хранит их конфигурацию и возвращает состояние процесса и соединения. Наличие процесса не подтверждает подписку на события. Перед проверкой изменённые параметры должны быть сохранены. Секретное поле после сохранения показывается как «Сохранено»; пустой ввод при повторном сохранении не удаляет сохранённый секрет.</p>
+<h3 id="donationalerts">DonationAlerts<a class="heading-anchor" href="#donationalerts" aria-label="Ссылка на раздел DonationAlerts">#</a></h3>
+<p>OAuth 2.0, live-канал Centrifugo и отдельная проверка API. Catch-up после восстановления соединения использует сохранённую контрольную точку; первый запуск не импортирует всю старую историю.</p>
+<p>Статус поддержки: <strong>stable</strong>. Публичная конфигурация: <code>integrations/donationalerts/donationalerts_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>use_system_proxy</code></td><td>checkbox</td><td>false</td><td>Обычно выключено: сервис подключается напрямую, отдельно от прокси браузера. VPN в режиме полного туннеля этой настройкой не обходится.</td></tr><tr><td><code>client_id</code></td><td>text · обязательно</td><td>пусто</td><td>Создаётся в разделе API Applications DonationAlerts.</td></tr><tr><td><code>client_secret</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Хранится только локально и не показывается повторно.</td></tr><tr><td><code>redirect_uri</code></td><td>text</td><td>http://127.0.0.1:3333/auth/donationalerts/callback</td><td>Должен точно совпадать с Redirect URL в приложении DonationAlerts.</td></tr><tr><td><code>scopes</code></td><td>text</td><td>oauth-user-show oauth-donation-subscribe oauth-donation-index</td><td>Для получения профиля, подписки на новые донаты и чтения истории.</td></tr></tbody></table></div>
+<h3 id="donatty">Donatty<a class="heading-anchor" href="#donatty" aria-label="Ссылка на раздел Donatty">#</a></h3>
+<p>OBS-ссылка виджета используется для получения временного SSE URL. Для поддерживаемой ссылки JWT получается через API; при необходимости доступен браузерный резерв. HTTP-ответ без событий потока не равен подтверждённому приёму донатов.</p>
+<p>Статус поддержки: <strong>stable</strong>. Публичная конфигурация: <code>integrations/donatty/donatty_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>use_system_proxy</code></td><td>checkbox</td><td>false</td><td>Обычно выключено: Donatty подключается напрямую, отдельно от прокси браузера. VPN в режиме полного туннеля этой настройкой не обходится.</td></tr><tr><td><code>widget_url</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Обычная ссылка виджета из кабинета Donatty. Для ссылки widgets.donatty.com/donations/ поток получается напрямую через API, без скрытого браузера.</td></tr><tr><td><code>headless_browser</code></td><td>checkbox</td><td>true</td><td>Выключите только для отладки Playwright.</td></tr><tr><td><code>prefer_auto_sse</code></td><td>checkbox</td><td>true</td><td>Автоматически получать SSE URL</td></tr><tr><td><code>use_old_sse_if_auto_failed</code></td><td>checkbox</td><td>true</td><td>Использовать сохранённый SSE как резерв</td></tr><tr><td><code>sse_capture_timeout_seconds</code></td><td>number</td><td>35</td><td>Таймаут получения SSE, сек.</td></tr><tr><td><code>reconnect_delay_seconds</code></td><td>number</td><td>5</td><td>Начальная задержка переподключения, сек.</td></tr><tr><td><code>max_reconnect_delay_seconds</code></td><td>number</td><td>60</td><td>Максимальная задержка переподключения, сек.</td></tr></tbody></table></div>
+<h3 id="streamelements">StreamElements<a class="heading-anchor" href="#streamelements" aria-label="Ссылка на раздел StreamElements">#</a></h3>
+<p>События completed tips принимаются по официальному real-time каналу. Фильтры статуса и модерации относятся к приёму события. Интеграция отмечена Beta.</p>
+<p>Статус поддержки: <strong>beta</strong>. Публичная конфигурация: <code>integrations/streamelements/streamelements_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>channel_id</code></td><td>text · обязательно</td><td>пусто</td><td>ID канала/room, для которого нужно получать tips. Берётся из StreamElements Dashboard.</td></tr><tr><td><code>token_type</code></td><td>select</td><td>jwt</td><td>Для личной установки проще JWT или Overlay Token. Токен должен относиться к выбранному каналу.; варианты: jwt, apikey, oauth2</td></tr><tr><td><code>token</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Хранится только локально и не возвращается обратно в браузер.</td></tr><tr><td><code>accept_statuses</code></td><td>text</td><td>success</td><td>Через запятую. По умолчанию учитываются только успешно завершённые tips.</td></tr><tr><td><code>accept_approval_states</code></td><td>text</td><td>allowed,approved,</td><td>Через запятую. Пустое значение разрешает события без moderation state.</td></tr><tr><td><code>reconnect_delay_seconds</code></td><td>number</td><td>3</td><td>Начальная задержка переподключения, сек.</td></tr><tr><td><code>max_reconnect_delay_seconds</code></td><td>number</td><td>60</td><td>Максимальная задержка переподключения, сек.</td></tr></tbody></table></div>
+<h3 id="streamlabs">Streamlabs<a class="heading-anchor" href="#streamlabs" aria-label="Ссылка на раздел Streamlabs">#</a></h3>
+<p>OAuth выдаёт доступ к Socket Token; события приходят через Socket.IO. Для неодобренного OAuth-приложения может потребоваться whitelist. Интеграция отмечена Beta.</p>
+<p>Статус поддержки: <strong>beta</strong>. Публичная конфигурация: <code>integrations/streamlabs/streamlabs_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>client_id</code></td><td>text · обязательно</td><td>пусто</td><td>Создаётся в Streamlabs Developer Console.</td></tr><tr><td><code>client_secret</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Секрет хранится только локально и не возвращается в браузер.</td></tr><tr><td><code>redirect_uri</code></td><td>text</td><td>http://127.0.0.1:3333/auth/streamlabs/callback</td><td>Должен полностью совпадать с Redirect URI в приложении Streamlabs.</td></tr><tr><td><code>scopes</code></td><td>text</td><td>socket.token</td><td>Для real-time донатов достаточно socket.token.</td></tr><tr><td><code>engineio_versions</code></td><td>text</td><td>4,3</td><td>Автоматический fallback для совместимости Socket.IO. Обычно менять не нужно.</td></tr><tr><td><code>reconnect_delay_seconds</code></td><td>number</td><td>3</td><td>Начальная задержка переподключения, сек.</td></tr><tr><td><code>max_reconnect_delay_seconds</code></td><td>number</td><td>60</td><td>Максимальная задержка переподключения, сек.</td></tr></tbody></table></div>
+<h3 id="donatepay">DonatePay<a class="heading-anchor" href="#donatepay" aria-label="Ссылка на раздел DonatePay">#</a></h3>
+<p>Регион .ru/.eu должен соответствовать кабинету, выдавшему API-ключ. ID канала связан с ключом и регионом. Соединение подтверждается ответами протокола и heartbeat. Catch-up через transactions отдельно ограничивается по частоте.</p>
+<p>Статус поддержки: <strong>stable</strong>. Публичная конфигурация: <code>integrations/donatepay/donatepay_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>api_key</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Хранится только локально. После публикации ключа где-либо перевыпустите его.</td></tr><tr><td><code>eu_region</code></td><td>checkbox</td><td>false</td><td>Включи для ключа из donatepay.eu. Для donatepay.ru оставь выключенным. Регион API и WebSocket переключается вместе.</td></tr><tr><td><code>user_id</code></td><td>text</td><td>пусто</td><td>Сохраняется после первого успешного /user. Нужен, чтобы не запрашивать /user при каждом переподключении.</td></tr><tr><td><code>catch_up_enabled</code></td><td>checkbox</td><td>false</td><td>Не обязателен для новых донатов. DonatePay жёстко ограничивает /transactions, поэтому по умолчанию выключено.</td></tr><tr><td><code>catch_up_limit</code></td><td>number</td><td>10</td><td>Сколько последних операций проверять</td></tr><tr><td><code>catch_up_min_interval_seconds</code></td><td>number</td><td>1800</td><td>Защита от HTTP 429. На новые real-time донаты не влияет.</td></tr><tr><td><code>catch_up_rate_limit_delay_seconds</code></td><td>number</td><td>900</td><td>Используется, если DonatePay не вернул заголовок Retry-After.</td></tr><tr><td><code>import_existing_first_run</code></td><td>checkbox</td><td>false</td><td>Обычно выключено, чтобы не добавить старую историю неожиданно.</td></tr><tr><td><code>reconnect_delay_seconds</code></td><td>number</td><td>5</td><td>Начальная задержка переподключения, сек.</td></tr><tr><td><code>max_reconnect_delay_seconds</code></td><td>number</td><td>60</td><td>Максимальная задержка переподключения, сек.</td></tr></tbody></table></div>
+<h3 id="donatestream">Donate.Stream<a class="heading-anchor" href="#donatestream" aria-label="Ссылка на раздел Donate.Stream">#</a></h3>
+<p>Подключение к alert-виджету подтверждается Socket.IO. Поддерживаются WebSocket и long polling. Открытая страница после тайм-аута не означает работающий канал. Локальный мост браузера не отменяет полный VPN-туннель.</p>
+<p>Статус поддержки: <strong>stable</strong>. Публичная конфигурация: <code>integrations/donatestream/donatestream_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>widget_url</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Полная ссылка из кабинета. Токен хранится локально.</td></tr><tr><td><code>headless_browser</code></td><td>checkbox</td><td>true</td><td>Скрытый браузер</td></tr><tr><td><code>capture_console</code></td><td>checkbox</td><td>true</td><td>Перехватывать сообщения страницы для диагностики</td></tr><tr><td><code>reconnect_delay_seconds</code></td><td>number</td><td>5</td><td>Задержка перезапуска браузера, сек.</td></tr></tbody></table></div>
+<h3 id="donatex">DonateX<a class="heading-anchor" href="#donatex" aria-label="Ссылка на раздел DonateX">#</a></h3>
+<p>Опрос официального endpoint с повторными запросами. Временный ReadTimeout не подтверждает ошибку ключа; длительная недоступность отражается в состоянии. Полученные события защищены от повторной записи.</p>
+<p>Статус поддержки: <strong>stable</strong>. Публичная конфигурация: <code>integrations/donatex/donatex_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>api_token</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>Личный API-токен DonateX</td></tr><tr><td><code>mode</code></td><td>select</td><td>api</td><td>Режим; варианты: api, widget</td></tr><tr><td><code>api_url</code></td><td>text</td><td>https://donatex.gg/api/v1/donations</td><td>Если поле пустое, используется официальный endpoint автоматически.</td></tr><tr><td><code>auth_mode</code></td><td>select</td><td>query</td><td>Способ передачи токена; варианты: bearer, x-api-key, api-key, query</td></tr><tr><td><code>query_token_name</code></td><td>text</td><td>token</td><td>Для официального External Token DonateX используется token.</td></tr><tr><td><code>items_path</code></td><td>text</td><td>пусто</td><td>Если ответ API содержит массив не в корне.</td></tr><tr><td><code>widget_url</code></td><td>password</td><td>пусто; секрет</td><td>Ссылка виджета (для режима widget)</td></tr><tr><td><code>take</code></td><td>number</td><td>20</td><td>Сколько последних донатов запрашивать</td></tr><tr><td><code>poll_interval_seconds</code></td><td>number</td><td>20</td><td>Интервал проверки API, сек.</td></tr><tr><td><code>headless_browser</code></td><td>checkbox</td><td>true</td><td>Скрытый браузер в режиме widget</td></tr></tbody></table></div>
+<h3 id="tribute">Tribute<a class="heading-anchor" href="#tribute" aria-label="Ссылка на раздел Tribute">#</a></h3>
+<p>OBS-ссылка из мини-приложения преобразуется в SSE-подключение. Cloudflare не нужен. При проверке включается двухминутное окно; учёт событий в этом окне задаётся переключателем. Надёжного отдельного признака тестового доната в потоке нет: имя Anonymous и сумма 999 сами по себе не доказывают тест. Гарантия восстановления событий за время полного отключения не заявляется.</p>
+<p>Статус поддержки: <strong>experimental</strong>. Публичная конфигурация: <code>integrations/tribute/tribute_config.json</code>.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле</th><th>Тип</th><th>Стандарт</th><th>Назначение</th></tr></thead><tbody><tr><td><code>widget_url</code></td><td>password · обязательно</td><td>пусто; секрет</td><td>В Tribute откройте «Донаты и цели» → интеграцию с OBS → «Копировать ссылку для OBS». Вставьте ссылку целиком.</td></tr><tr><td><code>count_during_test</code></td><td>checkbox</td><td>false</td><td>Действует только в двухминутном режиме проверки. Вне проверки учитываются все донаты, включая Anonymous на 999 ₽. Tribute не помечает тесты: тест, отправленный вне режима проверки, тоже будет учтён.</td></tr><tr><td><code>use_system_proxy</code></td><td>checkbox</td><td>true</td><td>Оставьте включённым для работы через системный прокси/VPN. После изменения сохраните настройки и перезапустите интеграцию.</td></tr></tbody></table></div>
+<h3 id="общие-ограничения-сети">Общие ограничения сети<a class="heading-anchor" href="#общие-ограничения-сети" aria-label="Ссылка на раздел Общие ограничения сети">#</a></h3>
+<p>Прямой режим соединения может обходить системный HTTP-прокси, но не отменяет VPN с перехватом всего трафика. Доступность сайта в браузере и API в процессе может различаться. Тайм-аут сообщает о проблеме доставки ответа; он сам по себе не доказывает блокировку сервиса или неверность токена.</p>
+<h2 id="streamerbot">Streamer.bot<a class="heading-anchor" href="#streamerbot" aria-label="Ссылка на раздел Streamer.bot">#</a></h2>
+<p>Отдельная вкладка «Интеграции → Streamer.bot» управляет выходными оповещениями. Это не источник донатов и не провайдер озвучки. Bridge запускается менеджером Core; повторный стандартный запуск не должен создавать второй Bridge.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Параметр</th><th>Назначение / стандарт</th></tr></thead><tbody><tr><td><code>enabled</code></td><td>Включение Bridge, в чистой сборке false</td></tr><tr><td><code>streamerbot_http_url</code></td><td>HTTP endpoint действия: <code>http://127.0.0.1:7474/DoAction</code></td></tr><tr><td><code>action_name</code></td><td>Точное имя Action, если ID не указан</td></tr><tr><td><code>action_id</code></td><td>ID Action, имеет приоритет над именем</td></tr><tr><td><code>poll_interval_seconds</code></td><td>Интервал чтения новых донатов, 0,5 с в примере конфигурации</td></tr><tr><td><code>send_existing_on_first_start</code></td><td>Обычно false: первый запуск не должен проигрывать старую историю</td></tr><tr><td><code>send_sources</code></td><td>Пустой список разрешает автоматические источники; ручные записи управляются флагом оповещения</td></tr><tr><td><code>extra_args</code></td><td>Дополнительные аргументы действия; сохраняются при редактировании основных настроек в интерфейсе</td></tr></tbody></table></div>
+<p>Загрузка действий использует HTTP GetActions. Проверка подключения проверяет доступность API и выбранного Action, ничего не проигрывая. «Тестовое оповещение» вызывает Action один раз с TestUser и суммой 133 RUB; оно не создаёт донат, запись TTS или сумму сбора.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Аргумент Action</th><th>Содержание</th></tr></thead><tbody><tr><td><code>user</code></td><td>Имя донатера</td></tr><tr><td><code>amount</code></td><td>Сумма</td></tr><tr><td><code>currency</code></td><td>Валюта в выбранном режиме представления, например ₽</td></tr><tr><td><code>message</code></td><td>Сообщение</td></tr><tr><td><code>source</code></td><td>Источник доната</td></tr><tr><td><code>donationId</code></td><td>Идентификатор записи</td></tr></tbody></table></div>
+<p>Дополнительные Donation Event Rules находятся в <code>integrations/streamerbot/donation_event_rules.json</code>. Они имеют собственную защиту от повторной отправки, отдельную от основного Action. Пошаговое создание сцены OBS и готовый C# находятся в Гайдбуке, а не требуются для любого подключения Streamer.bot.</p>
+<h2 id="tts">Озвучка и голосовые правила<a class="heading-anchor" href="#tts" aria-label="Ссылка на раздел Озвучка и голосовые правила">#</a></h2>
+<p>TTS Hub принимает событие, обрабатывает текст, выбирает профиль по правилам и направляет задание провайдеру. Приоритет правил задаёт порядок выбора профиля, а не порядок очереди воспроизведения. Speaker.bot выводит речь самостоятельно; провайдеры с аудиофайлом используют браузерный проигрыватель <code>/tts.html</code> в OBS.</p>
+<h3 id="общая-последовательность">Общая последовательность<a class="heading-anchor" href="#общая-последовательность" aria-label="Ссылка на раздел Общая последовательность">#</a></h3>
 <pre><code class="language-text">Событие
   ↓
 Проверка TTS-флага и суммы
@@ -315,82 +128,54 @@ integrations/tts/providers/
   ↓
 При подтверждённой ошибке — fallback
   ↓
-История и лог
-</code></pre>
-<h2 id="102-общие-настройки">10.2. Общие настройки</h2>
-<ul>
-<li>основной провайдер;</li>
-<li>резервный провайдер;</li>
-<li>профиль по умолчанию;</li>
-<li>минимальная сумма автоматического доната;</li>
-<li>максимальная длина;</li>
-<li>удаление ссылок и HTML;</li>
-<li>пропуск пустого текста;</li>
-<li>автоматическая озвучка донатов сервисов.</li>
-</ul>
+История и лог</code></pre>
+<h3 id="общие-настройки">Общие настройки<a class="heading-anchor" href="#общие-настройки" aria-label="Ссылка на раздел Общие настройки">#</a></h3>
+<ul><li>основной провайдер;</li><li>резервный провайдер;</li><li>профиль по умолчанию;</li><li>минимальная сумма автоматического доната;</li><li>максимальная длина;</li><li>удаление ссылок и HTML;</li><li>пропуск пустого текста;</li><li>автоматическая озвучка донатов сервисов.</li></ul>
 <p>Важно: провайдер, жёстко заданный в профиле, имеет приоритет. Значение <strong>«Автоматически»</strong> заставляет профиль использовать основной провайдер.</p>
-<hr />
-<h2 id="11-провайдер-speakerbot">11. Провайдер Speaker.bot</h2>
-<p>Speaker.bot удобен как общий голосовой центр для донатов, команд, наград и Вашингтона.</p>
-<h3 id="111-настройка-speakerbot">11.1. Настройка Speaker.bot</h3>
-<ol>
-<li>Открой <code>Settings -&gt; Speech Engines</code>.</li>
-<li>Добавь и настрой движок.</li>
-<li>Открой <code>Settings -&gt; Voice Aliases</code>.</li>
-<li>Создай alias, например:</li>
-</ol>
+<hr>
+<h3 id="провайдер-speakerbot">Провайдер Speaker.bot<a class="heading-anchor" href="#провайдер-speakerbot" aria-label="Ссылка на раздел Провайдер Speaker.bot">#</a></h3>
+<p>Speaker.bot удобен как общий голосовой центр для донатов, команд, наград и внешних событий.</p>
+<h4 id="настройка-speakerbot">Настройка Speaker.bot<a class="heading-anchor" href="#настройка-speakerbot" aria-label="Ссылка на раздел Настройка Speaker.bot">#</a></h4>
+<ol><li>Открой <code>Settings -&gt; Speech Engines</code>.</li><li>Добавь и настрой движок.</li><li>Открой <code>Settings -&gt; Voice Aliases</code>.</li><li>Создай alias, например:</li></ol>
 <pre><code class="language-text">Donations
 moderator
 Rewards
-Washington
-</code></pre>
-<ol start="5">
-<li>Проверь <code>Test Speak</code>.</li>
-<li>Открой <code>Settings -&gt; Websocket Server</code>.</li>
-<li>Включи Auto Start.</li>
-</ol>
+Custom</code></pre>
+<ol><li>Проверь <code>Test Speak</code>.</li><li>Открой <code>Settings -&gt; Websocket Server</code>.</li><li>Включи Auto Start.</li></ol>
 <p>Пример текущей конфигурации:</p>
 <pre><code class="language-text">Address: 127.0.0.1
 Port: 7580
-Endpoint: /
-</code></pre>
+Endpoint: /</code></pre>
 <p>В VicDonationGoal:</p>
-<pre><code class="language-text">ws://127.0.0.1:7580/
-</code></pre>
+<pre><code class="language-text">ws://127.0.0.1:7580/</code></pre>
 <p>Название Voice Alias в профиле должно совпадать символ в символ.</p>
-<h3 id="112-очередь-speakerbot">11.2. Очередь Speaker.bot</h3>
+<h4 id="очередь-speakerbot">Очередь Speaker.bot<a class="heading-anchor" href="#очередь-speakerbot" aria-label="Ссылка на раздел Очередь Speaker.bot">#</a></h4>
 <p>VicDonationGoal умеет отправлять команды:</p>
 <pre><code class="language-text">Pause
 Resume
 Stop
-Clear
-</code></pre>
+Clear</code></pre>
 <p>Fallback запускается только при подтверждённой ошибке отправки. Медленная речь Speaker.bot сама по себе не запускает второй голос.</p>
-<h3 id="113-типичные-ошибки">11.3. Типичные ошибки</h3>
-<pre><code class="language-text">speakerbot: выключен
-</code></pre>
+<h4 id="типичные-ошибки">Типичные ошибки<a class="heading-anchor" href="#типичные-ошибки" aria-label="Ссылка на раздел Типичные ошибки">#</a></h4>
+<pre><code class="language-text">speakerbot: выключен</code></pre>
 <p>Проверь флаг провайдера, профиль и WebSocket.</p>
-<pre><code class="language-text">Voice Alias не указан
-</code></pre>
+<pre><code class="language-text">Voice Alias не указан</code></pre>
 <p>Создай alias и впиши его в профиль.</p>
-<hr />
-<h2 id="12-провайдер-microsoft-edge">12. Провайдер Microsoft Edge</h2>
+<hr>
+<h3 id="провайдер-microsoft-edge">Провайдер Microsoft Edge<a class="heading-anchor" href="#провайдер-microsoft-edge" aria-label="Ссылка на раздел Провайдер Microsoft Edge">#</a></h3>
 <p>Edge TTS не требует API-ключа, но использует онлайн-службу Microsoft.</p>
 <p>Настройки:</p>
 <pre><code class="language-text">voice
 rate
 volume
-pitch
-</code></pre>
+pitch</code></pre>
 <p>Пример голоса:</p>
-<pre><code class="language-text">ru-RU-SvetlanaNeural
-</code></pre>
+<pre><code class="language-text">ru-RU-SvetlanaNeural</code></pre>
 <p>Edge создаёт MP3. Для вывода звука добавь в OBS Browser Source:</p>
-<pre><code class="language-text">http://127.0.0.1:3333/tts.html
-</code></pre>
+<pre><code class="language-text">http://127.0.0.1:3333/tts.html</code></pre>
 <p>TTS Hub показывает heartbeat этого плеера. Если аудио создано, но Browser Source не открыт, звук не будет воспроизведён.</p>
-<hr />
-<h2 id="13-провайдер-yandex-speechkit">13. Провайдер Yandex SpeechKit</h2>
+<hr>
+<h3 id="провайдер-yandex-speechkit">Провайдер Yandex SpeechKit<a class="heading-anchor" href="#провайдер-yandex-speechkit" aria-label="Ссылка на раздел Провайдер Yandex SpeechKit">#</a></h3>
 <p>Yandex является необязательным облачным провайдером.</p>
 <p>Поля:</p>
 <pre><code class="language-text">Endpoint
@@ -399,39 +184,31 @@ Folder ID
 Voice
 Emotion
 Speed
-Format
-</code></pre>
+Format</code></pre>
 <p>Сервисному аккаунту нужны права SpeechKit TTS на выбранный каталог. При ошибке <code>401/403 PermissionDenied</code> проверь роль, Folder ID и владельца ключа.</p>
 <p>Ключи хранятся в приватном:</p>
-<pre><code class="language-text">integrations/tts/tts_config.json
-</code></pre>
+<pre><code class="language-text">integrations/tts/tts_config.json</code></pre>
 <p>Никогда не публикуй его без очистки.</p>
-<hr />
-<h2 id="14-провайдер-xtts-local">14. Провайдер XTTS Local</h2>
+<hr>
+<h3 id="провайдер-xtts-local">Провайдер XTTS Local<a class="heading-anchor" href="#провайдер-xtts-local" aria-label="Ссылка на раздел Провайдер XTTS Local">#</a></h3>
 <p>VicDonationGoal не включает модель XTTS и её веса. Провайдер подключается к отдельно запущенному локальному HTTP-серверу.</p>
 <p>Ожидаемая схема по умолчанию:</p>
 <pre><code class="language-text">POST endpoint
 multipart/form-data:
   text
   language
-  speaker_wav (необязательно)
-</code></pre>
+  speaker_wav (необязательно)</code></pre>
 <p>Поля настройки:</p>
 <pre><code class="language-text">Endpoint
 Language
 Reference WAV
 Format
-Response type
-</code></pre>
+Response type</code></pre>
 <p>Поддерживаются ответы:</p>
-<ul>
-<li>готовое аудио;</li>
-<li>JSON с URL аудио;</li>
-<li>JSON с base64.</li>
-</ul>
+<ul><li>готовое аудио;</li><li>JSON с URL аудио;</li><li>JSON с base64.</li></ul>
 <p>Если конкретный XTTS-сервер имеет другой API, используй Custom HTTP.</p>
-<hr />
-<h2 id="15-провайдер-custom-http">15. Провайдер Custom HTTP</h2>
+<hr>
+<h3 id="провайдер-custom-http">Провайдер Custom HTTP<a class="heading-anchor" href="#провайдер-custom-http" aria-label="Ссылка на раздел Провайдер Custom HTTP">#</a></h3>
 <p>Универсальный адаптер для внешнего или локального API.</p>
 <p>Настройки:</p>
 <pre><code class="language-text">URL
@@ -440,84 +217,62 @@ Headers JSON
 Body JSON / Form
 Voice
 Language
-Response type
-</code></pre>
+Response type</code></pre>
 <p>Шаблоны:</p>
 <pre><code class="language-text">{text}
 {voice}
-{language}
-</code></pre>
+{language}</code></pre>
 <p>Пример тела:</p>
 <pre><code class="language-json">{
   &quot;text&quot;: &quot;{text}&quot;,
   &quot;voice&quot;: &quot;{voice}&quot;,
   &quot;language&quot;: &quot;{language}&quot;
-}
-</code></pre>
+}</code></pre>
 <p>Типы ответа:</p>
 <pre><code class="language-text">audio       — бинарный аудиофайл в теле ответа
 json_url    — JSON содержит ссылку на аудиофайл
-json_base64 — JSON содержит base64-аудио
-</code></pre>
+json_base64 — JSON содержит base64-аудио</code></pre>
 <p>Для вложенного JSON можно указать путь через точку, например:</p>
-<pre><code class="language-text">data.audio.url
-</code></pre>
+<pre><code class="language-text">data.audio.url</code></pre>
 <p>Не выводи приватные заголовки в публичные скриншоты и логи.</p>
-<hr />
-<h2 id="16-голосовые-профили">16. Голосовые профили</h2>
+<hr>
+<h3 id="голосовые-профили">Голосовые профили<a class="heading-anchor" href="#голосовые-профили" aria-label="Ссылка на раздел Голосовые профили">#</a></h3>
 <p>Профиль — набор настроек голоса для назначения или группы пользователей.</p>
 <p>Стандартные профили:</p>
 <pre><code class="language-text">Default
 Donations
 Rewards
-Washington
+Custom
 Moderator
-VIP
-</code></pre>
-<h3 id="161-поля-профиля">16.1. Поля профиля</h3>
-<ul>
-<li>ID — постоянный технический идентификатор;</li>
-<li>название;</li>
-<li>провайдер;</li>
-<li>Voice Alias Speaker.bot;</li>
-<li>Edge voice;</li>
-<li>Yandex voice/emotion;</li>
-<li>XTTS reference WAV/language;</li>
-<li>Custom HTTP voice/language;</li>
-<li>rate, pitch, volume;</li>
-<li>Bad Word Filter;</li>
-<li>включён/выключен.</li>
-</ul>
-<h3 id="162-провайдер-автоматически">16.2. Провайдер «Автоматически»</h3>
-<pre><code class="language-text">Автоматически -&gt; основной провайдер из общих настроек
-</code></pre>
+VIP</code></pre>
+<h4 id="поля-профиля">Поля профиля<a class="heading-anchor" href="#поля-профиля" aria-label="Ссылка на раздел Поля профиля">#</a></h4>
+<ul><li>ID — постоянный технический идентификатор;</li><li>название;</li><li>провайдер;</li><li>Voice Alias Speaker.bot;</li><li>Edge voice;</li><li>Yandex voice/emotion;</li><li>XTTS reference WAV/language;</li><li>Custom HTTP voice/language;</li><li>rate, pitch, volume;</li><li>Bad Word Filter;</li><li>включён/выключен.</li></ul>
+<h4 id="провайдер-автоматически">Провайдер «Автоматически»<a class="heading-anchor" href="#провайдер-автоматически" aria-label="Ссылка на раздел Провайдер «Автоматически»">#</a></h4>
+<pre><code class="language-text">Автоматически -&gt; основной провайдер из общих настроек</code></pre>
 <p>Это лучший вариант для обычных профилей, если пользователь часто переключает движки.</p>
-<h3 id="163-персональный-голос">16.3. Персональный голос</h3>
+<h4 id="персональный-голос">Персональный голос<a class="heading-anchor" href="#персональный-голос" aria-label="Ссылка на раздел Персональный голос">#</a></h4>
 <p>Создай профиль:</p>
 <pre><code class="language-text">ID: nick-special
 Name: Голос Nick
 Provider: Speaker.bot
-Alias: NickVoice
-</code></pre>
+Alias: NickVoice</code></pre>
 <p>После этого создай правило по нику или userId.</p>
-<hr />
-<h2 id="17-правила-маршрутизации">17. Правила маршрутизации</h2>
+<hr>
+<h3 id="правила-маршрутизации">Правила маршрутизации<a class="heading-anchor" href="#правила-маршрутизации" aria-label="Ссылка на раздел Правила маршрутизации">#</a></h3>
 <p>Правила выбирают профиль. Они <strong>не задают порядок проигрывания очереди</strong>.</p>
 <p>Главное правило:</p>
-<pre><code class="language-text">меньше число приоритета = правило проверяется раньше
-</code></pre>
+<pre><code class="language-text">меньше число приоритета = правило проверяется раньше</code></pre>
 <p>Срабатывает первое подходящее правило.</p>
-<h3 id="171-типы-событий">17.1. Типы событий</h3>
+<h4 id="типы-событий">Типы событий<a class="heading-anchor" href="#типы-событий" aria-label="Ссылка на раздел Типы событий">#</a></h4>
 <p>Стандартные значения:</p>
 <pre><code class="language-text">donation
 channel_reward
-washington
+custom
 moderator_command
 manual_test
-custom
-</code></pre>
+custom</code></pre>
 <p>Это внутренние значения TTS Hub. Они не появляются автоматически из Twitch или YouTube — их передаёт создатель события.</p>
-<h3 id="172-источники">17.2. Источники</h3>
+<h4 id="источники">Источники<a class="heading-anchor" href="#источники" aria-label="Ссылка на раздел Источники">#</a></h4>
 <p>Стандартные значения:</p>
 <pre><code class="language-text">donationalerts
 donatty
@@ -525,88 +280,62 @@ manual
 streamerbot
 twitch
 youtube
-washington-service
-custom
-</code></pre>
+external
+custom</code></pre>
 <p>Пример:</p>
 <pre><code class="language-text">eventType = channel_reward
-source = streamerbot
-</code></pre>
+source = streamerbot</code></pre>
 <p>означает, что Streamer.bot получил награду и отправил её в TTS Hub.</p>
-<h3 id="173-user-id">17.3. User ID</h3>
+<h4 id="user-id">User ID<a class="heading-anchor" href="#user-id" aria-label="Ссылка на раздел User ID">#</a></h4>
 <p>Постоянный ID пользователя Twitch, YouTube или другой платформы. Он надёжнее ника, но доступен только если внешняя система его передала.</p>
-<h3 id="174-ники">17.4. Ники</h3>
+<h4 id="ники">Ники<a class="heading-anchor" href="#ники" aria-label="Ссылка на раздел Ники">#</a></h4>
 <p>Сравнение выполняется без учёта регистра. У донатов DA/Donatty ник обычно доступен, а platform userId — не всегда.</p>
-<h3 id="175-роли">17.5. Роли</h3>
+<h4 id="роли">Роли<a class="heading-anchor" href="#роли" aria-label="Ссылка на раздел Роли">#</a></h4>
 <p>Примеры:</p>
 <pre><code class="language-text">moderator
 vip
 subscriber
-broadcaster
-</code></pre>
+broadcaster</code></pre>
 <p>Роль сработает только если Streamer.bot или другая интеграция передала поле <code>roles</code>.</p>
-<h3 id="176-reward-id">17.6. Reward ID</h3>
+<h4 id="reward-id">Reward ID<a class="heading-anchor" href="#reward-id" aria-label="Ссылка на раздел Reward ID">#</a></h4>
 <p>ID конкретной награды Twitch. Его можно получить из события Streamer.bot или из настроек награды.</p>
-<h3 id="177-сумма">17.7. Сумма</h3>
+<h4 id="сумма">Сумма<a class="heading-anchor" href="#сумма" aria-label="Ссылка на раздел Сумма">#</a></h4>
 <p>Правила могут ограничить минимальную и максимальную сумму. Сначала используется <code>amountForGoal</code>, затем обычный <code>amount</code>.</p>
-<h3 id="178-как-объединяются-условия">17.8. Как объединяются условия</h3>
+<h4 id="как-объединяются-условия">Как объединяются условия<a class="heading-anchor" href="#как-объединяются-условия" aria-label="Ссылка на раздел Как объединяются условия">#</a></h4>
 <p>Разные заполненные поля работают через <strong>И</strong>. Значения внутри одного поля, перечисленные через запятую, работают через <strong>ИЛИ</strong>.</p>
 <p>Пример:</p>
 <pre><code class="language-text">Тип: donation
 Источник: donatty, donationalerts
 Ник: Nick
-Минимальная сумма: 1000
-</code></pre>
+Минимальная сумма: 1000</code></pre>
 <p>означает: донат из Donatty или DA, от Nick, не меньше 1000.</p>
-<h3 id="179-тестер-маршрутизации">17.9. Тестер маршрутизации</h3>
+<h4 id="тестер-маршрутизации">Тестер маршрутизации<a class="heading-anchor" href="#тестер-маршрутизации" aria-label="Ссылка на раздел Тестер маршрутизации">#</a></h4>
 <p>В разделе правил можно ввести тестовое событие и увидеть:</p>
-<ul>
-<li>совпавшее правило;</li>
-<li>выбранный профиль;</li>
-<li>фактический провайдер;</li>
-<li>голос;</li>
-<li>fallback.</li>
-</ul>
+<ul><li>совпавшее правило;</li><li>выбранный профиль;</li><li>фактический провайдер;</li><li>голос;</li><li>fallback.</li></ul>
 <p>Озвучка при этом не запускается.</p>
-<hr />
-<h2 id="18-очередь-история-и-логи">18. Очередь, история и логи</h2>
-<h3 id="181-очередь">18.1. Очередь</h3>
+<hr>
+<h3 id="очередь-история-и-логи">Очередь, история и логи<a class="heading-anchor" href="#очередь-история-и-логи" aria-label="Ссылка на раздел Очередь, история и логи">#</a></h3>
+<h4 id="очередь">Очередь<a class="heading-anchor" href="#очередь" aria-label="Ссылка на раздел Очередь">#</a></h4>
 <p>Показывает ожидающие, обрабатываемые и готовые задачи. Длинный текст раскрывается вниз.</p>
-<h3 id="182-история">18.2. История</h3>
+<h4 id="история">История<a class="heading-anchor" href="#история" aria-label="Ссылка на раздел История">#</a></h4>
 <p>Фильтры:</p>
-<ul>
-<li>поиск по нику, тексту и ID;</li>
-<li>статус;</li>
-<li>провайдер.</li>
-</ul>
+<ul><li>поиск по нику, тексту и ID;</li><li>статус;</li><li>провайдер.</li></ul>
 <p>Развёрнутая запись показывает:</p>
-<ul>
-<li>оригинальный текст;</li>
-<li>текст после очистки;</li>
-<li>удалённые ссылки и фрагменты;</li>
-<li>профиль;</li>
-<li>совпавшее правило;</li>
-<li>провайдер и голос;</li>
-<li>fallback;</li>
-<li>ошибку;</li>
-<li>идентификаторы события.</li>
-</ul>
+<ul><li>оригинальный текст;</li><li>текст после очистки;</li><li>удалённые ссылки и фрагменты;</li><li>профиль;</li><li>совпавшее правило;</li><li>провайдер и голос;</li><li>fallback;</li><li>ошибку;</li><li>идентификаторы события.</li></ul>
 <p>Статус <code>Пропущено</code> не является аварией. Например, сообщение могло состоять только из ссылки и стать пустым после очистки.</p>
-<h3 id="183-логи">18.3. Логи</h3>
+<h4 id="логи">Логи<a class="heading-anchor" href="#логи" aria-label="Ссылка на раздел Логи">#</a></h4>
 <p>Логи хранят технические события TTS. Секретные ключи нельзя добавлять в текст ошибок вручную.</p>
-<hr />
-<h2 id="19-внешний-tts-api">19. Внешний TTS API</h2>
+<hr>
+<h3 id="внешний-tts-api">Внешний TTS API<a class="heading-anchor" href="#внешний-tts-api" aria-label="Ссылка на раздел Внешний TTS API">#</a></h3>
 <p>Главный endpoint:</p>
-<pre><code class="language-text">POST http://127.0.0.1:3333/api/tts/enqueue
-</code></pre>
+<pre><code class="language-text">POST http://127.0.0.1:3333/api/tts/enqueue</code></pre>
 <p>Минимальный пример:</p>
 <pre><code class="language-json">{
   &quot;eventType&quot;: &quot;channel_reward&quot;,
   &quot;source&quot;: &quot;streamerbot&quot;,
   &quot;username&quot;: &quot;Viewer&quot;,
   &quot;text&quot;: &quot;Сообщение зрителя&quot;
-}
-</code></pre>
+}</code></pre>
 <p>Расширенный пример:</p>
 <pre><code class="language-json">{
   &quot;eventType&quot;: &quot;channel_reward&quot;,
@@ -619,467 +348,43 @@ broadcaster
   &quot;text&quot;: &quot;Сообщение зрителя&quot;,
   &quot;profileId&quot;: &quot;moderator&quot;,
   &quot;priority&quot;: 50
-}
-</code></pre>
+}</code></pre>
 <p>Если указан существующий <code>profileId</code>, правила пропускаются и профиль выбирается напрямую.</p>
 <p>Проверка правил без озвучки:</p>
-<pre><code class="language-text">POST /api/tts/rules/test
-</code></pre>
-<hr />
-<h2 id="20-команда-ттс-в-streamerbot">20. Команда !ттс в Streamer.bot</h2>
-<p>Можно напрямую использовать встроенный sub-action Speaker.bot, но тогда сообщение не попадёт в историю VicDonationGoal. Для единой истории лучше отправлять POST в TTS Hub.</p>
-<p>Пример C# sub-action Streamer.bot:</p>
-<pre><code class="language-csharp">using System;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
-
-public class CPHInline
-{
-    public bool Execute()
-    {
-        CPH.TryGetArg(&quot;rawInput&quot;, out string text);
-        CPH.TryGetArg(&quot;user&quot;, out string username);
-        CPH.TryGetArg(&quot;userId&quot;, out string userId);
-
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
-
-        var payload = new
-        {
-            eventType = &quot;moderator_command&quot;,
-            source = &quot;streamerbot&quot;,
-            username = username ?? &quot;Moderator&quot;,
-            userId = userId ?? &quot;&quot;,
-            roles = new[] { &quot;moderator&quot; },
-            text,
-            profileId = &quot;moderator&quot;
-        };
-
-        using var client = new HttpClient();
-        var json = JsonSerializer.Serialize(payload);
-        var content = new StringContent(json, Encoding.UTF8, &quot;application/json&quot;);
-        var response = client.PostAsync(
-            &quot;http://127.0.0.1:3333/api/tts/enqueue&quot;,
-            content
-        ).GetAwaiter().GetResult();
-
-        return response.IsSuccessStatusCode;
-    }
-}
-</code></pre>
-<p>Команда должна быть доступна только модераторам.</p>
-<hr />
-<h2 id="21-награды-за-баллы-канала">21. Награды за баллы канала</h2>
-<p>Схема:</p>
-<pre><code class="language-text">Twitch Reward
-  ↓
-Streamer.bot trigger
-  ↓
-POST /api/tts/enqueue
-  ↓
-eventType: channel_reward
-source: streamerbot
-rewardId: ID награды
-  ↓
-Профиль Rewards или правило конкретной награды
-</code></pre>
-<p>Для разных наград можно создавать разные правила по <code>rewardId</code>.</p>
-<hr />
-<h2 id="22-washington-service">22. Washington Service</h2>
-<p>Washington Service генерирует текст, а TTS Hub отвечает за голос.</p>
-<p>Пример:</p>
+<pre><code class="language-text">POST /api/tts/rules/test</code></pre>
+<hr>
+<h2 id="interface">Главная, темы и настройки интерфейса<a class="heading-anchor" href="#interface" aria-label="Ссылка на раздел Главная, темы и настройки интерфейса">#</a></h2>
+<p>Настройки интерфейса хранятся в <code>core/ui_settings.json</code> отдельно от документа OBS. Главная использует сетку из 12 колонок. Доступны блоки подключений, последних донатов, цели, ручного ввода, озвучки, TopDonation, сводки, курсов, очереди, теста TTS, истории речи и сервисов. Блоки можно добавлять, удалять, перемещать и изменять их размер с учётом минимальных размеров. Освободившиеся верхние места занимаются автоматически.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Поле темы</th><th>Значения</th></tr></thead><tbody><tr><td><code>mode</code></td><td>dark / light</td></tr><tr><td><code>family</code></td><td>monocrome / vicwander</td></tr><tr><td><code>base</code></td><td>Палитра основы; варианты neutral, stone, zinc, slate, gray и цветные палитры</td></tr><tr><td><code>accent</code></td><td>Независимая палитра акцента</td></tr><tr><td><code>baseSaturation</code></td><td>0–100, стандарт 35; насыщенность оттенка основы</td></tr></tbody></table></div>
+<p>Всего 26 семейств палитр. Базовый Monocrome использует нейтральные поверхности и белые кнопки в тёмном режиме. Насыщенность меняет цветность основы, сохраняя заданную светлоту поверхностей. Цвета состояния подключения и обозначения сервисов имеют собственный смысл и не становятся цветом темы.</p>
+<h2 id="data">Хранение, резервные копии и перенос<a class="heading-anchor" href="#data" aria-label="Ссылка на раздел Хранение, резервные копии и перенос">#</a></h2>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Данные</th><th>Расположение</th></tr></thead><tbody><tr><td>Цель и история</td><td><code>core/data/state.json</code>, <code>core/data/donations.json</code></td></tr><tr><td>Профили и корректировки TopDonation</td><td><code>core/data/donor_profiles.json</code>, <code>core/data/donor_adjustments.json</code></td></tr><tr><td>Интерфейс</td><td><code>core/ui_settings.json</code></td></tr><tr><td>Оформления</td><td><code>core/widget_settings.json</code></td></tr><tr><td>Ресурсы оформлений</td><td><code>core/widget_assets/</code></td></tr><tr><td>Подключения</td><td>Конфигурации и токены в <code>integrations/</code></td></tr><tr><td>TTS</td><td>Конфигурация, профили, правила, очередь и история в <code>integrations/tts/</code></td></tr><tr><td>Служебные отметки отправки</td><td><code>*_sent.json</code> и поддерживаемые файлы состояния модулей</td></tr><tr><td>Резервные копии</td><td><code>backups/</code></td></tr><tr><td>Диагностические отчёты</td><td><code>diagnostics/</code></td></tr></tbody></table></div>
+<p>Полный бэкап содержит поддерживаемые пользовательские файлы, в том числе секреты подключений, оформления и ресурсы. Схема бэкапа — 1; неизвестная более новая схема отклоняется. Ограничения импорта: до 64 MiB загружаемого файла, до 128 MiB распакованных данных, до 500 файлов. Проверяются пути, формат и содержимое, а не только расширение ZIP.</p>
+<p>Импорт истории защищается от дублей. Полный перенос конфигурации требует остановленных внешних модулей; для переноса из папки предназначен <code>16_UPDATE_FROM_OLD_VERSION.bat</code>. Перед изменением создаётся резервная копия. Бэкап не является способом переносить старый исполняемый код поверх новой версии.</p>
+<p>Не публикуйте настроенную папку, OAuth-токены, ссылки виджетов и полные бэкапы. Локальная админка не предназначена для открытого доступа из интернета. Пользовательский HTML виджета изолируется от страницы управления, но доверие к внешнему файлу или коду всё равно требует проверки результата до применения.</p>
+<h2 id="diagnostics">Состояния, ошибки и диагностика<a class="heading-anchor" href="#diagnostics" aria-label="Ссылка на раздел Состояния, ошибки и диагностика">#</a></h2>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Состояние</th><th>Значение</th></tr></thead><tbody><tr><td>Выключено</td><td>Модуль отключён настройкой</td></tr><tr><td>Не настроено</td><td>Не заполнены обязательные параметры</td></tr><tr><td>Остановлено</td><td>Модуль включён, но процесс не запущен</td></tr><tr><td>Подключение</td><td>Запуск или ожидание подтверждения соединения</td></tr><tr><td>Подключено</td><td>Есть подтверждение, предусмотренное данным обработчиком</td></tr><tr><td>Требует внимания</td><td>Переподключение, устаревший статус, ограничение частоты или другой неполный рабочий режим</td></tr><tr><td>Ошибка</td><td>Конфигурационная, авторизационная или продолжительная сетевая ошибка</td></tr></tbody></table></div>
+<p><code>running</code> относится к процессу, <code>connected</code> — к подтверждённому каналу, <code>stale</code> — к возрасту последнего обновления состояния. В техсостоянии сохраняются последняя ошибка, событие и время обновления. Для DonationAlerts OAuth/API, live-подписка и догон истории — отдельные признаки.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Симптом</th><th>Что проверить</th></tr></thead><tbody><tr><td>API отвечает, донатов нет</td><td>Подписку/канал событий, параметры фильтра, тип теста сервиса и последнее событие</td></tr><tr><td>401/403, Incorrect token</td><td>Актуальность и тип ключа, OAuth, регион DonatePay</td></tr><tr><td>ReadTimeout</td><td>Сеть, прокси/VPN и доступность API; это не признак успешной доставки</td></tr><tr><td>Bridge запущен, оповещения нет</td><td>HTTP Server Streamer.bot, выбранный Action, его очередь и источники OBS</td></tr><tr><td>Speaker.bot: ConnectionRefused</td><td>Запуск Speaker.bot и его WebSocket Server, адрес и порт 7580</td></tr><tr><td>Edge создал файл, но звука нет</td><td>Проигрыватель <code>/tts.html</code> в OBS и аудиомаршрутизацию</td></tr><tr><td>Старые записи проигрались повторно</td><td>Сброс служебных sent-файлов, ручной повтор или запуск двух копий</td></tr><tr><td>Конфликт редактора</td><td>Документ изменён в другом окне; обновить состояние перед записью</td></tr></tbody></table></div>
+<p>«Диагностический отчёт» и <code>14_CREATE_DIAGNOSTIC_REPORT.bat</code> создают ZIP с маскировкой секретов без текстов донатов. Это формат для поддержки. Полный бэкап для поддержки не требуется. <code>09_STABILITY_CHECK.bat</code> проверяет структуру установки; <code>15_BETA_READINESS_CHECK.bat</code> — расширенные офлайн-проверки (историческое имя файла не означает Beta-статус всей версии).</p>
+<h2 id="api">Архитектура и API<a class="heading-anchor" href="#api" aria-label="Ссылка на раздел Архитектура и API">#</a></h2>
+<p>Core обслуживает локальный HTTP API и хранение. Integration Manager читает manifests, запускает включённые обработчики и возвращает их состояние. Интеграции приводят платежи к единому событию; Streamer.bot Bridge и TTS Hub обрабатывают уже записанные данные. Исходные валюты и источник сохраняются.</p>
 <pre><code class="language-json">{
-  &quot;eventType&quot;: &quot;washington&quot;,
-  &quot;source&quot;: &quot;washington-service&quot;,
-  &quot;username&quot;: &quot;Вашингтон&quot;,
-  &quot;text&quot;: &quot;Реплика виртуального кота&quot;,
-  &quot;profileId&quot;: &quot;washington&quot;
-}
-</code></pre>
-<p>Так Вашингтон может использовать отдельный Speaker.bot alias, Edge-голос или локальный XTTS-профиль.</p>
-<hr />
-<h2 id="23-основные-api-endpoints">23. Основные API endpoints</h2>
-<table>
-<thead>
-<tr>
-  <th>Метод</th>
-  <th>Endpoint</th>
-  <th>Назначение</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-  <td>GET</td>
-  <td><code>/api/state</code></td>
-  <td>состояние цели</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/donations</code></td>
-  <td>история донатов</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/donation</code></td>
-  <td>добавить донат</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/donors/top</code></td>
-  <td>TopDonation</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/integrations</code></td>
-  <td>список и статусы интеграций</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/integrations/detail?id=...</code></td>
-  <td>manifest, настройки и инструкция сервиса</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/integrations/logs?id=...</code></td>
-  <td>логи интеграции</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/config</code></td>
-  <td>сохранить настройки сервиса</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/enable</code></td>
-  <td>включить или выключить модуль</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/start</code></td>
-  <td>запустить модуль</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/stop</code></td>
-  <td>остановить модуль</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/restart</code></td>
-  <td>переподключить модуль</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/test</code></td>
-  <td>проверить подключение</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/clear-auth</code></td>
-  <td>удалить OAuth-токены</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/integrations/onboarding</code></td>
-  <td>завершить мастер первого запуска</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/status</code></td>
-  <td>общий статус системы</td>
-</tr>
-<tr>
-  <td>GET</td>
-  <td><code>/api/tts/bootstrap</code></td>
-  <td>TTS-конфиг, профили, правила и очередь</td>
-</tr>
-<tr>
-  <td>POST</td>
-  <td><code>/api/tts/enqueue</code></td>
-  <td>внешнее TTS-событие</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="24-bat-файлы">24. BAT-файлы</h2>
-<pre><code class="language-text">00_INSTALL_ALL.bat              установка зависимостей
-01_START_ALL.bat                Core + включённые интеграции + Bridge + TTS
-02_START_SERVER_ONLY.bat        Core и Integration Manager
-03_START_DONATTY_ONLY.bat       ручная отладка Donatty
-04_START_STREAMERBOT_ONLY.bat   только Streamer.bot Bridge
-05_TEST_STREAMERBOT.bat         тест action Streamer.bot
-06_RESET_STREAMERBOT_SENT.bat   сброс отправленных событий
-07_CREATE_LOCAL_CONFIGS.bat     создание конфигов из примеров
-08_START_TTS_ONLY.bat           только TTS Hub
-09_STABILITY_CHECK.bat          проверка проекта
-</code></pre>
-<hr />
-<h2 id="25-структура-проекта">25. Структура проекта</h2>
-<pre><code class="language-text">VicDonationGoal/
-├─ core/
-│  ├─ server.py
-│  ├─ integration_manager.py
-│  ├─ donor_store.py
-│  ├─ tts_hub_store.py
-│  ├─ data/
-│  └─ public/
-│     ├─ admin.html/js/css
-│     ├─ integrations-admin.js
-│     ├─ tts-admin.js
-│     ├─ widget.html/js
-│     └─ tts.html/js
-├─ integrations/
-│  ├─ donationalerts/
-│  │  ├─ manifest.json
-│  │  ├─ donationalerts_integration.py
-│  │  ├─ donationalerts_config.json
-│  │  ├─ donationalerts_tokens.json
-│  │  └─ GUIDE.md
-│  ├─ donatty/
-│  │  ├─ manifest.json
-│  │  ├─ donatty_listener.py
-│  │  ├─ donatty_config.json
-│  │  └─ GUIDE.md
-│  ├─ streamerbot/
-│  └─ tts/
-├─ runtime/integrations/
-├─ docs/
-├─ backups/
-└─ *.bat
-</code></pre>
-<p>Manifest описывает имя, тип запуска, обязательные поля, секреты, capabilities и встроенный гайд. Благодаря этому следующие сервисы можно добавлять без возврата их логики в Core.</p>
-<hr />
-<h2 id="26-типичные-проблемы-tts">26. Типичные проблемы TTS</h2>
-<h3 id="профиль-продолжает-использовать-не-тот-движок">Профиль продолжает использовать не тот движок</h3>
-<p>Проверь поле <code>Провайдер</code> в профиле. Поставь <code>Автоматически</code>, если профиль должен следовать общим настройкам.</p>
-<h3 id="speakerbot-выключен">Speaker.bot выключен</h3>
-<ul>
-<li>запусти Speaker.bot;</li>
-<li>включи WebSocket Server;</li>
-<li>проверь порт;</li>
-<li>проверь флаг провайдера;</li>
-<li>проверь Voice Alias.</li>
-</ul>
-<h3 id="edge-создал-файл-но-звука-нет">Edge создал файл, но звука нет</h3>
-<p>Добавь <code>/tts.html</code> в OBS Browser Source и проверь heartbeat Edge Player в обзоре TTS Hub.</p>
-<h3 id="после-очистки-сообщение-пустое">После очистки сообщение пустое</h3>
-<p>Сообщение могло состоять только из ссылки или HTML. Это нормальный статус <code>Пропущено</code>.</p>
-<h3 id="сообщение-озвучилось-дважды">Сообщение озвучилось дважды</h3>
-<p>Не запускай одновременно прямой Speaker.bot sub-action и тот же текст через <code>/api/tts/enqueue</code>. Выбери одну цепочку.</p>
-<h3 id="старые-сообщения-проигрались-после-сброса-sent">Старые сообщения проигрались после сброса sent</h3>
-<p>Не удаляй <code>tts_sent.json</code>, если не хочешь повторно обрабатывать старую историю донатов.</p>
-<h3 id="yandex-401403">Yandex 401/403</h3>
-<p>Проверь API key/IAM token, Folder ID и роль <code>ai.speechkit-tts.user</code>.</p>
-<h3 id="xtts-timeout">XTTS timeout</h3>
-<p>Модель может долго загружаться. Проверь локальный сервер, GPU/CPU, endpoint и увеличь timeout.</p>
-<hr />
-<h2 id="27-бэкапы-и-безопасность">27. Бэкапы и безопасность</h2>
-<p>Перед обновлением копируй всю папку проекта.</p>
-<p>Особенно важны:</p>
-<pre><code class="language-text">core/data/state.json
-core/data/donations.json
-core/data/rates.json
-integrations/donationalerts/donationalerts_config.json
-integrations/donationalerts/donationalerts_tokens.json
-integrations/donatty/donatty_config.json
-integrations/streamerbot/streamerbot_config.json
-integrations/tts/tts_config.json
-integrations/tts/tts_profiles.json
-integrations/tts/tts_rules.json
-</code></pre>
-<p>Приватную рабочую сборку нельзя публиковать целиком. Перед GitHub-релизом нужно собрать отдельный sanitized-архив.</p>
-<hr />
-<h2 id="28-topdonation">28. TopDonation</h2>
-<p>Версия v1.3 добавляет отдельный рейтинг донатеров. В разделе <code>Донаты</code> доступны вкладки:</p>
-<pre><code class="language-text">История | Топ
-</code></pre>
-<h3 id="281-как-считается-рейтинг">28.1. Как считается рейтинг</h3>
-<p>TopDonation считает сумму за всё время и не зависит от текущего донат-гола. Для каждого доната при первом учёте сохраняется отдельная сумма <code>amountForTop</code> в RUB. Позднее изменение курса валют не меняет уже сохранённый результат.</p>
-<p>Донат участвует в рейтинге, если у него включён флаг:</p>
-<pre><code class="language-text">Учитывать в TopDonation
-</code></pre>
-<p>Для ручного доната эта галочка находится прямо в форме добавления.</p>
-<h3 id="282-почему-одинаковые-ники-из-разных-сервисов-разделены">28.2. Почему одинаковые ники из разных сервисов разделены</h3>
-<p>Автоматическое объединение выполняется только внутри одного источника. Например:</p>
-<pre><code class="language-text">DonationAlerts: Nick
-DonationAlerts: nick
-</code></pre>
-<p>считаются одним профилем, потому что отличается только регистр.</p>
-<p>Но:</p>
-<pre><code class="language-text">DonationAlerts: Nick
-Donatty: Nick
-</code></pre>
-<p>по умолчанию считаются разными донатерами. Это защищает от случайного объединения двух людей с одинаковыми никами. Если это один человек, используй меню <code>••• → Объединить с другим</code>.</p>
-<h3 id="283-профиль-донатера">28.3. Профиль донатера</h3>
-<p>Профиль содержит:</p>
-<ul>
-<li>отображаемое имя;</li>
-<li>алиасы с указанием источника;</li>
-<li>общую сумму донатов;</li>
-<li>сумму ручных корректировок;</li>
-<li>количество донатов;</li>
-<li>дату первого и последнего доната;</li>
-<li>личную заметку;</li>
-<li>признаки <code>Закреплён</code> и <code>Исключён из топа</code>.</li>
-</ul>
-<p>Данные хранятся в:</p>
-<pre><code class="language-text">core/data/donor_profiles.json
-core/data/donor_adjustments.json
-</code></pre>
-<h3 id="284-закрепленные-донатеры">28.4. Закреплённые донатеры</h3>
-<p>Команда <code>Закрепить</code> переносит профиль в отдельный блок над обычным рейтингом. Закреплённый пользователь не занимает номер в общем списке.</p>
-<h3 id="285-корректировка-суммы">28.5. Корректировка суммы</h3>
-<p>Меню <code>Добавить сумму</code> создаёт техническую корректировку. Она полезна для старых переводов или денег, полученных вне донат-сервиса.</p>
-<p>Корректировка:</p>
-<ul>
-<li>влияет только на TopDonation;</li>
-<li>не создаёт обычный донат;</li>
-<li>не меняет текущую цель;</li>
-<li>отображается в раскрытой истории профиля;</li>
-<li>может быть отрицательной;</li>
-<li>может быть удалена отдельно.</li>
-</ul>
-<h3 id="286-объединение-профилей">28.6. Объединение профилей</h3>
-<p>Чтобы объединить одного человека из разных сервисов:</p>
-<ol>
-<li>открой вкладку <code>Топ</code>;</li>
-<li>нажми <code>•••</code> у профиля, который нужно присоединить;</li>
-<li>выбери <code>Объединить с другим</code>;</li>
-<li>введи точное имя или ID целевого профиля;</li>
-<li>подтверди действие.</li>
-</ol>
-<p>Исходные донаты не переписываются и не удаляются. В целевой профиль добавляются алиасы, а записи связываются с одним <code>donorId</code>.</p>
-<h3 id="287-исключение-и-удаление">28.7. Исключение и удаление</h3>
-<p><code>Исключить из топа</code> скрывает пользователя из рейтинга, но сохраняет историю и донат-гол.</p>
-<p><code>Удалить все донаты</code> — опасное действие. Оно удаляет все связанные донаты, корректировки и профиль, а затем пересчитывает текущую цель. Для подтверждения требуется повторно ввести имя донатера.</p>
-<h3 id="288-поиск">28.8. Поиск</h3>
-<p>Поиск во вкладке <code>Топ</code> работает по:</p>
-<ul>
-<li>отображаемому имени;</li>
-<li>алиасам;</li>
-<li>заметке;</li>
-<li>текстам всех донатов пользователя.</li>
-</ul>
-<h3 id="289-экспорт-одного-донатера">28.9. Экспорт одного донатера</h3>
-<p>Меню <code>Экспорт CSV</code> создаёт отдельный файл с:</p>
-<ul>
-<li>общей суммой;</li>
-<li>суммой корректировок;</li>
-<li>всеми донатами;</li>
-<li>исходными валютами;</li>
-<li>суммой для рейтинга;</li>
-<li>сообщениями;</li>
-<li>техническими корректировками.</li>
-</ul>
-<h3 id="2810-массовые-флаги-истории">28.10. Массовые флаги истории</h3>
-<p>Над историей есть общие переключатели:</p>
-<pre><code class="language-text">Сбор | Опов. | Ивент | TTS | Топ
-</code></pre>
-<p>Они применяются ко всей истории. Смешанное состояние отображается чертой. Это позволяет одним действием убрать все старые донаты из текущего сбора.</p>
-<h3 id="2811-topdonation-api">28.11. TopDonation API</h3>
-<p>Основные endpoints:</p>
-<pre><code class="language-text">GET  /api/donors/top
-GET  /api/donors/detail?id=&lt;donorId&gt;
-GET  /api/donors/export.csv?id=&lt;donorId&gt;
-POST /api/donors/update
-POST /api/donors/adjustment/add
-POST /api/donors/adjustment/delete
-POST /api/donors/merge
-POST /api/donors/delete-all
-POST /api/donations/bulk-update
-</code></pre>
-<hr />
-<h2 id="29-integrations-hub">29. Integrations Hub</h2>
-<h3 id="291-состояния">29.1. Состояния</h3>
-<pre><code class="language-text">Не настроено
-Выключено
-Остановлено
-Запуск / подключение
-Подключено
-Ошибка
-</code></pre>
-<p>Карточка показывает фактическое состояние процесса и соединения. Кнопка <strong>Переподключить</strong> выполняет stop/start без перезапуска всей программы.</p>
-<h3 id="292-секретные-поля">29.2. Секретные поля</h3>
-<p>Client Secret, widget URL и другие поля, помеченные в manifest как секретные, не отправляются обратно в браузер. Если секрет уже сохранён, поле показывает подсказку «Сохранено»; пустое значение при повторном сохранении не стирает его.</p>
-<h3 id="293-первый-запуск">29.3. Первый запуск</h3>
-<p>Файл:</p>
-<pre><code class="language-text">integrations/integrations_onboarding.json
-</code></pre>
-<p>хранит завершение мастера и выбранные сервисы. На существующей рабочей установке мастер автоматически считается завершённым, если интеграции уже настроены.</p>
-<h3 id="294-добавление-будущего-сервиса">29.4. Добавление будущего сервиса</h3>
-<p>Новая интеграция должна иметь собственную папку, <code>manifest.json</code>, конфиг, гайд и adapter/listener. Она приводит событие к единому формату и отправляет его в <code>/api/donation</code> или вызывает Core callback.</p>
-<hr />
-<hr />
-<h2 id="30-streamelements">30. StreamElements</h2>
-<h3 id="301-как-работает">30.1. Как работает</h3>
-<pre><code class="language-text">JWT / Overlay Token
-→ wss://astro.streamelements.com/
-→ subscribe channel.tips
-→ completed tip
-→ VicDonationGoal Core
-</code></pre>
-<p>Тема <code>channel.tips</code> предназначена для real-time tip/donation events. В событии доступны ID, пользователь, сообщение, сумма, валюта, статус и время.</p>
-<h3 id="302-подключение">30.2. Подключение</h3>
-<ol>
-<li>Откройте StreamElements Dashboard и переключитесь на нужный канал.</li>
-<li>Скопируйте JWT Token или Overlay Token.</li>
-<li>Скопируйте StreamElements Channel ID.</li>
-<li>Откройте <strong>Админка → Интеграции → StreamElements</strong>.</li>
-<li>Заполните Channel ID, тип токена и сам токен.</li>
-<li>Включите интеграцию, сохраните и нажмите <strong>Проверить</strong>.</li>
-<li>Убедитесь, что в логах появилась подписка <code>channel.tips</code>.</li>
-<li>Выполните тестовый или маленький настоящий tip.</li>
-</ol>
-<h3 id="303-статусы-и-фильтрация">30.3. Статусы и фильтрация</h3>
-<p>По умолчанию интеграция принимает <code>status=success</code> и разрешённые moderation states. Значения меняются в настройках через запятую.</p>
-<h3 id="304-безопасность">30.4. Безопасность</h3>
-<p>JWT и Overlay Token являются секретами канала. Они хранятся только локально в <code>streamelements_config.json</code> и исключены из Git.</p>
-<hr />
-<h2 id="31-streamlabs-beta">31. Streamlabs — Beta</h2>
-<h3 id="311-создание-приложения">31.1. Создание приложения</h3>
-<ol>
-<li>Войдите в Streamlabs Developer Console.</li>
-<li>Создайте OAuth Application.</li>
-<li>Укажите Redirect URI:</li>
-</ol>
-<pre><code class="language-text">http://127.0.0.1:3333/auth/streamlabs/callback
-</code></pre>
-<ol start="4">
-<li>Пока приложение не одобрено, добавьте свой аккаунт в whitelist.</li>
-<li>Скопируйте Client ID и Client Secret.</li>
-</ol>
-<h3 id="312-подключение">31.2. Подключение</h3>
-<ol>
-<li>Откройте <strong>Интеграции → Streamlabs</strong>.</li>
-<li>Введите Client ID и Client Secret.</li>
-<li>Оставьте scope <code>socket.token</code>.</li>
-<li>Включите интеграцию и сохраните.</li>
-<li>Нажмите <strong>Авторизовать</strong> и подтвердите доступ.</li>
-<li>После возврата нажмите <strong>Проверить</strong>.</li>
-<li>Сделайте тестовый или маленький настоящий донат.</li>
-</ol>
-<h3 id="313-техническая-схема">31.3. Техническая схема</h3>
-<pre><code class="language-text">OAuth access token
-→ GET /api/v2.0/socket/token
-→ Socket.IO event
-→ type=donation
-→ VicDonationGoal Core
-</code></pre>
-<p>Интеграция автоматически пробует Engine.IO v4 и v3. В v1.4.2 Streamlabs помечен Beta до живого теста на пользовательском приложении.</p>
-<h3 id="314-whitelist">31.4. Whitelist</h3>
-<p>Неодобренное Streamlabs-приложение разрешает авторизацию только whitelist-пользователям. Это подходит для личной сборки и небольшой закрытой беты.</p>
-<h3 id="315-безопасность">31.5. Безопасность</h3>
-<p>Не публикуйте Client Secret и <code>streamlabs_tokens.json</code>.</p>
-<h2 id="32-roadmap">32. Roadmap</h2>
-<pre><code class="language-text">v1.4.0 — Integrations Hub — выполнено
-v1.4.2 — StreamElements + Streamlabs — выполнено
-v1.4.2 — StreamElements + Streamlabs
-v1.4.2 — исследование DonatePay, DonateX, Donate.Stream и Tribute
-v1.5   — Core &amp; Storage Refactor
-v1.6   — Donation Goal Customisation
-v2.0   — Desktop EXE Application
-Latest — optional account/cloud backup
-</code></pre>
-<p>Полный план находится в <code>ROADMAP.md</code>.</p>
-<section class="doc-section"><h2>33. v1.4.4 — Integration Stability</h2><p>Исправлены Streamer.bot/TTS для новых сервисов, DonatePay rate-limit, статус DonateX, установка Cloudflare Tunnel и блокировки JSON/скрытые процессы Windows.</p><div class="callout"><strong>Остановка:</strong> используйте <code>13_STOP_ALL.bat</code>. <code>01_START_ALL.bat</code> автоматически завершает процессы предыдущего запуска.</div><p>Подробности и актуальные инструкции находятся в <code>docs/MANUAL.md</code>.</p></section><section class="doc-section"><h2>34. v1.4.4 — Beta Readiness</h2><p>Главная страница теперь отдельно показывает Core Server, Integration Manager, Streamer.bot Bridge, TTS Hub и компактную сетку донат-сервисов с цветными лампочками.</p><div class="callout"><strong>Диагностика:</strong> используйте кнопку «Диагностический отчёт» или <code>14_CREATE_DIAGNOSTIC_REPORT.bat</code>. Секреты маскируются, тексты донатов не включаются.</div><p><code>15_BETA_READINESS_CHECK.bat</code> выполняет runtime-import, проверку центрального реестра источников, JSON concurrency и dashboard API.</p><p>Tribute остаётся Experimental. <code>cloudflared.exe</code> не входит в архив и скачивается только при необходимости.</p></section></main></div><button class="theme-toggle" id="themeToggle">Тема</button><script src="docs-theme.js"></script></body></html>
+  &quot;source&quot;: &quot;manual&quot;,
+  &quot;externalId&quot;: &quot;example-1&quot;,
+  &quot;username&quot;: &quot;Viewer&quot;,
+  &quot;amount&quot;: 100,
+  &quot;currency&quot;: &quot;RUB&quot;,
+  &quot;message&quot;: &quot;Спасибо за стрим&quot;,
+  &quot;includeInGoal&quot;: true,
+  &quot;includeInTop&quot;: true,
+  &quot;notifyStreamerBot&quot;: false,
+  &quot;triggerDonationEvents&quot;: false,
+  &quot;speakTTS&quot;: false
+}</code></pre>
+<p>API локальной админки — внутренний интерфейс приложения, а не размещённый облачный сервис. JSON-запросы используют Content-Type application/json. Ошибки возвращают HTTP-код и диагностическое сообщение. Для защищённых операций проверяются локальный контекст запроса и поддерживаемая схема; обходить эти проверки внешней публикацией сервера не следует.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>Метод</th><th>Endpoint</th><th>Область</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/da/status</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/donations</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/donations/export.csv</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/donors/detail</code></td><td>TopDonation</td></tr><tr><td>GET</td><td><code>/api/donors/export.csv</code></td><td>TopDonation</td></tr><tr><td>GET</td><td><code>/api/donors/top</code></td><td>TopDonation</td></tr><tr><td>GET</td><td><code>/api/health</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/integrations</code></td><td>Подключения и управление модулями</td></tr><tr><td>GET</td><td><code>/api/integrations/detail</code></td><td>Подключения и управление модулями</td></tr><tr><td>GET</td><td><code>/api/integrations/logs</code></td><td>Подключения и управление модулями</td></tr><tr><td>GET</td><td><code>/api/portability/backup</code></td><td>Перенос и резервное копирование</td></tr><tr><td>GET</td><td><code>/api/portability/status</code></td><td>Перенос и резервное копирование</td></tr><tr><td>GET</td><td><code>/api/rates</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/source-registry</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/state</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/status</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/tts/bootstrap</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/config</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/control-state</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/history</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/logs</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/next</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/player-status</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/profiles</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/queue</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/rules</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/tts/status</code></td><td>TTS</td></tr><tr><td>GET</td><td><code>/api/ui/settings</code></td><td>Интерфейс</td></tr><tr><td>GET</td><td><code>/api/widget/active</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/widget/editor</code></td><td>Цель, события и диагностика</td></tr><tr><td>GET</td><td><code>/api/widget/resources</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/da/start</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/da/stop</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/diagnostics/create</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/donation</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/donation/delete</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/donation/replay</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/donation/update</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/donations/bulk-update</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/donors/adjustment/add</code></td><td>TopDonation</td></tr><tr><td>POST</td><td><code>/api/donors/adjustment/delete</code></td><td>TopDonation</td></tr><tr><td>POST</td><td><code>/api/donors/delete-all</code></td><td>TopDonation</td></tr><tr><td>POST</td><td><code>/api/donors/merge</code></td><td>TopDonation</td></tr><tr><td>POST</td><td><code>/api/donors/update</code></td><td>TopDonation</td></tr><tr><td>POST</td><td><code>/api/integrations/clear-auth</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/config</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/enable</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/onboarding</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/restart</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/start</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/stop</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/streamerbot/actions</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/streamerbot/test-action</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/integrations/test</code></td><td>Подключения и управление модулями</td></tr><tr><td>POST</td><td><code>/api/portability/apply</code></td><td>Перенос и резервное копирование</td></tr><tr><td>POST</td><td><code>/api/portability/stage</code></td><td>Перенос и резервное копирование</td></tr><tr><td>POST</td><td><code>/api/portability/stage-folder</code></td><td>Перенос и резервное копирование</td></tr><tr><td>POST</td><td><code>/api/portability/stage-local-backup</code></td><td>Перенос и резервное копирование</td></tr><tr><td>POST</td><td><code>/api/rates</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/reset</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/set-goal</code></td><td>Цель, события и диагностика</td></tr><tr><td>POST</td><td><code>/api/tts/clear</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/config</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/control</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/control/consume</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/done</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/enqueue</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/fail</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/history/clear</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/history/delete</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/job/complete</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/job/delete</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/job/retry</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/job/update</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/player-heartbeat</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/profiles</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/rules</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/rules/test</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/skip</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/tts/test</code></td><td>TTS</td></tr><tr><td>POST</td><td><code>/api/ui/settings</code></td><td>Интерфейс</td></tr><tr><td>POST</td><td><code>/api/undo-last</code></td><td>Цель, события и диагностика</td></tr></tbody></table></div>
+<h3 id="контракт-редактора">Контракт редактора<a class="heading-anchor" href="#контракт-редактора" aria-label="Ссылка на раздел Контракт редактора">#</a></h3>
+<p>Документ использует <code>schemaVersion: 1</code>. Изменяющие запросы редактора передают текущую <code>revision</code>; конфликт возвращает 409. Неверный документ или отсутствующий ресурс отклоняются. <code>draft</code>, <code>apply</code>, <code>save</code>, <code>load</code>, <code>revert</code>, <code>delete</code> — отдельные действия: сохранение варианта и применение в OBS не равнозначны.</p>
+<div class="table-scroll" tabindex="0" aria-label="Таблица"><table><thead><tr><th>API виджета</th><th>Назначение</th></tr></thead><tbody><tr><td>GET <code>/api/widget/editor</code></td><td>Настройки редактора, черновик, ресурсы</td></tr><tr><td>GET <code>/api/widget/active</code></td><td>Активный документ</td></tr><tr><td>POST <code>/api/widget/draft</code></td><td>Сохранить черновик с revision</td></tr><tr><td>POST <code>/api/widget/apply</code></td><td>Применить документ</td></tr><tr><td>POST <code>/api/widget/save</code></td><td>Сохранить вариант</td></tr><tr><td>POST <code>/api/widget/load</code></td><td>Загрузить вариант в черновик</td></tr><tr><td>POST <code>/api/widget/revert</code></td><td>Вернуть предыдущее применённое оформление</td></tr><tr><td>POST <code>/api/widget/delete</code></td><td>Удалить сохранённый вариант</td></tr><tr><td>POST <code>/api/widget/assets?filename=…</code></td><td>Загрузить ресурс</td></tr><tr><td>POST <code>/api/widget/assets/rename</code></td><td>Переименовать ресурс в библиотеке</td></tr><tr><td>POST <code>/api/widget/assets/trash</code></td><td>Переместить неиспользуемый ресурс в корзину</td></tr><tr><td>POST <code>/api/widget/assets/restore</code></td><td>Восстановить ресурс</td></tr><tr><td>GET <code>/api/widget/export?kind=draft</code></td><td>Экспорт ZIP оформления</td></tr><tr><td>POST <code>/api/widget/import?revision=…</code></td><td>Проверить и импортировать ZIP</td></tr></tbody></table></div>
+<p>Пошаговые примеры собственных элементов и формат ответа ИИ находятся в Гайдбуке. Формат и ограничения схемы проверяются на сервере: успешный предпросмотр не отменяет проверку при сохранении и применении.</p><footer>VicDonationGoal 1.5 · Практические уроки доступны в Гайдбуке приложения.</footer></main></div><script src="docs-theme.js"></script></body></html>

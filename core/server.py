@@ -22,15 +22,17 @@ from urllib.parse import urlparse, parse_qs, urlencode, unquote
 import tts_hub_store as tts_store
 import donor_store
 import portability
+from ui_preferences import UIPreferencesStore, UIPreferencesError
+from widget_store import WidgetStore, WidgetError, RevisionConflict, LOCK as WIDGET_LOCK
 from integration_manager import IntegrationManager
 
 
 ROOT = Path(__file__).parent
+WIDGET_STORE = WidgetStore(ROOT / "widget_settings.json")
 PROJECT_ROOT = ROOT.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 from safe_json import load_json as _robust_load_json, save_json as _robust_save_json
-from washington_integration import WashingtonIntegration
 from source_registry import public_registry
 from tools.create_diagnostic_report import create_report
 from integrations.donationalerts.donationalerts_integration import DonationAlertsIntegration
@@ -57,7 +59,11 @@ TTS_CONFIG_FILE = TTS_DIR / "tts_config.json"
 TTS_STATUS_FILE = RUNTIME_DIR / "tts_status.json"
 
 HOST = "127.0.0.1"
-PORT = 3333
+PORT = int(os.environ.get("VDG_PORT", "3333"))
+if not 1 <= PORT <= 65535:
+    raise ValueError("VDG_PORT должен быть числом от 1 до 65535")
+PREVIEW_MODE = os.environ.get("VDG_PREVIEW", "").strip().lower() in {"1", "true", "yes", "on"}
+UI_PREFERENCES = UIPreferencesStore()
 
 VERSION_FILE = PROJECT_ROOT / "VERSION"
 APP_VERSION = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.exists() else "dev"
@@ -71,7 +77,6 @@ FILE_LOCK = threading.RLock()
 INTEGRATION_MANAGER = None
 DA_INTEGRATION = None
 STREAMLABS_INTEGRATION = None
-WASHINGTON = WashingtonIntegration(PROJECT_ROOT)
 
 
 DEFAULT_RATES = {
@@ -395,6 +400,10 @@ def add_donation(donation):
             donations = []
 
         normalized = normalize_donation_record(donation, state)
+        if PREVIEW_MODE:
+            # Preview entries must remain quiet if a worker is launched later.
+            for flag in ("notifyStreamerBot", "triggerDonationEvents", "speakTTS"):
+                normalized[flag] = False
 
         for old in donations:
             if old.get("uniqueKey") == normalized["uniqueKey"]:
@@ -410,11 +419,6 @@ def add_donation(donation):
         save_json(DONATIONS_FILE, donations)
         save_json(STATE_FILE, state)
 
-        # Only newly persisted donations reach this hook; replay/import never do.
-        try:
-            WASHINGTON.submit(normalized, normalize_currency(state.get("currency", "RUB")))
-        except Exception as error:
-            print(f"[Washington] enqueue_failed: {type(error).__name__}")
         return state, True, "Донат добавлен"
 
 
@@ -533,6 +537,10 @@ def reset_goal_progress_keep_history():
 def get_integration_manager():
     global INTEGRATION_MANAGER, DA_INTEGRATION, STREAMLABS_INTEGRATION
     if INTEGRATION_MANAGER is None:
+        if PREVIEW_MODE:
+            # Catalog/status/config reads do not need live network adapters.
+            INTEGRATION_MANAGER = IntegrationManager(PROJECT_ROOT)
+            return INTEGRATION_MANAGER
         DA_INTEGRATION = DonationAlertsIntegration(
             PROJECT_ROOT,
             add_donation=add_donation,
@@ -684,6 +692,8 @@ def build_system_status():
         sb_state = "error"
     else:
         sb_state = "stopped"
+    if "streamerbot" in by_id:
+        sb_state = by_id["streamerbot"].get("commonState", sb_state)
     streamerbot["enabled"] = sb_enabled
     streamerbot["commonState"] = sb_state
 
@@ -719,7 +729,7 @@ def build_system_status():
         },
         {
             "id": "streamerbot", "name": "Streamer.bot Bridge", "commonState": sb_state,
-            "text": "bridge работает" if sb_state == "connected" else (streamerbot.get("lastError") or "bridge не отвечает"),
+            "text": "Streamer.bot отвечает" if sb_state == "connected" else ("выключено" if sb_state == "disabled" else (streamerbot.get("lastError") or "подключение не подтверждено")),
             "detail": streamerbot.get("lastEvent") or (f"heartbeat {streamerbot.get('ageSeconds')} сек. назад" if streamerbot.get("ageSeconds") is not None else ""),
         },
         {
@@ -1276,7 +1286,8 @@ class Handler(BaseHTTPRequestHandler):
         if host not in {"127.0.0.1", "localhost", "::1", ""}:
             self.send_json({"ok": False, "message": "Операции с данными доступны только локально"}, 403)
             return False
-        if origin and not (origin.startswith("http://127.0.0.1") or origin.startswith("http://localhost")):
+        source = urlparse(origin)
+        if origin and (source.scheme != 'http' or source.hostname not in {'127.0.0.1', 'localhost', '::1'} or source.username or source.password):
             self.send_json({"ok": False, "message": "Недопустимый Origin для операции с данными"}, 403)
             return False
         return True
@@ -1290,15 +1301,39 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"ok": False, "message": "External access is limited to signed integration webhooks"}, 404)
             return
 
-        if path == "/":
-            self.redirect("/widget.html")
+        if PREVIEW_MODE and (path.startswith("/auth/") or path == "/api/tts/next" or path.startswith("/api/tts/audio/")):
+            self.send_json({"ok": False, "preview": True, "message": "Действие отключено в безопасном предпросмотре"}, 423)
             return
 
-        if path == "/api/washington":
+        if path == "/api/ui/settings":
+            self.send_json({"ok": True, "configured": UI_PREFERENCES.path.is_file(), "settings": UI_PREFERENCES.load()})
+            return
+
+        if path in {"/api/widget/editor", "/api/widget/active", "/api/widget/export", "/api/widget/resources"} or path.startswith('/widget-assets/'):
             try:
-                self.send_json({"config": WASHINGTON.config(), "status": WASHINGTON.status(), "sources": public_registry()})
-            except ValueError as error:
-                self.send_json({"ok": False, "message": str(error)}, 400)
+                with FILE_LOCK, WIDGET_LOCK:
+                    if path.startswith('/widget-assets/'):
+                        data, mime = WIDGET_STORE.asset_bytes(unquote(path[len('/widget-assets/'):]))
+                        self.send_bytes(data, mime, extra_headers={'Content-Security-Policy': "default-src 'none'; style-src 'none'; sandbox"})
+                    elif path == '/api/widget/resources':
+                        self.send_json(dict(ok=True, assets=WIDGET_STORE.assets(), trash=WIDGET_STORE.trashed_assets()))
+                    elif path == '/api/widget/editor':
+                        self.send_json(dict(ok=True, settings=WIDGET_STORE.load(), assets=WIDGET_STORE.assets()))
+                    elif path == '/api/widget/active':
+                        settings = WIDGET_STORE.load()
+                        self.send_json(dict(ok=True, revision=settings['revision'], document=settings['active']))
+                    else:
+                        query = parse_qs(parsed.query)
+                        data = WIDGET_STORE.export_document(query.get('kind', ['draft'])[0], query.get('id', [''])[0])
+                        self.send_bytes(data, 'application/zip', extra_headers={'Content-Disposition': 'attachment; filename="widget.zip"'})
+            except WidgetError as error:
+                self.send_json(dict(ok=False, message=str(error)), 400)
+            except OSError:
+                self.send_json(dict(ok=False, message='Не удалось прочитать виджет'), 500)
+            return
+
+        if path == "/":
+            self.redirect("/widget.html")
             return
 
         if path == "/api/health":
@@ -1306,6 +1341,7 @@ class Handler(BaseHTTPRequestHandler):
                 "ok": True,
                 "service": "VicDonationGoal",
                 "version": APP_VERSION,
+                "preview": PREVIEW_MODE,
                 "time": now_iso(),
                 "uptimeSeconds": round(max(0, time.time() - SERVER_STARTED_AT), 1)
             })
@@ -1505,7 +1541,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/da/status":
-            self.send_json(get_da_integration().public_status())
+            if PREVIEW_MODE:
+                self.send_json(get_integration_manager().detail("donationalerts")["summary"])
+            else:
+                self.send_json(get_da_integration().public_status())
             return
 
         if path == "/admin/add":
@@ -1548,23 +1587,69 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        if path in ("/api/washington/config", "/api/washington/test", "/api/washington/check"):
+        if path.startswith('/api/widget/'):
+            if not self.require_local_portability_request():
+                return
+            action = path[len('/api/widget/'):]
+            try:
+                with FILE_LOCK, WIDGET_LOCK:
+                    if action == 'assets':
+                        query = parse_qs(parsed.query)
+                        from widget_store import MAX_ASSET_BYTES
+                        asset = WIDGET_STORE.upload_asset(query.get('filename', [''])[0], self.read_body_bytes(MAX_ASSET_BYTES))
+                        self.send_json(dict(ok=True, asset=asset))
+                    elif action in {'assets/rename', 'assets/trash', 'assets/restore'}:
+                        request = json.loads(self.read_body_bytes(16384).decode('utf-8'))
+                        WIDGET_STORE.manage_asset(action.split('/')[1], request)
+                        self.send_json(dict(ok=True, assets=WIDGET_STORE.assets(), trash=WIDGET_STORE.trashed_assets()))
+                    elif action == 'import':
+                        query = parse_qs(parsed.query)
+                        revision = int(query.get('revision', ['-1'])[0])
+                        settings = WIDGET_STORE.import_document(self.read_body_bytes(64 * 1024 * 1024), revision)
+                        self.send_json(dict(ok=True, settings=settings, assets=WIDGET_STORE.assets()))
+                    elif action in {'draft', 'apply', 'save', 'load', 'revert', 'delete'}:
+                        request = json.loads(self.read_body_bytes(8 * 1024 * 1024).decode('utf-8'))
+                        settings = WIDGET_STORE.mutate(action, request)
+                        self.send_json(dict(ok=True, settings=settings, assets=WIDGET_STORE.assets()))
+                    else:
+                        self.send_json(dict(ok=False, message='Неизвестная операция'), 404)
+            except RevisionConflict as error:
+                self.send_json(dict(ok=False, message=str(error), revision=error.revision), 409)
+            except (WidgetError, ValueError, TypeError, UnicodeError) as error:
+                self.send_json(dict(ok=False, message=str(error)), 400)
+            except OSError:
+                self.send_json(dict(ok=False, message='Не удалось сохранить виджет'), 500)
+            return
+
+        if PREVIEW_MODE and (
+            path.startswith(("/auth/", "/api/integrations/"))
+            or path in {"/api/da/start", "/api/da/stop", "/api/donation/replay"}
+            or (path.startswith("/api/tts/") and path not in {
+                "/api/tts/config", "/api/tts/profiles", "/api/tts/rules", "/api/tts/rules/test",
+                "/api/tts/history/delete", "/api/tts/history/clear", "/api/tts/clear", "/api/tts/job/delete",
+            })
+        ):
+            self.send_json({"ok": False, "preview": True, "message": "Действие отключено в безопасном предпросмотре"}, 423)
+            return
+
+        if path == "/api/ui/settings":
             if not self.require_local_portability_request():
                 return
             try:
-                if path.endswith('/config'):
-                    result = {"ok": True, "config": WASHINGTON.save_config(self.read_body_json())}
-                elif path.endswith('/test'):
-                    ok = WASHINGTON.test(normalize_currency(load_state().get('currency', 'RUB')))
-                    result = {"ok": ok, "message": "Тест поставлен в очередь; сообщение будет отправлено в Twitch" if ok else "Очередь заполнена"}
-                else:
-                    result = {"ok": True, "status": WASHINGTON.check()}
-                self.send_json(result)
-            except (ValueError, TypeError) as error:
+                # This API is JSON-only; legacy form fallback could turn a
+                # malformed body into an empty patch and falsely report success.
+                request = json.loads(self.read_body_bytes(max_bytes=64 * 1024).decode("utf-8"))
+                # Import holds FILE_LOCK from snapshot through apply/rollback.
+                # UI writes must wait too, or a rollback could erase a saved theme.
+                with FILE_LOCK:
+                    settings = UI_PREFERENCES.update(request)
+                self.send_json({"ok": True, "configured": True, "settings": settings})
+            except (UIPreferencesError, ValueError, TypeError) as error:
                 self.send_json({"ok": False, "message": str(error)}, 400)
-            except Exception as error:
-                self.send_json({"ok": False, "message": type(error).__name__}, 500)
+            except OSError:
+                self.send_json({"ok": False, "message": "Не удалось сохранить настройки интерфейса"}, 500)
             return
+
 
         if path == "/api/portability/stage":
             if not self.require_local_portability_request():
@@ -1634,7 +1719,7 @@ class Handler(BaseHTTPRequestHandler):
                 request = self.read_body_json()
                 token = str(request.get("token") or "")
                 metadata, _raw = portability.load_stage(PROJECT_ROOT, token)
-                restart_integrations = metadata.get("kind") in {"backup", "folder"}
+                restart_integrations = not PREVIEW_MODE and metadata.get("kind") in {"backup", "folder"}
                 if restart_integrations:
                     manager = get_integration_manager()
                     manager.stop_all()
@@ -2124,7 +2209,11 @@ class Handler(BaseHTTPRequestHandler):
             manager = get_integration_manager()
             integration_id = str(data.get("id") or "")
             try:
-                if path == "/api/integrations/config":
+                if path == "/api/integrations/streamerbot/actions":
+                    self.send_json(manager.streamerbot_actions())
+                elif path == "/api/integrations/streamerbot/test-action":
+                    self.send_json(manager.test_streamerbot_action())
+                elif path == "/api/integrations/config":
                     result = manager.save_config(integration_id, data.get("config") or {})
                     self.send_json(result)
                 elif path == "/api/integrations/enable":
@@ -2267,12 +2356,15 @@ class VicThreadingHTTPServer(ThreadingHTTPServer):
 def main():
     ensure_files()
     normalize_storage()
-    WASHINGTON.start()
-    manager = get_integration_manager()
+    manager = None
+    if not PREVIEW_MODE:
+        manager = get_integration_manager()
 
     print("")
     print("==============================================")
     print(f" VicDonationGoal v{APP_VERSION} запущен")
+    if PREVIEW_MODE:
+        print(" Безопасный предпросмотр: внешние подключения и озвучка отключены")
     print("==============================================")
     print(f" Health check:       http://{HOST}:{PORT}/api/health")
     print(f" Виджет для OBS:     http://{HOST}:{PORT}/widget.html")
@@ -2291,16 +2383,17 @@ def main():
         return
 
     # External integrations start only after Core is ready to accept their events.
-    manager.start_enabled()
-    atexit.register(manager.stop_all)
+    if manager is not None:
+        manager.start_enabled()
+        atexit.register(manager.stop_all)
 
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n[SERVER] Остановка...")
     finally:
-        WASHINGTON.stop.set()
-        manager.stop_all()
+        if manager is not None:
+            manager.stop_all()
         server.server_close()
         print("[SERVER] Остановлено.")
 

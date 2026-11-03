@@ -36,6 +36,7 @@ class FileSafetyTests(unittest.TestCase):
         stack = ExitStack()
         self.addCleanup(stack.close)
         sample_project(self.root)
+        stack.enter_context(patch("tools.update_from_old.process_inventory",return_value=[]))
         for key, value in {
             "PROJECT_ROOT": self.root,
             "DATA_DIR": self.root / "core/data",
@@ -176,7 +177,7 @@ class FileSafetyTests(unittest.TestCase):
 
         def changing_read(p):
             content = real_read(p)
-            if p == path:
+            if p.resolve() == path.resolve():
                 counter[0] += 1
                 write_json(path, {"goal": 1000, "current": counter[0]})
             return content

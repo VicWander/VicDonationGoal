@@ -330,7 +330,7 @@ function renderQueue() {
   const queue = ttsBootstrap.queue || [];
   byId("ttsQueueCount").textContent = `${queue.length} задач`;
   if (!queue.length) { body.innerHTML = `<tr><td colspan="6" class="empty-cell">Очередь пуста</td></tr>`; return; }
-  body.innerHTML = queue.map(job => {
+  window.VDGMotion.replace(body, queue.map(job => {
     const text = job.cleanedText || job.originalText || "—";
     const jobId = String(job.id || "");
     const isExpanded = expandedTTSQueueRows.has(jobId);
@@ -344,7 +344,7 @@ function renderQueue() {
       <td class="history-cell cell-message"><span class="cell-label">Текст</span><div class="message-preview">${escapeHtml(shortText(text, 180))}</div></td>
       <td class="history-cell cell-actions"><span class="cell-label">Действия</span><div class="row-buttons"><button type="button" class="icon-button secondary" data-queue-action="expand">${expandLabel}</button><button type="button" class="icon-button danger" data-queue-action="delete">Удал.</button></div></td>
     </tr><tr class="details-row" data-detail-for="${escapeHtml(jobId)}"${detailHidden}><td colspan="6">${detailsBlock([["Полный текст",text],["Профиль",job.profileId || "авто"],["Провайдер",job.provider || "ещё не выбран"],["Попытки",job.attempts || 0],["Ошибка",job.error || "—"],["ID",job.id]])}</td></tr>`;
-  }).join("");
+  }).join(""));
 }
 
 function historySearchRows() {
@@ -363,7 +363,7 @@ function renderHistory() {
   const rows = [...historySearchRows()].reverse();
   byId("ttsHistoryCount").textContent = `${rows.length} из ${ttsHistory.length} записей`;
   if (!rows.length) { body.innerHTML = `<tr><td colspan="7" class="empty-cell">История пуста</td></tr>`; return; }
-  body.innerHTML = rows.map(job => {
+  window.VDGMotion.replace(body, rows.map(job => {
     const details = (job.removedParts || []).join("\n") || "—";
     const voice = [providerLabel(job.provider), job.voice].filter(Boolean).join(" / ") || "—";
     const jobId = String(job.id || "");
@@ -377,9 +377,9 @@ function renderHistory() {
       <td class="history-cell cell-user"><span class="cell-label">Пользователь</span><div class="cell-value strong-value">${escapeHtml(job.username || "—")}</div></td>
       <td class="history-cell cell-voice"><span class="cell-label">Голос</span><div class="cell-value">${escapeHtml(voice)}</div></td>
       <td class="history-cell cell-message"><span class="cell-label">Текст после очистки</span><div class="message-preview">${escapeHtml(shortText(job.cleanedText || job.originalText, 180))}</div></td>
-      <td class="history-cell cell-actions"><span class="cell-label">Действия</span><div class="row-buttons"><button type="button" class="icon-button secondary" data-history-action="expand">${expandLabel}</button><button type="button" class="icon-button secondary" data-history-action="retry">Повт.</button><button type="button" class="icon-button danger" data-history-action="delete">Удал.</button></div></td>
+      <td class="history-cell cell-actions"><span class="cell-label">Действия</span><div class="row-buttons"><button type="button" class="icon-button secondary" data-history-action="expand">${expandLabel}</button><details class="tts-row-more"><summary aria-label="Действия с записью озвучки">⋯</summary><div><button type="button" class="icon-button secondary" data-history-action="retry">Повторить</button><button type="button" class="icon-button danger" data-history-action="delete">Удалить</button></div></details></div></td>
     </tr><tr class="details-row" data-history-detail="${escapeHtml(jobId)}"${detailHidden}><td colspan="7">${detailsBlock([["Оригинал",job.originalText || "—"],["После очистки",job.cleanedText || "—"],["Удалено",details],["Профиль",job.profileId || "—"],["Правило",job.matchedRuleId || "по умолчанию / напрямую"],["Провайдер",providerLabel(job.provider)],["Запрошенный провайдер",job.requestedProvider || "—"],["Fallback",job.fallbackUsed ? "использован" : "нет"],["Ошибка",job.error || "—"],["Источник",job.source || "—"],["User ID",job.userId || "—"],["Reward ID",job.rewardId || "—"],["ID задачи",job.id]])}</td></tr>`;
-  }).join("");
+  }).join(""));
 }
 
 
@@ -469,11 +469,10 @@ document.addEventListener("click", async event => {
     const id = String(row?.dataset.jobId || "");
     const detail = document.querySelector(`[data-detail-for="${CSS.escape(id)}"]`);
     if (queueButton.dataset.queueAction === "expand" && detail) {
-      const shouldExpand = detail.hidden;
-      detail.hidden = !shouldExpand;
+      const shouldExpand = !expandedTTSQueueRows.has(id);
       if (shouldExpand) expandedTTSQueueRows.add(id);
       else expandedTTSQueueRows.delete(id);
-      queueButton.textContent = shouldExpand ? "Свернуть" : "Развернуть";
+      renderQueue();
     } else if (queueButton.dataset.queueAction === "delete" && confirm("Удалить задачу из очереди?")) {
       expandedTTSQueueRows.delete(id);
       await postJson("/api/tts/job/delete", { id });
@@ -489,11 +488,10 @@ document.addEventListener("click", async event => {
     const detail = document.querySelector(`[data-history-detail="${CSS.escape(id)}"]`);
     const action = historyButton.dataset.historyAction;
     if (action === "expand" && detail) {
-      const shouldExpand = detail.hidden;
-      detail.hidden = !shouldExpand;
+      const shouldExpand = !expandedTTSHistoryRows.has(id);
       if (shouldExpand) expandedTTSHistoryRows.add(id);
       else expandedTTSHistoryRows.delete(id);
-      historyButton.textContent = shouldExpand ? "Свернуть" : "Развернуть";
+      renderHistory();
     } else if (action === "retry") {
       await postJson("/api/tts/job/retry", { id });
       await refreshTTSAll(true);

@@ -57,25 +57,6 @@
     }
   },
   {
-    "id": "washington-rule",
-    "name": "Вашингтон",
-    "enabled": true,
-    "priority": 100,
-    "profileId": "washington",
-    "conditions": {
-      "eventTypes": [
-        "washington"
-      ],
-      "sources": [],
-      "userIds": [],
-      "usernames": [],
-      "roles": [],
-      "rewardIds": [],
-      "minAmount": null,
-      "maxAmount": null
-    }
-  },
-  {
     "id": "rewards-rule",
     "name": "Баллы канала",
     "enabled": true,

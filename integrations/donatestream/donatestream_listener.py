@@ -12,6 +12,7 @@ PROJECT_ROOT = ROOT.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from integrations.base.direct_proxy import DirectBrowserProxy
 from integrations.base.common import (
     StatusWriter,
     extract_donations,
@@ -104,10 +105,23 @@ def parse_socketio_alert(raw: Any, default_currency: str = "RUB") -> dict[str, A
 
 
 def donations_from_event(raw: Any, default_currency: str) -> list[dict[str, Any]]:
+    if isinstance(raw,bytes):raw=raw.decode('utf-8',errors='replace')
+    if isinstance(raw,str) and '\x1e' in raw:
+        result=[]
+        for packet in raw.split('\x1e'):result.extend(donations_from_event(packet,default_currency))
+        return result
     direct = parse_socketio_alert(raw, default_currency)
     if direct:
         return [direct]
     return extract_donations(raw, "donatestream", default_currency, "Donate.Stream widget")
+
+
+def socketio_state(raw):
+    text=raw.decode('utf-8',errors='replace') if isinstance(raw,bytes) else str(raw or '')
+    packets=text.split('\x1e')
+    if any(packet.startswith(('41','44')) for packet in packets):return 'disconnected'
+    if any(packet.startswith(('40','42')) for packet in packets):return 'connected'
+    return 'waiting'
 
 
 def main() -> None:
@@ -128,10 +142,10 @@ def main() -> None:
         browser = None
         try:
             STATUS.update(running=True, connected=False, status="starting_browser", lastError=None)
-            with sync_playwright() as playwright:
-                browser = playwright.chromium.launch(headless=bool(cfg.get("headless_browser", True)))
+            with sync_playwright() as playwright, DirectBrowserProxy(enabled=not cfg.get("use_system_proxy",False)) as direct_proxy:
+                browser = playwright.chromium.launch(headless=bool(cfg.get("headless_browser", True)),proxy=direct_proxy)
                 context = browser.new_context(
-                    ignore_https_errors=True,
+                    ignore_https_errors=False,
                     viewport={"width": 800, "height": 600},
                 )
                 page = context.new_page()
@@ -166,12 +180,18 @@ def main() -> None:
                 )
 
                 def attach_websocket(ws):
+                    ws.on("close",lambda: events.put({"kind":"socket-closed","data":""}))
                     ws.on(
                         "framereceived",
                         lambda data: events.put({"kind": "pw-websocket", "data": data}),
                     )
 
                 page.on("websocket", attach_websocket)
+                def capture_polling(response):
+                    if 'socket.io' in response.url and 'transport=polling' in response.url:
+                        try: events.put({'kind':'polling','data':response.text()})
+                        except Exception: pass
+                page.on('response',capture_polling)
                 if cfg.get("capture_console", True):
                     page.on(
                         "console",
@@ -179,26 +199,46 @@ def main() -> None:
                     )
 
                 try:
-                    page.goto(widget, wait_until="domcontentloaded", timeout=60000)
+                    page.goto(widget, wait_until="commit", timeout=30000)
                 except Exception as error:
-                    log(f"Страница открылась с предупреждением: {error}", "WARN")
+                    log(f"Страница открылась с предупреждением: {redact_url(str(error))}", "WARN")
 
                 STATUS.update(
-                    connected=True,
-                    status="listening",
+                    connected=False,
+                    status="waiting_socket",
                     widget=redact_url(widget),
                     lastError=None,
                 )
-                log("Виджет открыт; ожидаю Socket.IO событие alert")
+                log("Ожидаю подтверждение Socket.IO; открытая страница ещё не означает подключение")
+                connection_deadline=time.monotonic()+60
+                heartbeat=0
+                last_transport_activity=time.monotonic()
 
                 while True:
+                    page.wait_for_timeout(100)
+                    if time.monotonic()-heartbeat>=10:
+                        STATUS.update()
+                        heartbeat=time.monotonic()
+                    if STATUS.data.get('connected') and time.monotonic()-last_transport_activity>90:
+                        raise RuntimeError('Socket.IO не присылает события связи более 90 секунд')
+                    if not STATUS.data.get('connected') and time.monotonic()>connection_deadline:
+                        raise RuntimeError('Нет подтверждённого Socket.IO подключения; проверь доступность виджета')
                     try:
-                        event = events.get(timeout=1)
+                        event = events.get_nowait()
                     except queue.Empty:
-                        page.wait_for_timeout(50)
                         continue
-
+                    if event.get('kind')=='socket-closed':
+                        STATUS.update(connected=False,status='waiting_socket',lastError='Socket.IO соединение закрыто')
+                        connection_deadline=time.monotonic()+60
+                        continue
+                    if event.get('kind')=='console':continue
+                    last_transport_activity=time.monotonic()
                     raw = event.get("data")
+                    transport_state=socketio_state(raw)
+                    if transport_state=='disconnected':raise RuntimeError('Socket.IO отключён или отклонил авторизацию')
+                    if transport_state=='connected':
+                        if not STATUS.data.get('connected'):log('Socket.IO подтвердил подключение')
+                        STATUS.update(connected=True,status='listening',lastError=None,lastHeartbeatAt=time.time())
                     STATUS.update(frames=int(STATUS.data.get("frames", 0)) + 1)
                     parsed = donations_from_event(raw, cfg.get("default_currency", "RUB"))
                     if parse_socketio_alert(raw, cfg.get("default_currency", "RUB")):

@@ -57,25 +57,6 @@
     "httpLanguage": "ru"
   },
   {
-    "id": "washington",
-    "name": "Washington",
-    "enabled": true,
-    "provider": "speakerbot",
-    "voiceAlias": "Washington",
-    "edgeVoice": "ru-RU-DmitryNeural",
-    "rate": "+0%",
-    "volume": "+0%",
-    "pitch": "-10Hz",
-    "badWordFilter": false,
-    "yandexVoice": "marina",
-    "yandexEmotion": "friendly",
-    "yandexSpeed": "1.0",
-    "xttsSpeakerWav": "",
-    "xttsLanguage": "ru",
-    "httpVoice": "",
-    "httpLanguage": "ru"
-  },
-  {
     "id": "moderator",
     "name": "Moderator",
     "enabled": true,

@@ -188,7 +188,7 @@ class IntegrationManager:
             configured = []
             for integration_id, manifest in self._manifests.items():
                 config = self._load_config(integration_id)
-                if self._configured(manifest, config):
+                if manifest.get("category") != "tools" and self._configured(manifest, config):
                     configured.append(integration_id)
             # Existing private builds should not be interrupted by a wizard.
             completed = bool(configured)
@@ -250,6 +250,8 @@ class IntegrationManager:
         _save_json(self._config_path(manifest), config)
 
     def _configured(self, manifest, config):
+        if manifest.get("id") == "streamerbot" and not (str(config.get("action_id") or "").strip() or str(config.get("action_name") or "").strip()):
+            return False
         required = manifest.get("requiredFields") or []
         for key in required:
             if _is_placeholder(config.get(key)):
@@ -378,6 +380,7 @@ class IntegrationManager:
             "icon": manifest.get("icon", integration_id[:2].upper()),
             "order": int(manifest.get("order") or 100),
             "kind": manifest.get("kind", "subprocess"),
+            "category": manifest.get("category", "donations"),
             "enabled": enabled,
             "configured": configured,
             "running": running,
@@ -428,6 +431,9 @@ class IntegrationManager:
         if integration_id == "tribute" and config.get("widget_url"):
             from integrations.tribute.tribute_listener import stream_url
             stream_url(config["widget_url"])
+        if integration_id == "streamerbot":
+            from integrations.streamerbot.streamerbot_api import normalize_config
+            config = normalize_config(config)
         self._save_config(integration_id, config)
         adapter = self._adapters.get(integration_id)
         if adapter is not None:
@@ -462,7 +468,7 @@ class IntegrationManager:
         with self._lock:
             process = self._process(integration_id)
             if process:
-                return {"ok": True, "message": "Интеграция уже запущена", "detail": self.detail(integration_id)}
+                return {"ok": True, "message": "Модуль уже работает; состояние подключения указано отдельно", "detail": self.detail(integration_id)}
             entrypoint = self._integration_dir(manifest) / str(manifest.get("entrypoint") or "")
             if not entrypoint.exists():
                 return {"ok": False, "message": f"Не найден entrypoint: {entrypoint.name}"}
@@ -474,6 +480,7 @@ class IntegrationManager:
             env["PYTHONIOENCODING"] = "utf-8"
             env["PYTHONUTF8"] = "1"
             flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+            if self._status_path(manifest):_save_json(self._status_path(manifest), {"service":integration_id,"running":True,"connected":False,"status":"starting","lastError":None,"lastEvent":None,"updatedAt":time.time()})
             process = subprocess.Popen(
                 [sys.executable, str(entrypoint)],
                 cwd=str(entrypoint.parent),
@@ -486,7 +493,7 @@ class IntegrationManager:
             self._log_handles[integration_id] = log_handle
             self._child_job.assign(process)
             self._write_pid_registry()
-        return {"ok": True, "message": "Интеграция запущена", "detail": self.detail(integration_id)}
+        return {"ok": True, "message": "Модуль запущен; подключение ещё проверяется", "detail": self.detail(integration_id)}
 
     def stop(self, integration_id):
         manifest = self._manifest(integration_id)
@@ -563,9 +570,26 @@ class IntegrationManager:
         except (URLError, TimeoutError, OSError) as error:
             return {"ok": False, "message": f"Публичный Tribute webhook недоступен: {type(error).__name__}: {error}", "status": self.integration_status("tribute")}
 
+    def streamerbot_actions(self):
+        from integrations.streamerbot.streamerbot_api import list_actions
+        return {"ok": True, "actions": list_actions(self._load_config("streamerbot"))}
+
+    def test_streamerbot_action(self):
+        from integrations.streamerbot.streamerbot_api import check_connection, execute_action
+        from integrations.streamerbot.streamerbot_bridge import build_args
+        config = self._load_config("streamerbot")
+        action = check_connection(config)
+        donation = {"username":"TestUser", "amount":133, "currency":"RUB", "message":"Тестовое сообщение доната", "source":"test"}
+        execute_action(config, {"id":action["id"]}, build_args(donation, config))
+        return {"ok": True, "message":"Streamer.bot принял тестовое оповещение. Проверь звук или изображение в своём Action. История и сбор не изменены."}
+
     def test(self, integration_id, cancel=False):
         manifest = self._manifest(integration_id)
         adapter = self._adapters.get(integration_id)
+        if integration_id == "streamerbot":
+            from integrations.streamerbot.streamerbot_api import check_connection
+            action = check_connection(self._load_config(integration_id))
+            return {"ok": True, "message": "HTTP Server отвечает; действие «"+action["name"]+"» найдено. Оповещение не запускалось."}
         if integration_id == "tribute" and cancel:
             _save_json(self.runtime_dir / "tribute_control.json", {})
             return {"ok":True, "message":"Проверка завершена. Новые донаты учитываются как обычно."}
@@ -631,6 +655,8 @@ class IntegrationManager:
             "updatedAt": time.time(),
         })
         for integration_id in self._manifests:
+            if self._manifest(integration_id).get("category") == "tools":
+                continue
             config = self._load_config(integration_id)
             should_enable = integration_id in selected
             config["enabled"] = should_enable

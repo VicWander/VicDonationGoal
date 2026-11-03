@@ -121,15 +121,20 @@ def save_json(path, data):
     _robust_save_json(path, data, retries=120)
 
 
+_connection_ok = False
+_connection_error = None
+_last_connection_event = None
+
 def write_status(status="running", running=True, last_error=None, last_event=None):
     payload = {
         "service": "streamerbot",
         "version": APP_VERSION,
         "status": status,
         "running": running,
+        "connected": bool(running and _connection_ok and not last_error),
         "updatedAt": time.time(),
-        "lastError": last_error,
-        "lastEvent": last_event
+        "lastError": last_error or _connection_error,
+        "lastEvent": last_event or _last_connection_event
     }
     try:
         save_json(STATUS_FILE, payload)
@@ -469,6 +474,7 @@ def streamerbot_action_object(config):
 
 
 def send_action_to_streamerbot(donation, config, action_object, label="main", extra_args=None):
+    global _connection_ok, _connection_error, _last_connection_event
     if requests is None:
         print("[SB] requests не установлен. Запусти 00_INSTALL_ALL.bat")
         return False
@@ -482,37 +488,25 @@ def send_action_to_streamerbot(donation, config, action_object, label="main", ex
     if extra_args:
         args.update(extra_args)
 
-    payload = {
-        "action": action_object,
-        "args": args
-    }
-
     try:
-        response = requests.post(
-            url,
-            json=payload,
-            timeout=6
-        )
+        from integrations.streamerbot.streamerbot_api import execute_action
+        execute_action(config, action_object, args)
+        _connection_ok, _connection_error = True, None
+        last_event = f"{args['user']} — {args['amount']}{args['currency']}"
+        _last_connection_event = last_event
+        write_status("sent", running=True, last_event=last_event)
 
-        if 200 <= response.status_code < 300:
-            last_event = f"{args['user']} — {args['amount']}{args['currency']}"
-            write_status("sent", running=True, last_event=last_event)
+        if label == "main":
+            print(f"[SB] Отправлено в Streamer.bot: {args['user']} — {args['amount']}{args['currency']} | {args['message']}")
+        else:
+            print(f"[SB] Донат-ивент отправлен: {label} | {args['user']} — {args['amount']}{args['currency']}")
 
-            if label == "main":
-                print(f"[SB] Отправлено в Streamer.bot: {args['user']} — {args['amount']}{args['currency']} | {args['message']}")
-            else:
-                print(f"[SB] Донат-ивент отправлен: {label} | {args['user']} — {args['amount']}{args['currency']}")
-
-            return True
-
-        error_text = f"HTTP {response.status_code}: {response.text[:300]}"
-        write_status("error", running=True, last_error=error_text)
-        print(f"[SB] Ошибка Streamer.bot {error_text}")
-        return False
+        return True
 
     except Exception as error:
         error_text = f"{type(error).__name__}: {error}"
         write_status("error", running=True, last_error=error_text)
+        _connection_ok, _connection_error = False, error_text
         print(f"[SB] Не удалось отправить в Streamer.bot: {error_text}")
         return False
 
@@ -596,6 +590,30 @@ def mark_existing_event_rules_if_needed(event_rules_config):
 
 
 def run_loop():
+    global _connection_ok, _connection_error
+    # A process-lifetime lock also covers accidental direct launches.
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    lock_file = (RUNTIME_DIR / "streamerbot.lock").open("a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+            lock_file.seek(0);lock_file.write(b"0");lock_file.flush();lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        lock_file.close()
+        print("[SB] Bridge уже запущен для этой папки. Управление: Интеграции → Streamer.bot.")
+        return
+    try:
+        _run_loop()
+    finally:
+        lock_file.close()
+
+
+def _run_loop():
+    global _connection_ok, _connection_error
     config = load_config()
     event_rules_config = load_event_rules()
 
@@ -618,6 +636,7 @@ def run_loop():
     event_rules_sent = mark_existing_event_rules_if_needed(event_rules_config)
     write_status("running", running=True)
 
+    next_check = 0
     try:
         while True:
             try:
@@ -631,7 +650,15 @@ def run_loop():
                     time.sleep(1)
                     continue
 
-                write_status("running", running=True)
+                if time.monotonic() >= next_check:
+                    from integrations.streamerbot.streamerbot_api import check_connection
+                    try:
+                        check_connection(config)
+                        _connection_ok, _connection_error = True, None
+                    except Exception as error:
+                        _connection_ok, _connection_error = False, str(error)
+                    next_check = time.monotonic() + 5
+                write_status("connected" if _connection_ok else "reconnecting", running=True)
                 donations = load_donations()
 
                 should_break = False
@@ -726,10 +753,20 @@ def main():
     ensure_config()
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--managed", action="store_true", help="Запустить через менеджер Core")
     parser.add_argument("--test", action="store_true", help="Отправить тестовый донат в Streamer.bot")
     parser.add_argument("--reset-sent", action="store_true", help="Сбросить список уже отправленных донатов")
     args = parser.parse_args()
 
+    if args.managed:
+        try:
+            with requests.Session() as session:
+                session.trust_env = False
+                result = session.post("http://127.0.0.1:3333/api/integrations/start", json={"id":"streamerbot"}, headers={"Origin":"http://127.0.0.1:3333"}, timeout=8).json()
+            print(result.get("message", "Готово"))
+        except Exception:
+            print("Сначала запусти Core, затем включи Streamer.bot в разделе Интеграции → Подключения.")
+        return
     if args.reset_sent:
         reset_sent()
         return

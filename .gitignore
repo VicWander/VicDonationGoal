@@ -2,18 +2,19 @@
 # VicDonationGoal local files
 # ==============================
 
-# Integration configs, tokens and listener state
-integrations/*/*_config.json
-integrations/*/*_tokens.json
-integrations/*/*_seen.json
-integrations/*/*_runtime_state.json
-integrations/*/*_catch_up_state.json
-integrations/*/oauth_state.txt
+# DonationAlerts secrets / OAuth tokens
+integrations/donationalerts/donationalerts_config.json
+integrations/donationalerts/donationalerts_tokens.json
+integrations/donationalerts/oauth_state.txt
 
 # Local Integration Hub selection
 integrations/integrations_onboarding.json
 
+# Donatty private widget links / tokens
+integrations/donatty/donatty_config.json
+
 # Streamer.bot local settings and processed events
+integrations/streamerbot/streamerbot_config.json
 integrations/streamerbot/streamerbot_sent.json
 integrations/streamerbot/donation_event_rules.json
 integrations/streamerbot/streamerbot_event_rules_sent.json
@@ -59,6 +60,7 @@ Thumbs.db
 *.rar
 build/
 dist/
+release/
 
 # Runtime status/heartbeat files
 runtime/
@@ -73,17 +75,15 @@ backups/
 core/data/donor_profiles.json
 core/data/donor_adjustments.json
 
+# StreamElements / Streamlabs private configs and OAuth tokens
+integrations/streamelements/streamelements_config.json
+integrations/streamlabs/streamlabs_config.json
+integrations/streamlabs/streamlabs_tokens.json
+integrations/streamlabs/oauth_state.txt
+
 # Optional tools downloaded on demand
 tools/cloudflared.exe
 
 # Local diagnostic reports
 diagnostics/
-integration_inspector_reports/
-BETA_READINESS_REPORT_*.json
-BETA_READINESS_REPORT_*.md
-
-# Generated release artifacts and private integration state
-release/
-integrations/*/*_state.json
-integrations/*/*_sent.json
-integrations/washington/config.json
+integration_inspector_reports/*.jsonl

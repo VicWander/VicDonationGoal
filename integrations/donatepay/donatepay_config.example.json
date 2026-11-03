@@ -13,5 +13,6 @@
   "request_timeout_seconds": 15,
   "catch_up_min_interval_seconds": 1800,
   "catch_up_rate_limit_delay_seconds": 900,
-  "user_id": ""
+  "user_id": "",
+  "eu_region": false
 }

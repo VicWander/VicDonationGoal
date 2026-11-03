@@ -35,6 +35,13 @@
       "help": "Хранится только локально. После публикации ключа где-либо перевыпустите его."
     },
     {
+      "key": "eu_region",
+      "label": "Кабинет DonatePay.eu",
+      "type": "checkbox",
+      "default": false,
+      "help": "Включи для ключа из donatepay.eu. Для donatepay.ru оставь выключенным. Регион API и WebSocket переключается вместе."
+    },
+    {
       "key": "user_id",
       "label": "DonatePay User ID",
       "type": "text",
@@ -88,6 +95,6 @@
       "default": 60
     }
   ],
-  "stability": "beta",
+  "stability": "stable",
   "dashboardVisible": true
 }

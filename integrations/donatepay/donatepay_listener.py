@@ -5,6 +5,7 @@ import json
 import socket
 import sys
 import time
+from urllib.parse import urlsplit
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -57,7 +58,11 @@ def log(message: str, level: str = "INFO") -> None:
 
 
 def config() -> dict[str, Any]:
-    return load_json(CONFIG_FILE, {})
+    cfg=load_json(CONFIG_FILE, {})
+    if 'eu_region' in cfg:
+        domain='donatepay.eu' if cfg['eu_region'] else 'donatepay.ru'
+        cfg.update(api_v1_url='https://'+domain+'/api/v1',socket_token_url='https://'+domain+'/api/v2/socket/token',websocket_url='wss://centrifugo.'+domain+':443/connection/websocket')
+    return cfg
 
 
 def safe_error(error: BaseException | str) -> str:
@@ -68,10 +73,16 @@ def _request_timeout(cfg: dict[str, Any]) -> int:
     return max(5, int(cfg.get("request_timeout_seconds", 15)))
 
 
+def http_request(method, url, **kwargs):
+    with requests.Session() as session:
+        session.trust_env=bool(config().get('use_system_proxy',False))
+        return session.request(method,url,**kwargs)
+
+
 def api_get(cfg: dict[str, Any], path: str, params: dict[str, Any] | None = None):
     params = dict(params or {})
     params["access_token"] = cfg["api_key"]
-    response = requests.get(
+    response = http_request("GET",
         cfg["api_v1_url"].rstrip("/") + "/" + path.lstrip("/"),
         params=params,
         timeout=_request_timeout(cfg),
@@ -81,7 +92,7 @@ def api_get(cfg: dict[str, Any], path: str, params: dict[str, Any] | None = None
 
 
 def api_post_json(url: str, payload: dict[str, Any], timeout: int = 15):
-    response = requests.post(url, json=payload, timeout=timeout)
+    response = http_request("POST",url, json=payload, timeout=timeout)
     response.raise_for_status()
     return response.json()
 
@@ -108,36 +119,20 @@ def _save_runtime_state(**patch) -> dict[str, Any]:
 
 
 def resolve_user_id(cfg: dict[str, Any]) -> str:
-    """Resolve user ID once and cache it permanently.
-
-    DonatePay rate-limits `/user` very aggressively. Older builds called it on every
-    WebSocket reconnect, eventually locking themselves in an HTTP 429 loop. v1.4.3
-    uses the configured/cached ID and only calls `/user` when no ID is known.
-    """
-    configured = str(cfg.get("user_id") or "").strip()
-    if configured:
-        _save_runtime_state(userId=configured)
-        return configured
-
-    runtime = _load_runtime_state()
-    cached = str(runtime.get("userId") or "").strip()
-    if cached:
-        return cached
-
-    payload = api_get(cfg, "/user")
-    uid = user_id_from(payload)
+    # A user ID belongs to the API key AND region, not to the installation.
+    scope=hashlib.sha256((str(cfg.get('api_key',''))+'|'+str(cfg.get('api_v1_url',''))).encode()).hexdigest()
+    runtime=_load_runtime_state()
+    if runtime.get('credentialScope')==scope and runtime.get('userId'):
+        return str(runtime['userId'])
+    payload=api_get(cfg,'/user')
+    uid=user_id_from(payload)
     if not uid:
-        raise RuntimeError("Не удалось определить USER_ID через /user")
-
-    _save_runtime_state(userId=uid)
-    # Save the non-secret ID to config so future starts never need `/user` again.
-    try:
-        current = config()
-        current["user_id"] = uid
-        save_json(CONFIG_FILE, current)
-    except Exception:
-        pass
-    log(f"USER_ID определён и сохранён: {uid}")
+        raise RuntimeError('DonatePay не вернул User ID. Проверь регион кабинета (.ru или .eu) и API-ключ.')
+    _save_runtime_state(userId=uid,credentialScope=scope)
+    current=load_json(CONFIG_FILE,{})
+    current['user_id']=uid
+    save_json(CONFIG_FILE,current)
+    log('User ID проверен для текущего ключа и региона')
     return uid
 
 
@@ -186,6 +181,8 @@ def save_seen(ids: set[str]) -> None:
 def send(cfg: dict[str, Any], donation: dict[str, Any], seen: set[str]) -> bool:
     key = str(donation["externalId"])
     if key in seen:
+        STATUS.update(lastSkippedEvent=key,duplicateEvents=int(STATUS.data.get('duplicateEvents',0))+1)
+        log('Событие уже учтено ранее; повтор пропущен','DEBUG')
         return False
     result = post_donation(
         cfg.get("widget_api_url", "http://127.0.0.1:3333/api/donation"),
@@ -241,7 +238,7 @@ def catch_up(cfg: dict[str, Any], seen: set[str]) -> None:
         "access_token": cfg["api_key"],
     }
     url = cfg["api_v1_url"].rstrip("/") + "/transactions"
-    response = requests.get(url, params=params, timeout=_request_timeout(cfg))
+    response = http_request("GET",url, params=params, timeout=_request_timeout(cfg))
 
     if response.status_code == 429:
         retry_seconds = _retry_after_seconds(response, cfg)
@@ -283,6 +280,10 @@ def catch_up(cfg: dict[str, Any], seen: set[str]) -> None:
     )
 
 
+class DonatePayAuthError(RuntimeError):
+    pass
+
+
 def get_connection_token(cfg: dict[str, Any]) -> str:
     payload = api_post_json(
         cfg["socket_token_url"],
@@ -291,7 +292,9 @@ def get_connection_token(cfg: dict[str, Any]) -> str:
     )
     token = deep_get(payload, "token", "data.token", "result.token")
     if not token:
-        raise RuntimeError("DonatePay не вернул connection token")
+        if isinstance(payload,dict) and 'incorrect token' in str(payload.get('message','')).lower():
+            raise DonatePayAuthError('DonatePay отклонил ключ на выбранном сервере (Incorrect token). Проверь регион кабинета (.ru/.eu), затем API-ключ.')
+        raise RuntimeError("DonatePay не вернул connection token; проверь API-ключ и доступность сервиса")
     return str(token)
 
 
@@ -449,6 +452,33 @@ def _validate_reply(raw: Any, operation: str) -> dict[str, Any]:
     return reply
 
 
+def socket_message(ws, pending):
+    if pending:return pending.pop(0)
+    opcode,raw=ws.recv_data(control_frame=True)
+    if opcode in (websocket.ABNF.OPCODE_PING,websocket.ABNF.OPCODE_PONG):
+        STATUS.update(lastHeartbeatAt=time.time())
+        return None
+    if opcode==websocket.ABNF.OPCODE_CLOSE:
+        raise RuntimeError('WebSocket закрыт сервером')
+    return raw
+
+
+def receive_reply(ws, identity, operation, pending):
+    deadline=time.monotonic()+45
+    while time.monotonic()<deadline:
+        raw=ws.recv()
+        if raw in (None, ''):raise RuntimeError('WebSocket закрыт при подписке')
+        if str(raw).strip()=='{}':ws.send('{}');continue
+        match=None
+        for frame in _decode_json_frames(raw):
+            if isinstance(frame,dict) and frame.get('id')==identity:
+                if frame.get('error'):raise RuntimeError(f'Centrifugo {operation}: {frame["error"]}')
+                match=frame
+            else:pending.append(json.dumps(frame,ensure_ascii=False))
+        if match is not None:return match
+    raise RuntimeError(f'Не получено подтверждение {operation}')
+
+
 def main() -> None:
     if requests is None or websocket is None:
         raise SystemExit("Нужны requests и websocket-client")
@@ -481,16 +511,17 @@ def main() -> None:
 
             STATUS.update(status="connecting_socket")
             connection_token = get_connection_token(cfg)
-            ws = websocket.create_connection(cfg["websocket_url"], timeout=45)
+            ws = websocket.create_connection(cfg["websocket_url"], timeout=45, **({} if cfg.get("use_system_proxy",False) else {"http_no_proxy":["*"]}))
             ws.send(json.dumps({"params": {"token": connection_token}, "id": 1}))
-            auth = _validate_reply(ws.recv(), "connect")
+            pending=[]
+            auth = receive_reply(ws, 1, "connect", pending)
             client = deep_get(auth, "result.client")
             if not client:
                 raise RuntimeError(f"Centrifugo не вернул client: {auth}")
 
             subscription_token = get_subscription_token(cfg, str(client), channel)
             ws.send(json.dumps({"params": {"channel": channel, "token": subscription_token}, "method": 1, "id": 2}))
-            subscription_reply = _validate_reply(ws.recv(), "subscribe")
+            subscription_reply = receive_reply(ws, 2, "subscribe", pending)
             STATUS.update(
                 connected=True,
                 subscribed=True,
@@ -503,8 +534,11 @@ def main() -> None:
 
             while True:
                 try:
-                    raw = ws.recv()
+                    raw = socket_message(ws,pending)
+                    if raw is None:continue
+                    STATUS.update(lastSocketReadAt=time.time())
                 except websocket.WebSocketTimeoutException:
+                    STATUS.update(status="subscribed", lastHeartbeatAt=time.time())
                     # Keep idle connections alive without re-running /user.
                     try:
                         ws.send("{}")
@@ -512,6 +546,7 @@ def main() -> None:
                         raise
                     continue
                 except socket.timeout:
+                    STATUS.update(status="subscribed", lastHeartbeatAt=time.time())
                     ws.send("{}")
                     continue
 
@@ -542,6 +577,10 @@ def main() -> None:
 
         except KeyboardInterrupt:
             break
+        except DonatePayAuthError as error:
+            STATUS.update(connected=False,subscribed=False,status='authorization_error',lastError=str(error),nextRetryAt=time.time()+300)
+            log(str(error)+' Повтор через 5 минут или после перезапуска.','ERROR')
+            time.sleep(300)
         except Exception as error:
             safe = safe_error(error)
             STATUS.update(

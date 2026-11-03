@@ -17,6 +17,15 @@ from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
+try:
+    from ui_preferences import LOCK as UI_SETTINGS_LOCK, validate_settings as validate_ui_settings, UIPreferencesError
+except ModuleNotFoundError:
+    from .ui_preferences import LOCK as UI_SETTINGS_LOCK, validate_settings as validate_ui_settings, UIPreferencesError
+try:
+    import widget_store
+except ModuleNotFoundError:
+    from . import widget_store
+
 
 BACKUP_FORMAT = "vicdonationgoal-backup"
 BACKUP_SCHEMA_VERSION = 1
@@ -69,6 +78,10 @@ def app_version(project_root: Path) -> str:
 
 def category_for_path(relative: str) -> str:
     path = relative.replace("\\", "/")
+    if path == "core/widget_settings.json" or path.startswith("core/widget_assets/"):
+        return "widget_editor"
+    if path == "core/ui_settings.json":
+        return "ui_preferences"
     if path == "core/data/donations.json":
         return "donation_history"
     if path in {"core/data/donor_profiles.json", "core/data/donor_adjustments.json"}:
@@ -104,6 +117,10 @@ def is_user_data_path(relative: str) -> bool:
     if not _safe_relative_path(relative):
         return False
     normalized = relative.lower()
+    if normalized in {"core/ui_settings.json", "core/widget_settings.json"}:
+        return True
+    if relative.startswith("core/widget_assets/"):
+        return bool(widget_store.ASSET_RE.fullmatch(relative[len("core/widget_assets/"):]))
     parts = PurePosixPath(normalized).parts
     if ".." in parts or not parts:
         return False
@@ -130,6 +147,14 @@ def _user_data_destination(project_root: Path, relative: str) -> Path:
     if not is_user_data_path(relative):
         raise PortabilityError(f"Неподдерживаемый или небезопасный путь: {relative}")
     root = Path(project_root).resolve()
+    if relative.startswith('core/widget_assets/'):
+        try:
+            asset_root = widget_store.WidgetStore(root / 'core/widget_settings.json')._assets_root()
+            asset_path = root / PurePosixPath(relative)
+            if asset_path.is_symlink() or asset_path.resolve().parent != asset_root:
+                raise widget_store.WidgetError('Ресурс не должен перенаправлять путь')
+        except widget_store.WidgetError as error:
+            raise PortabilityError(f'Небезопасный каталог ресурсов: {relative}') from error
     destination = (root / PurePosixPath(relative)).resolve()
     if not destination.is_relative_to(root):
         raise PortabilityError(f"Путь выходит за пределы папки программы: {relative}")
@@ -153,6 +178,15 @@ def normalize_old_relative_path(value: str) -> str | None:
 def collect_user_files(project_root: Path) -> list[Path]:
     project_root = Path(project_root)
     result: list[Path] = []
+    ui_settings = project_root / "core" / "ui_settings.json"
+    if ui_settings.is_file():
+        result.append(ui_settings)
+    widget_settings = project_root / "core" / "widget_settings.json"
+    if widget_settings.is_file():
+        result.append(widget_settings)
+    assets = project_root / "core" / "widget_assets"
+    if assets.is_dir():
+        result.extend(p for p in assets.iterdir() if p.is_file() and not p.is_symlink() and widget_store.ASSET_RE.fullmatch(p.name))
     core_data = project_root / "core" / "data"
     for name in sorted(CORE_DATA_NAMES):
         path = core_data / name
@@ -380,6 +414,7 @@ def _validate_donations(value: Any, label: str) -> None:
 def validate_user_payload(payload: dict[str, bytes]) -> dict[str, str]:
     """Validate all known records before writing any imported file; keep extra fields."""
     schemas: dict[str, str] = {}
+    asset_ids = {name[len("core/widget_assets/"):] for name in payload if name.startswith("core/widget_assets/")}
     seen = set()
     for relative, content in payload.items():
         if not is_user_data_path(relative):
@@ -388,11 +423,30 @@ def validate_user_payload(payload: dict[str, bytes]) -> dict[str, str]:
         if name in seen:
             raise PortabilityError(f"Повторяющийся путь: {relative}")
         seen.add(name)
+        if relative.startswith("core/widget_assets/"):
+            try:
+                asset = relative[len("core/widget_assets/"):]
+                widget_store.validate_asset(asset, content)
+                if sha256_bytes(content) != asset.split('.')[0]:
+                    raise widget_store.WidgetError("Контрольная сумма ресурса не совпала")
+            except widget_store.WidgetError as error:
+                raise PortabilityError(f"{relative}: {error}") from error
         if not name.endswith(".json"):
             schemas[relative] = "binary"
             continue
         parsed = _read_json_bytes(content, relative)
-        if name == "core/data/donations.json":
+        if name == "core/widget_settings.json":
+            try:
+                widget_store.validate_settings(parsed, asset_ids)
+            except widget_store.WidgetError as error:
+                raise PortabilityError(f"{relative}: {error}") from error
+        elif name == "core/ui_settings.json":
+            # Same schema is used by API writes and full restore/folder import.
+            try:
+                validate_ui_settings(parsed)
+            except UIPreferencesError as error:
+                raise PortabilityError(f"{relative}: {error}") from error
+        elif name == "core/data/donations.json":
             _validate_donations(parsed, relative)
         elif name == "core/data/donor_profiles.json":
             ids = set()
@@ -546,6 +600,14 @@ def _atomic_write(path: Path, data: bytes) -> None:
 
 
 def apply_payload(project_root: Path, payload: dict[str, bytes]) -> list[str]:
+    # No store cache needs reloading. Serialize restore/rollback with partial UI
+    # saves so a concurrent theme/layout update cannot be silently overwritten.
+    # Existing caller locks remain outermost; the UI store never acquires them.
+    with UI_SETTINGS_LOCK, widget_store.LOCK:
+        return _apply_payload_locked(project_root, payload)
+
+
+def _apply_payload_locked(project_root: Path, payload: dict[str, bytes]) -> list[str]:
     project_root = Path(project_root)
     validate_user_payload(payload)
     destinations = {relative: _user_data_destination(project_root, relative) for relative in sorted(payload)}

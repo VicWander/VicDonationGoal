@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <title>Donation Goal Widget</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="widget-renderer.css" />
 </head>
 <body class="widget-body">
-  <div class="goal-card">
+  <div class="goal-card" id="legacyWidget">
     <div class="goal-top">
       <div class="goal-title" id="goalTitle">Сбор на цель</div>
       <div class="goal-percent" id="goalPercent">0%</div>
@@ -25,6 +26,9 @@
     <div class="last-donation" id="lastDonation"></div>
   </div>
 
+  <div id="designedWidget" hidden></div>
+  <script src="widget-model.js"></script>
+  <script src="widget-renderer.js"></script>
   <script src="widget.js"></script>
 </body>
 </html>

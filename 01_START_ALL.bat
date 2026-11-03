@@ -1,7 +1,9 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title VicDonationGoal v1.4.6 - Reliability & Safe Update
+set "VDG_TITLE_VERSION=dev"
+if exist "%~dp0VERSION" set /p VDG_TITLE_VERSION=<"%~dp0VERSION"
+title VicDonationGoal v%VDG_TITLE_VERSION% - Studio
 
 echo Stopping stale VicDonationGoal processes from previous runs...
 call "%~dp013_STOP_ALL.bat" --quiet >nul 2>&1
@@ -41,9 +43,7 @@ if "%CORE_READY%"=="0" (
 )
 
 echo Core server is ready.
-echo Starting Streamer.bot bridge...
-start "VicDonationGoal - Streamer.bot Bridge" cmd /k call "%~dp004_START_STREAMERBOT_ONLY.bat"
-timeout /t 1 /nobreak >nul
+echo Streamer.bot Bridge is managed by Core; configure it in Integrations.
 
 echo Starting TTS Hub...
 start "VicDonationGoal - TTS Hub" cmd /k call "%~dp008_START_TTS_ONLY.bat"

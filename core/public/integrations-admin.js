@@ -1,6 +1,8 @@
 const integrationState = {
   bootstrap: { integrations: [], onboarding: {} },
   selectedId: "",
+  route: "services",
+  donationSelectedId: "",
   detail: null,
   refreshing: false,
   onboardingDraft: null
@@ -40,11 +42,30 @@ function integrationMarkdown(text) {
     .replace(/\n/g, "<br>");
   return `<p>${html}</p>`;
 }
-function integrationIsPanelActive() {
-  return document.getElementById("integrationsPanel")?.classList.contains("active");
+const integrationDetailHome = document.querySelector('.integration-detail-card')?.parentElement;
+function setIntegrationRoute(page) {
+  const next=page==='streamerbot'?'streamerbot':'services';
+  if(integrationState.route!==next){
+    ++integrationDetailSequence;
+    integrationState.selectedId=next==='streamerbot'?'streamerbot':integrationState.donationSelectedId;
+    integrationState.detail=null;
+    document.getElementById('integrationDetail').hidden=true;
+    document.getElementById('integrationEmptyDetail').hidden=false;
+    document.getElementById('integrationEmptyDetail').textContent='Загрузка подключения…';
+    integrationResult('');
+  }
+  integrationState.route=next;
+  const card=document.querySelector('.integration-detail-card');
+  const host=next==='streamerbot'?document.querySelector('[data-route="integrations/streamerbot"]'):integrationDetailHome;
+  if(card&&host&&card.parentElement!==host)host.append(card);
 }
+function integrationIsPanelActive() {
+  return document.getElementById("integrationsPanel")?.classList.contains("active") && /^#integrations\/(services|streamerbot)(?:$|\/)/.test(location.hash);
+}
+
 function integrationResult(message, ok = true, level = "") {
   const box = document.getElementById("integrationActionResult");
+  if(!message){box.hidden=true;box.textContent="";return;}
   box.hidden = false;
   box.className = `integration-result ${!ok ? "error" : level === "warning" ? "warn" : "ok"}`;
   box.textContent = message || (ok ? "Готово" : "Ошибка");
@@ -64,8 +85,9 @@ async function refreshIntegrations(forceDetail = false) {
   try {
     integrationState.bootstrap = await getJson("/api/integrations");
     renderIntegrationBootstrap();
-    if (!integrationState.selectedId && integrationState.bootstrap.integrations.length) {
-      integrationState.selectedId = integrationState.bootstrap.integrations[0].id;
+    const candidates=integrationState.bootstrap.integrations.filter(item=>integrationState.route==="streamerbot"?item.id==="streamerbot":item.category!=="tools");
+    if (!candidates.some(item=>item.id===integrationState.selectedId) && candidates.length) {
+      integrationState.selectedId = candidates[0].id;
       forceDetail = true;
     }
     if (integrationState.selectedId && (forceDetail || !integrationState.detail || integrationState.detail.summary?.id !== integrationState.selectedId)) {
@@ -85,7 +107,7 @@ async function refreshIntegrations(forceDetail = false) {
 }
 
 function renderIntegrationBootstrap() {
-  const list = integrationState.bootstrap.integrations || [];
+  const list = (integrationState.bootstrap.integrations || []).filter(item=>item.category!=="tools");
   document.getElementById("integrationTotalStat").textContent = list.length;
   document.getElementById("integrationEnabledStat").textContent = list.filter(item => item.enabled).length;
   document.getElementById("integrationConnectedStat").textContent = list.filter(item => item.connected).length;
@@ -125,12 +147,37 @@ function renderIntegrationBootstrap() {
   }
 }
 
+let integrationDetailSequence = 0;
 async function loadIntegrationDetail(id) {
+  const sequence = ++integrationDetailSequence;
+  const changed = integrationState.detail?.summary?.id !== id;
+  const panel = document.getElementById('integrationDetail');
   integrationState.selectedId = id;
-  integrationState.detail = await getJson(`/api/integrations/detail?id=${encodeURIComponent(id)}`);
+  if(id!=="streamerbot")integrationState.donationSelectedId=id;
+  if(changed)integrationResult("",true);
+  panel.inert = true;
+  panel.setAttribute('aria-busy', 'true');
   renderIntegrationBootstrap();
-  renderIntegrationDetail(true);
-  await refreshIntegrationLogs();
+  try {
+    const detail = await getJson(`/api/integrations/detail?id=${encodeURIComponent(id)}`);
+    if (sequence !== integrationDetailSequence) return;
+    if(changed)integrationResult("",true);
+    integrationState.detail = detail;
+    renderIntegrationBootstrap();
+    renderIntegrationDetail(true);
+    if (changed) window.VDGMotion.reveal(panel);
+    await refreshIntegrationLogs();
+  } catch (error) {
+    if (sequence === integrationDetailSequence) {
+      // The visible form still belongs to the last successfully loaded service.
+      integrationState.selectedId = integrationState.detail?.summary?.id || '';
+      renderIntegrationBootstrap();
+      if (integrationState.detail) integrationResult(error.message, false);
+      else document.getElementById('integrationEmptyDetail').textContent = `Не удалось загрузить сервис: ${error.message}`;
+    }
+  } finally {
+    if (sequence === integrationDetailSequence) { panel.inert = false; panel.removeAttribute('aria-busy'); }
+  }
 }
 
 function renderIntegrationDetail(fillFields = false) {
@@ -147,6 +194,7 @@ function renderIntegrationDetail(fillFields = false) {
   const badge = document.getElementById("integrationDetailBadge");
   badge.textContent = integrationStatusLabel(summary);
   badge.className = `integration-badge ${integrationStatusClass(summary)}`;
+  document.getElementById("streamerbotSetup").hidden = summary.id !== "streamerbot";
   document.getElementById("integrationEnabledInput").checked = Boolean(summary.enabled);
   document.getElementById("integrationStartButton").disabled = !summary.enabled || summary.running;
   document.getElementById("integrationStopButton").disabled = !summary.running;
@@ -240,8 +288,10 @@ function collectIntegrationConfig() {
 }
 
 async function integrationCommand(path, extra = {}) {
+  const commandId=integrationState.selectedId;
   try {
-    const result = await postJson(path, { id: integrationState.selectedId, ...extra });
+    const result = await postJson(path, { id: commandId, ...extra });
+    if(commandId!==integrationState.selectedId)return result;
     integrationResult(result.message || "Готово", Boolean(result.ok ?? true), result.level || "");
     await refreshIntegrations(true);
     return result;
@@ -253,10 +303,13 @@ async function integrationCommand(path, extra = {}) {
 
 async function refreshIntegrationLogs() {
   if (!integrationState.selectedId) return;
+  const id = integrationState.selectedId;
   try {
-    const result = await getJson(`/api/integrations/logs?id=${encodeURIComponent(integrationState.selectedId)}&limit=300`);
+    const result = await getJson(`/api/integrations/logs?id=${encodeURIComponent(id)}&limit=300`);
+    if (id !== integrationState.selectedId) return;
     document.getElementById("integrationLogs").textContent = (result.lines || []).join("\n") || "Логи пока пусты.";
   } catch (error) {
+    if (id !== integrationState.selectedId) return;
     document.getElementById("integrationLogs").textContent = `Ошибка: ${error.message}`;
   }
 }
@@ -306,6 +359,7 @@ document.querySelectorAll(".integration-detail-tab").forEach(button => button.ad
   document.querySelectorAll(".integration-detail-tab").forEach(item => item.classList.toggle("active", item === button));
   document.querySelectorAll(".integration-detail-view").forEach(view => view.classList.remove("active"));
   document.getElementById(`integration${button.dataset.integrationView[0].toUpperCase()}${button.dataset.integrationView.slice(1)}View`)?.classList.add("active");
+  window.VDGMotion.reveal(document.querySelector('.integration-detail-view.active'));
   if (button.dataset.integrationView === "logs") refreshIntegrationLogs();
 }));
 
@@ -317,3 +371,34 @@ setInterval(() => {
     if (logsView?.classList.contains("active")) refreshIntegrationLogs();
   }
 }, 4000);
+
+// Streamer.bot is an output integration. Connection checks never execute Actions.
+document.getElementById('streamerbotLoadActions')?.addEventListener('click', async event => {
+  const button=event.currentTarget;button.disabled=true;
+  try {
+    if(integrationState.selectedId!=='streamerbot')return;
+    const saved=await integrationCommand('/api/integrations/config',{config:collectIntegrationConfig()});
+    if(!saved?.ok || integrationState.selectedId!=='streamerbot')return;
+    const result=await postJson('/api/integrations/streamerbot/actions',{});
+    if(integrationState.selectedId!=='streamerbot')return;
+    const select=document.getElementById('streamerbotActionSelect');
+    select.innerHTML='<option value="">Выбери действие</option>'+(result.actions||[]).map(a=>`<option value="${escapeHtml(a.id)}" data-name="${escapeHtml(a.name)}" ${a.enabled===false?'disabled':''}>${escapeHtml(a.name)}${a.enabled===false?' · выключено':''}</option>`).join('');
+    integrationResult(result.actions?.length?'Действия загружены. Выбери нужное и сохрани настройки.':'Список пуст. Сначала создай Action в Streamer.bot.');
+  } catch(error){integrationResult(error.message,false);}
+  finally {button.disabled=false;}
+});
+document.getElementById('streamerbotActionSelect')?.addEventListener('change',event=>{
+  const option=event.target.selectedOptions[0];if(!option?.value)return;
+  document.querySelector('[data-config-key="action_id"]').value=option.value;
+  document.querySelector('[data-config-key="action_name"]').value=option.dataset.name;
+});
+document.getElementById('streamerbotTestAction')?.addEventListener('click',async event=>{
+  const button=event.currentTarget;button.disabled=true;
+  try {
+    if(integrationState.selectedId!=='streamerbot')return;
+    const saved=await integrationCommand('/api/integrations/config',{config:collectIntegrationConfig()});
+    if(saved?.ok && integrationState.selectedId==='streamerbot')await integrationCommand('/api/integrations/streamerbot/test-action');
+  } finally {button.disabled=false;}
+});
+
+document.getElementById('streamerbotAlertExample')?.addEventListener('toggle',event=>{if(event.target.open)window.VDGGuidebook.mountAlertExample(event.target.querySelector('[data-alert-example]'));});

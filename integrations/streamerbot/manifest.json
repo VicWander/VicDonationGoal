@@ -1,0 +1,14 @@
+{
+  "id":"streamerbot","name":"Streamer.bot","shortName":"Streamer.bot","icon":"SB","order":100,
+  "kind":"subprocess","entrypoint":"streamerbot_bridge.py","category":"tools",
+  "description":"Запускает выбранное действие Streamer.bot при новом донате: звук, изображение или другие реакции.",
+  "configFile":"streamerbot_config.json","configExampleFile":"streamerbot_config.example.json","guideFile":"GUIDE.md",
+  "statusFile":"runtime/streamerbot_status.json","statusStaleSeconds":20,
+  "requiredFields":["streamerbot_http_url"],"secretFields":[],"stability":"stable","dashboardVisible":false,
+  "capabilities":{"oauth":false,"test":true,"logs":true,"clearAuth":false},
+  "fields":[
+    {"key":"streamerbot_http_url","label":"HTTP-адрес Streamer.bot","type":"text","default":"http://127.0.0.1:7474/DoAction","help":"Адрес из Servers/Clients → HTTP Server в Streamer.bot. WebSocket здесь не используется."},
+    {"key":"action_name","label":"Название действия","type":"text","help":"Точное имя Action из Streamer.bot. Можно вместо него выбрать действие из списка ниже."},
+    {"key":"action_id","label":"ID действия","type":"text","help":"Заполняется при выборе из списка. Если ID указан, используется он, даже после переименования действия."}
+  ]
+}

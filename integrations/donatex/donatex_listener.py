@@ -112,11 +112,13 @@ def poll(cfg: dict[str, Any]):
         parameter_name = str(cfg.get("query_token_name") or "token").strip() or "token"
         params[parameter_name] = cfg["api_token"]
 
-    response = requests.get(
+    with requests.Session() as session:
+        session.trust_env=bool(cfg.get("use_system_proxy",False))
+        response = session.get(
         url,
         headers=headers(cfg),
         params=params,
-        timeout=int(cfg.get("request_timeout_seconds", 15)),
+        timeout=(10,max(30,int(cfg.get("request_timeout_seconds", 15)))),
     )
     response.raise_for_status()
     return response.json(), url
@@ -236,7 +238,7 @@ def api_loop(cfg: dict[str, Any]) -> None:
             # A polling service is not a persistent socket. Once at least one poll
             # succeeded, a temporary HTTP failure means degraded connection, not a
             # full disconnect/restart.
-            if last_success_at:
+            if last_success_at and time.time()-last_success_at < max(90,interval*3):
                 STATUS.update(
                     running=True,
                     connected=True,

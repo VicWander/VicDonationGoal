@@ -1,6 +1,8 @@
 @echo off
 cd /d "%~dp0"
-title VicDonationGoal - Create Local Configs
+set "VDG_TITLE_VERSION=dev"
+if exist "%~dp0VERSION" set /p VDG_TITLE_VERSION=<"%~dp0VERSION"
+title VicDonationGoal v%VDG_TITLE_VERSION% - Create Local Configs
 
 echo ==============================================
 echo  Creating local config/data files if missing

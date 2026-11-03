@@ -1,3 +1,1 @@
-# Документация
-
-Открой `index.html` или `http://127.0.0.1:3333/docs/index.html`.
+HTML-справка VicDonationGoal 1.5 генерируется из docs/MANUAL.md скриптом docs/build_manual.py. Обе HTML-копии, поиск и стили проверяются вместе. Не редактируйте HTML-копию отдельно.

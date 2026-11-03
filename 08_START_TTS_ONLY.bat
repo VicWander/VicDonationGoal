@@ -1,6 +1,8 @@
 @echo off
 cd /d "%~dp0integrations\tts"
-title VicDonationGoal v1.4.4.1 - TTS Hub
+set "VDG_TITLE_VERSION=dev"
+if exist "%~dp0VERSION" set /p VDG_TITLE_VERSION=<"%~dp0VERSION"
+title VicDonationGoal v%VDG_TITLE_VERSION% - TTS Hub
 
 py -3 --version >nul 2>&1
 if %errorlevel%==0 (

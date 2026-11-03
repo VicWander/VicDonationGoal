@@ -5,6 +5,16 @@
   <title>VicDonationGoal v1.4.6 — Reliability &amp; Safe Update</title>
   <link rel="stylesheet" href="admin.css" />
   <link rel="stylesheet" href="admin-theme.css" />
+  <link rel="stylesheet" href="studio-base.css" />
+  <link rel="stylesheet" href="studio-refinement.css" />
+  <link rel="stylesheet" href="studio-dashboard.css" />
+  <link rel="stylesheet" href="studio-shell.css" />
+  <link rel="stylesheet" href="studio-themes.css" />
+  <link rel="stylesheet" href="guidebook.css" />
+  <link rel="stylesheet" href="widget-renderer.css" />
+  <link rel="stylesheet" href="widget-editor.css" />
+  <link rel="stylesheet" href="widget-ai.css" />
+  <link rel="stylesheet" href="studio-polish.css" />
 </head>
 <body>
   <div class="admin-shell">
@@ -339,7 +349,7 @@
           <div class="card-title">
             <div>
               <h2>TTS Hub</h2>
-              <p class="hint">Единая очередь озвучки донатов, наград, Вашингтона, команд и внешних событий.</p>
+              <p class="hint">Единая очередь озвучки донатов, наград, команд и внешних событий.</p>
             </div>
             <span class="tts-state-badge" id="ttsStateBadge">Загрузка...</span>
           </div>
@@ -403,6 +413,7 @@
 
           <section class="card provider-card">
             <div class="card-title"><h2>Speaker.bot</h2><span class="badge-soft" id="speakerProviderBadge">—</span></div>
+            <details><summary>Первое подключение Speaker.bot</summary><p class="hint">В Speaker.bot открой Settings → WebSocket Server, запусти сервер на 127.0.0.1:7580 и включи автоматический запуск. В Settings → Voice Aliases создай alias Donations с нужным голосом. Здесь включи TTS Hub и провайдер Speaker.bot, выбери его основным, затем нажми «Тест Speaker.bot». Для своего alias измени также alias в голосовом профиле Donations. Сам Speaker.bot должен быть запущен.</p></details>
             <label class="checkbox-line"><input id="speakerEnabledInput" type="checkbox" />Провайдер включён</label>
             <label>WebSocket URL<input id="speakerUrlInput" value="ws://127.0.0.1:7580/" /></label>
             <label>Voice Alias по умолчанию<input id="speakerAliasInput" value="Donations" /></label>
@@ -483,12 +494,13 @@
             <input id="ttsProfileOriginalId" type="hidden" />
             <div class="form-row"><label>ID<input id="ttsProfileIdInput" placeholder="donations" /></label><label>Название<input id="ttsProfileNameInput" placeholder="Donations" /></label></div>
             <label>Провайдер<select id="ttsProfileProviderInput"><option value="auto">Автоматически</option><option value="speakerbot">Speaker.bot</option><option value="edge">Microsoft Edge</option><option value="yandex">Yandex SpeechKit</option><option value="xtts">XTTS Local</option><option value="http">Custom HTTP</option></select></label>
-            <div class="form-row"><label>Voice Alias Speaker.bot<input id="ttsProfileAliasInput" placeholder="Donations" /></label><label>Edge voice<input id="ttsProfileEdgeVoiceInput" placeholder="ru-RU-SvetlanaNeural" /></label></div>
-            <div class="form-row"><label>Yandex voice<input id="ttsProfileYandexVoiceInput" placeholder="marina" /></label><label>Yandex emotion<input id="ttsProfileYandexEmotionInput" placeholder="friendly" /></label><label>Yandex speed<input id="ttsProfileYandexSpeedInput" placeholder="1.0" /></label></div>
-            <div class="form-row"><label>XTTS Reference WAV<input id="ttsProfileXttsSpeakerInput" /></label><label>XTTS language<input id="ttsProfileXttsLanguageInput" value="ru" /></label></div>
-            <div class="form-row"><label>Custom HTTP voice<input id="ttsProfileHttpVoiceInput" /></label><label>Custom HTTP language<input id="ttsProfileHttpLanguageInput" value="ru" /></label></div>
-            <div class="form-row"><label>Rate<input id="ttsProfileRateInput" value="+0%" /></label><label>Pitch<input id="ttsProfilePitchInput" value="+0Hz" /></label><label>Volume<input id="ttsProfileVolumeInput" value="+0%" /></label></div>
+            <details class="studio-advanced"><summary>Голоса и дополнительные параметры</summary>            <div class="form-row"><label>Имя голоса в Speaker.bot<input id="ttsProfileAliasInput" placeholder="Donations" /></label><label>Голос Microsoft Edge<input id="ttsProfileEdgeVoiceInput" placeholder="ru-RU-SvetlanaNeural" /></label></div>
+            <div class="form-row"><label>Голос Yandex<input id="ttsProfileYandexVoiceInput" placeholder="marina" /></label><label>Эмоция Yandex<input id="ttsProfileYandexEmotionInput" placeholder="friendly" /></label><label>Скорость Yandex<input id="ttsProfileYandexSpeedInput" placeholder="1.0" /></label></div>
+            <div class="form-row"><label>Образец голоса XTTS (WAV)<input id="ttsProfileXttsSpeakerInput" /></label><label>Язык XTTS<input id="ttsProfileXttsLanguageInput" value="ru" /></label></div>
+            <div class="form-row"><label>Голос HTTP<input id="ttsProfileHttpVoiceInput" /></label><label>Язык HTTP<input id="ttsProfileHttpLanguageInput" value="ru" /></label></div>
+            <div class="form-row"><label>Темп<input id="ttsProfileRateInput" value="+0%" /></label><label>Высота голоса<input id="ttsProfilePitchInput" value="+0Hz" /></label><label>Громкость<input id="ttsProfileVolumeInput" value="+0%" /></label></div>
             <label class="checkbox-line"><input id="ttsProfileBadWordsInput" type="checkbox" />Bad Word Filter Speaker.bot</label>
+</details>
             <label class="checkbox-line"><input id="ttsProfileEnabledInput" type="checkbox" checked />Профиль включён</label>
             <div class="danger-zone inline"><button type="button" id="ttsSaveProfileButton">Сохранить профиль</button><button type="button" id="ttsTestProfileButton" class="secondary">Тестировать</button><button type="button" id="ttsDeleteProfileButton" class="danger">Удалить</button></div>
           </section>
@@ -508,16 +520,17 @@
             <div class="form-row"><label>Профиль<select id="ttsRuleProfileInput"></select></label><label>Приоритет<input id="ttsRulePriorityInput" type="number" value="100" /></label></div>
             <label>Типы событий<input id="ttsRuleEventTypesInput" list="ttsEventTypesList" placeholder="donation, channel_reward" /></label>
             <label>Источники<input id="ttsRuleSourcesInput" list="ttsSourcesList" placeholder="donationalerts, streamerbot" /></label>
-            <div class="form-row"><label>User ID<input id="ttsRuleUserIdsInput" placeholder="постоянный ID Twitch/YouTube" /></label><label>Ники<input id="ttsRuleUsernamesInput" placeholder="ViewerName" /></label></div>
+            <details class="studio-advanced"><summary>Условия по зрителю, награде и сумме</summary>            <div class="form-row"><label>User ID<input id="ttsRuleUserIdsInput" placeholder="постоянный ID Twitch/YouTube" /></label><label>Ники<input id="ttsRuleUsernamesInput" placeholder="ViewerName" /></label></div>
             <div class="form-row"><label>Роли<input id="ttsRuleRolesInput" list="ttsRolesList" placeholder="moderator, vip" /></label><label>Reward ID<input id="ttsRuleRewardIdsInput" placeholder="ID награды Twitch" /></label></div>
             <div class="form-row"><label>Минимальная сумма<input id="ttsRuleMinAmountInput" type="number" /></label><label>Максимальная сумма<input id="ttsRuleMaxAmountInput" type="number" /></label></div>
+</details>
             <label class="checkbox-line"><input id="ttsRuleEnabledInput" type="checkbox" checked />Правило включено</label>
-            <div class="rule-help">
+            <details class="rule-help studio-advanced"><summary>Как заполнить условия</summary>
               <b>Что сюда вводить</b>
-              <p><code>eventType</code>: donation, channel_reward, washington, moderator_command, manual_test или своё значение.</p>
-              <p><code>source</code>: donationalerts, donatty, manual, streamerbot, twitch, youtube, washington-service или своё.</p>
+              <p><code>eventType</code>: donation, channel_reward, moderator_command, manual_test или своё значение.</p>
+              <p><code>source</code>: donationalerts, donatty, manual, streamerbot, twitch, youtube или своё.</p>
               <p>User ID, роли и Reward ID работают только когда их передал Streamer.bot или другая внешняя система. Пустое поле означает «любое».</p>
-            </div>
+            </details>
             <div class="danger-zone inline"><button type="button" id="ttsSaveRuleButton">Сохранить правило</button><button type="button" id="ttsDeleteRuleButton" class="danger">Удалить</button></div>
           </section>
         </section>
@@ -549,8 +562,8 @@
         <section class="card"><div class="card-title"><h2>Логи TTS Hub</h2><button type="button" id="ttsRefreshLogsButton" class="secondary">Обновить</button></div><pre id="ttsLogsOutput" class="log-console">Загрузка...</pre></section>
       </section>
 
-      <datalist id="ttsEventTypesList"><option value="donation"></option><option value="channel_reward"></option><option value="washington"></option><option value="moderator_command"></option><option value="manual_test"></option><option value="custom"></option></datalist>
-      <datalist id="ttsSourcesList"><option value="donationalerts"></option><option value="donatty"></option><option value="manual"></option><option value="streamerbot"></option><option value="twitch"></option><option value="youtube"></option><option value="washington-service"></option><option value="custom"></option></datalist>
+      <datalist id="ttsEventTypesList"><option value="donation"></option><option value="channel_reward"></option><option value="moderator_command"></option><option value="manual_test"></option><option value="custom"></option></datalist>
+      <datalist id="ttsSourcesList"><option value="donationalerts"></option><option value="donatty"></option><option value="manual"></option><option value="streamerbot"></option><option value="twitch"></option><option value="youtube"></option><option value="custom"></option></datalist>
       <datalist id="ttsRolesList"><option value="moderator"></option><option value="vip"></option><option value="subscriber"></option><option value="broadcaster"></option></datalist>
     </div>
 
@@ -572,7 +585,7 @@
         <section class="card big-card">
           <div class="card-title">
             <div>
-              <h2>Integrations Hub</h2>
+              <h2>Подключения донат-сервисов</h2>
               <p class="hint">Все внешние донат-сервисы теперь отделены от Core и управляются из одного раздела.</p>
             </div>
             <button type="button" id="integrationRefreshButton" class="secondary">Обновить</button>
@@ -585,17 +598,17 @@
           </div>
         </section>
         <section class="card">
-          <div class="card-title"><h2>Как это работает</h2></div>
+<details class="studio-advanced"><summary>Как устроены подключения</summary>          <div class="card-title"><h2>Как это работает</h2></div>
           <p class="hint">Каждая интеграция приводит событие к единому формату VicDonationGoal. После этого Core одинаково обновляет историю, виджет, TopDonation, Streamer.bot и TTS.</p>
           <pre class="integration-flow">Сервис → Integration Adapter → /api/donation
                      ↓
-Core → Goal / History / Top / TTS / Streamer.bot</pre>
+Core → Goal / History / Top / TTS / Streamer.bot</pre></details>
         </section>
       </section>
 
       <section class="integration-layout">
         <section class="card">
-          <div class="card-title"><h2>Донат-сервисы</h2><span class="muted" id="integrationListCount">0 модулей</span></div>
+          <div class="card-title"><h2>Подключения</h2><span class="muted" id="integrationListCount">0 модулей</span></div>
           <div id="integrationCards" class="integration-cards"><div class="empty-cell">Загрузка...</div></div>
         </section>
 
@@ -612,6 +625,14 @@ Core → Goal / History / Top / TTS / Streamer.bot</pre>
 
             <div id="integrationConfigFields" class="integration-config-fields"></div>
 
+            <div id="streamerbotSetup" hidden>
+              <p><a href="#guidebook/appearance/streamerbot">Гайд: оповещение о донате в Streamer.bot</a></p>
+              <details id="streamerbotAlertExample"><summary>Пример кода оповещения для OBS</summary><p class="hint">Текст на цветной подложке, 10 секунд на экране. Звук необязателен. Сначала создай источники по <a href="#guidebook/appearance/streamerbot">пошаговому гайду</a>, затем замени MainScene на имя рабочей сцены.</p><div data-alert-example></div></details>
+              <div class="integration-actions"><button type="button" class="secondary" id="streamerbotLoadActions">Загрузить действия</button></div>
+              <label>Действие из Streamer.bot<select id="streamerbotActionSelect"><option value="">Сначала загрузи список действий</option></select></label>
+              <p class="hint">Выбери действие и сохрани настройки. Тестовое оповещение запустит его один раз без изменения истории и сбора.</p>
+              <button type="button" class="secondary" id="streamerbotTestAction">Тестовое оповещение</button>
+            </div>
             <div class="integration-actions">
               <button type="button" id="integrationSaveButton">Сохранить настройки</button>
               <button type="button" id="integrationStartButton" class="secondary">Запустить</button>
@@ -642,11 +663,20 @@ Core → Goal / History / Top / TTS / Streamer.bot</pre>
 
   <button id="backToTopButton" class="back-to-top" type="button" title="Вернуться наверх" aria-label="Вернуться наверх"><span aria-hidden="true">↑</span><span class="back-to-top-label">Наверх</span></button>
 
+  <script src="studio-motion.js"></script>
   <script src="admin.js"></script>
   <script src="portability-admin.js"></script>
   <script src="tts-admin.js"></script>
   <script src="integrations-admin.js"></script>
-  <script src="washington-admin.js"></script>
+  <script src="widget-model.js"></script>
+  <script src="widget-presets.js"></script>
+  <script src="widget-renderer.js"></script>
+  <script src="widget-editor.js"></script>
+  <script src="widget-ai.js"></script>
+  <script src="studio-dashboard.js"></script>
+  <script src="guidebook.js"></script>
+  <script src="studio-admin.js"></script>
+  <script src="studio-polish.js"></script>
   <script src="admin-theme.js"></script>
 </body>
 </html>

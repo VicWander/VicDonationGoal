@@ -9,6 +9,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -191,7 +192,11 @@ def test_server_apply_pipeline(temp_root: Path) -> None:
     write_json(app_root / "core/data/donations.json", [])
     restore_preview = server.portability.backup_preview(backup_bytes, server.APP_VERSION)
     token = server.portability.create_stage(app_root, "backup", "backup.zip", backup_bytes, restore_preview)
-    result = server.apply_staged_import(token)
+    # This temporary fixture has no workers. Do not let unrelated running
+    # installations on the user's machine affect this restore-pipeline test.
+    # Real process-detection cases are covered by test_release_upgrade.py.
+    with patch("tools.update_from_old.process_inventory", return_value=[]):
+        result = server.apply_staged_import(token)
     assert result["ok"] is True and result["restartRequired"] is True
     restored = json.loads((app_root / "core/data/donations.json").read_text(encoding="utf-8"))
     assert any(item.get("uniqueKey") == new_row["uniqueKey"] for item in restored)

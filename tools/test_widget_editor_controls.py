@@ -1,0 +1,81 @@
+import unittest
+from playwright.sync_api import expect
+from test_widget_editor_browser import WidgetEditorTests
+
+class ControlsTests(WidgetEditorTests):
+ def test_zoom_one_to_one_survives_resize(self):
+  self.editor()
+  self.page.locator('[data-we-doc-prop="width"]').fill('2000')
+  self.page.locator('[data-we-doc-prop="width"]').press('Tab')
+  self.page.locator('[data-we-action="actual"]').click()
+  expect(self.page.locator('[data-we-zoom]')).to_have_text('100%')
+  self.page.set_viewport_size({'width':1700,'height':1000})
+  expect(self.page.locator('[data-we-zoom]')).to_have_text('100%')
+  self.page.locator('[data-we-action="fit"]').click()
+  self.assertNotEqual(self.page.locator('[data-we-zoom]').inner_text(),'100%')
+ def test_inline_layer_controls_and_drag(self):
+  self.editor()
+  expect(self.page.locator('[data-we-action="library"]')).to_have_count(0)
+  expect(self.page.locator('[data-we-action="add-group"]')).to_have_count(0)
+  expect(self.page.locator('.we-layer-actions')).to_have_count(0)
+  rows=self.page.locator('[data-we-layer]')
+  first=rows.first.get_attribute('data-we-layer')
+  self.page.locator('[data-we-layer="'+first+'"] [data-we-row-action="duplicate"]').click()
+  expect(rows).to_have_count(4)
+  copy=self.page.locator('[data-we-layer]').first.get_attribute('data-we-layer')
+  self.page.locator('[data-we-layer="'+copy+'"] [data-we-row-action="delete"]').click()
+  expect(rows).to_have_count(3)
+  self.page.locator('[data-we-layer="'+first+'"] [data-we-drag-handle]').drag_to(rows.last)
+  expect(rows.last).to_have_attribute('data-we-layer',first)
+  self.page.locator('[data-we-action="undo"]').click()
+  expect(rows.first).to_have_attribute('data-we-layer',first)
+
+ def test_group_drag_and_locked_layer(self):
+  self.editor()
+  rows=self.page.locator('[data-we-layer]')
+  first=rows.first.get_attribute('data-we-layer')
+  self.page.locator('[data-we-select="'+first+'"]').click()
+  second=rows.nth(1).get_attribute('data-we-layer')
+  self.page.locator('[data-we-select="'+second+'"]').click(modifiers=['Shift'])
+  self.page.locator('[data-we-action="group"]').click()
+  group=self.page.evaluate("VDGWidgetEditor.getDocument().elements.find(e=>e.type==='group').id")
+  before=self.page.evaluate('VDGWidgetEditor.getDocument()')
+  self.page.locator('[data-we-layer="'+group+'"] [data-we-drag-handle]').drag_to(rows.last)
+  after=self.page.evaluate('VDGWidgetEditor.getDocument()')
+  self.assertEqual(len(after['elements']),len(before['elements']))
+  self.assertEqual({e['id'] for e in before['elements']},{e['id'] for e in after['elements']})
+  self.assertEqual(sum(e['parentId']==group for e in after['elements']),2)
+  row=self.page.locator('[data-we-layer="'+group+'"]')
+  row.locator('[data-we-lock]').click()
+  expect(row.locator('[data-we-drag-handle]')).to_have_attribute('draggable','false')
+  expect(row.locator('[data-we-row-action="delete"]')).to_be_disabled()
+
+ def test_shared_guide_and_fonts(self):
+  self.editor()
+  self.page.locator('[data-we-action="add-text"]').click()
+  expect(self.page.locator('[data-we-prop="style.fontFamily"]')).to_have_attribute('list','weSystemFonts')
+  self.assertGreaterEqual(self.page.locator('#weSystemFonts option').count(),10)
+  self.page.goto(self.origin+'/docs/widget-editor.html')
+  expect(self.page.locator('[data-widget-guide-nav] a[href="#ai-workflow"]')).to_be_visible()
+  expect(self.page.locator('#masks')).to_have_text('Своя форма: маска прогресса')
+  ids=self.page.locator('[id]').evaluate_all('(nodes)=>nodes.map(n=>n.id)')
+  self.assertEqual(len(ids),len(set(ids)))
+  self.page.goto(self.origin+'/docs/widget-ai.html#motion')
+  expect(self.page).to_have_url(self.origin+'/docs/widget-editor.html#ai-motion')
+
+ def test_restore_previous_is_on_obs_page(self):
+  self.editor()
+  self.page.locator('[data-we-action="apply"]').click()
+  self.page.wait_for_function('document.querySelector("[data-we-status]").textContent.includes("Применено")')
+  previous=self.page.request.get(self.origin+'/api/widget/active').json()['document']
+  self.page.locator('[data-we-action="add-text"]').click()
+  self.page.locator('[data-we-action="apply"]').click()
+  self.page.wait_for_function('document.querySelector("[data-we-status]").textContent.includes("Применено")')
+  self.page.evaluate("location.hash='widget/obs'")
+  self.page.get_by_text('Восстановление оформления',exact=True).click()
+  self.page.once('dialog',lambda dialog:dialog.accept())
+  self.page.locator('#studioRestoreWidget').click()
+  expect(self.page.locator('#studioRestoreWidget')).to_be_enabled()
+  self.assertEqual(self.page.request.get(self.origin+'/api/widget/active').json()['document'],previous)
+
+if __name__=='__main__':unittest.main()

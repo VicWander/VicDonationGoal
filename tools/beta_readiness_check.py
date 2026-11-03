@@ -42,7 +42,7 @@ for path in sorted((ROOT/'integrations').glob('*/manifest.json')):
     try:
         d=json.loads(path.read_text(encoding='utf-8')); mid=str(d.get('id') or '')
         manifest_ids.add(mid)
-        if mid not in SOURCE_REGISTRY: err(f'{mid}: отсутствует в source_registry.py')
+        if mid not in SOURCE_REGISTRY and d.get('category') != 'tools': err(f'{mid}: отсутствует в source_registry.py')
         else:
             if not d.get('stability'): err(f'{mid}: manifest не содержит stability')
             else: ok(f'{mid}: registry/manifest синхронизированы ({d.get("stability")})')

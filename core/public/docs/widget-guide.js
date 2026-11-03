@@ -1,0 +1,1 @@
+(()=>{const nav=document.querySelector('[data-widget-guide-nav]');if(!nav)return;for(const heading of document.querySelectorAll('main h2[id]')){const link=document.createElement('a');link.className='level-1';link.href='#'+heading.id;link.textContent=heading.textContent;nav.append(link);}})();

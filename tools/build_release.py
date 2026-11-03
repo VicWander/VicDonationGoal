@@ -15,11 +15,11 @@ sys.path.insert(0,str(ROOT/'core'))
 import portability
 from tools.update_from_old import migrate
 
-VERSION='1.4.6'
+VERSION='1.5'
 CODE_DIRS={'core','integrations','tools','docs'}
 CODE_SUFFIXES={'.py','.js','.css','.html','.md','.svg','.png','.jpg','.jpeg','.webp','.ico','.woff','.woff2'}
 ROOT_FILES={'VERSION','README.md','ROADMAP.md','requirements.txt','requirements_all.txt','LICENSE','LICENSE.md',
-            'LICENSE.txt','.gitignore','safe_json.py','source_registry.py','UPDATE_GUIDE.md','CHANGELOG_v1.4.6.md'}
+            'LICENSE.txt','.gitignore','safe_json.py','source_registry.py','UPDATE_GUIDE.md','CHANGELOG_v1.4.6.md','CHANGELOG_v1.5.md','START_HERE_1.5.md'}
 SECRET_KEYS=re.compile(r'(^|_)(token|secret|password|api_key|client_id|action_id|channel|login)($|_)|apiKey|iamToken|folderId',re.I)
 
 def clean_example(value):
@@ -36,6 +36,7 @@ def allowed(relative):
     if len(parts)>=3 and folded[:2]==('integrations','tts') and folded[2] in portability.CUSTOM_TTS_DIR_NAMES:return False
     if len(parts)>=2 and folded[:2]==('core','data'):return name.casefold().endswith('.example.json')
     if len(parts)==1:return name in ROOT_FILES or (name.endswith('.bat') and not name.startswith('APPLY_PATCH'))
+    if folded[:2]==('core','widget_assets'):return False
     if parts[0] not in CODE_DIRS:return False
     if name.endswith('.example.json') or (parts[0]=='integrations' and name=='manifest.json'):return True
     if name=='tribute_tunnel.py':return False
